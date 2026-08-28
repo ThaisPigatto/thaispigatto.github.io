@@ -1,0 +1,52 @@
+name: Atualizar Painel Comercial Pigatto
+
+on:
+  schedule:
+    - cron: '0 11 * * *'   # 08:00 SP
+    - cron: '0 13 * * *'   # 10:00 SP
+    - cron: '0 16 * * *'   # 13:00 SP
+    - cron: '0 18 * * *'   # 15:00 SP
+    - cron: '0 19 * * *'   # 16:00 SP
+    - cron: '0 20 * * *'   # 17:00 SP
+    - cron: '15 20 * * *'  # 17:15 SP
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: atualizar-painel
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Rodar atualização (extrai OMIE, recalcula, regrava index.html)
+        env:
+          OMIE_MATRIZ_APP_KEY: ${{ secrets.OMIE_MATRIZ_APP_KEY }}
+          OMIE_MATRIZ_APP_SECRET: ${{ secrets.OMIE_MATRIZ_APP_SECRET }}
+          OMIE_PAPEIS_APP_KEY: ${{ secrets.OMIE_PAPEIS_APP_KEY }}
+          OMIE_PAPEIS_APP_SECRET: ${{ secrets.OMIE_PAPEIS_APP_SECRET }}
+        run: python automacao/atualizar_painel.py
+
+      - name: Publicar (commit + push) só se algo mudou
+        run: |
+          git config user.name "Painel Pigatto (robô)"
+          git config user.email "actions@github.com"
+          git add index.html automacao/produto_familia_cache.json
+          if git diff --cached --quiet; then
+            echo "Nada mudou desde a última atualização."
+          else
+            git commit -m "Atualização automática do painel — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
