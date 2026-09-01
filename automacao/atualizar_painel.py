@@ -34,9 +34,9 @@ CACHE_PRODUTO_FAMILIA = os.path.join(BASE_DIR, "produto_familia_cache.json")
 # CONFIG — ajustar manualmente quando a meta do mês mudar (normalmente só
 # no começo de cada mês). O resto (dias úteis, datas) é calculado sozinho.
 # ----------------------------------------------------------------------------
-META_GERAL = 1465000
+META_GERAL = 1575000  # a partir de set/2026 já inclui a meta da HUB (100.000) — pedido Thais 01/09/2026
 GRUPOS = [
-    {"id": "adesivos", "cor": "#C0392B", "meta": 860000,
+    {"id": "adesivos", "cor": "#C0392B", "meta": 870000,
      "familias": ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT"],
      "cor_tint": "#f6e5e3", "cor_texto": "#FFFFFF", "row_bg": "#D7E7C6"},
     {"id": "quimicos", "cor": "#1B6B3D", "meta": 105000,
@@ -70,12 +70,20 @@ ULTIMO_DIA_MES = calendar.monthrange(ANO, MES)[1]
 LIMITE_PREVISAO = datetime.datetime(ANO, MES, ULTIMO_DIA_MES)
 
 
+# Feriados nacionais/confirmados que NÃO contam como dia útil (nem para o total de
+# dias úteis do mês, nem para "dias decorridos"/ESPERADO, nem para "dias restantes").
+# Adicionar aqui manualmente conforme confirmado — nunca supor feriado sem confirmação.
+FERIADOS = {
+    datetime.date(2026, 9, 7),  # Independência do Brasil — confirmado por Thais (01/09/2026)
+}
+
+
 def dias_uteis_no_intervalo(d1, d2):
-    """Conta dias úteis (seg-sex) entre d1 e d2, inclusive. Não desconta feriados."""
+    """Conta dias úteis (seg-sex) entre d1 e d2, inclusive, descontando os dias em FERIADOS."""
     n = 0
     d = d1
     while d <= d2:
-        if d.weekday() < 5:
+        if d.weekday() < 5 and d not in FERIADOS:
             n += 1
         d += datetime.timedelta(days=1)
     return n
@@ -226,6 +234,37 @@ def montar_linhas_previsao(pedidos_por_empresa):
 # ----------------------------------------------------------------------------
 # 4) Realizado (faturado) — cruza NF com a última etapa conhecida do pedido
 # ----------------------------------------------------------------------------
+_ETAPA_VIVA_CACHE = {}
+
+
+def confirmar_etapa_ao_vivo(empresa, nIdPedido):
+    """Confirma a etapa ATUAL do pedido via ConsultarPedido (dado ao vivo), em vez de
+    confiar cegamente no histórico paginado de pedidoetapas.
+
+    Motivo (achado em 01/09/2026, cruzando o fechamento de agosto com o relatório oficial
+    da OMIE a pedido da Thais): o pedido papeis/5110935412 (NF 00020009, R$120,24) tinha,
+    no histórico de pedidoetapas, um registro desatualizado mostrando etapa de Faturado —
+    mas o estado ao vivo do pedido já tinha avançado pra etapa 70, que pela regra
+    documentada (Seção 2-A: "nunca usar etapa 70 da Papéis sem validar de novo") NÃO conta
+    como Realizado. O histórico ficou "para trás" e o pedido foi contado errado.
+    Essa função faz uma segunda checagem, ao vivo, pra pegar exatamente esse tipo de caso.
+    Cacheada por pedido pra não repetir a mesma chamada em NFs com múltiplos itens.
+    """
+    key = (empresa, nIdPedido)
+    if key in _ETAPA_VIVA_CACHE:
+        return _ETAPA_VIVA_CACHE[key]
+    app_key, app_secret = EMPRESAS[empresa]
+    etapa_viva = None
+    try:
+        r = call("produtos/pedido", "ConsultarPedido", {"codigo_pedido": nIdPedido}, app_key, app_secret)
+        etapa_viva = r.get("pedido_venda_produto", {}).get("cabecalho", {}).get("etapa")
+    except Exception:
+        etapa_viva = None  # falha na checagem ao vivo: não bloqueia, cai no valor do histórico
+    _ETAPA_VIVA_CACHE[key] = etapa_viva
+    time.sleep(0.4)
+    return etapa_viva
+
+
 def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
     def parse_dt(d, h):
         try:
@@ -245,6 +284,8 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
 
     linhas = []
     sem_etapa = []
+    corrigidos_pelo_vivo = 0
+    resgatados_pelo_vivo = 0
     for empresa in nf_dados:
         for nf in nf_dados[empresa]:
             if nf["ide"].get("cDeneg") != "N" or nf["ide"].get("dCan"):
@@ -260,12 +301,24 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
                 if cfop not in CFOP_REALIZADO:
                     continue
                 if est is None:
-                    sem_etapa.append((empresa, nIdPedido, nf["ide"]["nNF"], item["prod"]["vProd"]))
-                    continue
-                if est["cancelado"] == "S":
-                    continue
-                if est["etapa"] not in REALIZADO_ETAPAS[empresa]:
-                    continue
+                    # Histórico não tem esse pedido: antes de descartar, confirma ao vivo
+                    # (pode ser um pedido cujo histórico não foi capturado na paginação).
+                    etapa_viva = confirmar_etapa_ao_vivo(empresa, nIdPedido)
+                    if etapa_viva is None or etapa_viva not in REALIZADO_ETAPAS[empresa]:
+                        sem_etapa.append((empresa, nIdPedido, nf["ide"]["nNF"], item["prod"]["vProd"]))
+                        continue
+                    resgatados_pelo_vivo += 1
+                else:
+                    if est["cancelado"] == "S":
+                        continue
+                    if est["etapa"] not in REALIZADO_ETAPAS[empresa]:
+                        continue
+                    # Histórico diz que conta: confirma ao vivo antes de aceitar, pra pegar
+                    # casos como o do pedido papeis/5110935412 (histórico desatualizado).
+                    etapa_viva = confirmar_etapa_ao_vivo(empresa, nIdPedido)
+                    if etapa_viva is not None and etapa_viva not in REALIZADO_ETAPAS[empresa]:
+                        corrigidos_pelo_vivo += 1
+                        continue
                 linhas.append({
                     "empresa": empresa, "nota": nf["ide"]["nNF"], "cfop": cfop,
                     "valor": item["prod"]["vProd"],
@@ -274,6 +327,9 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
     total = sum(l["valor"] for l in linhas)
     print(f"Realizado — Linhas incluidas: {len(linhas)}  Total: {round(total, 2)}")
     print(f"Itens SEM info de etapa: {len(sem_etapa)}")
+    if corrigidos_pelo_vivo or resgatados_pelo_vivo:
+        print(f"Confirmação ao vivo: {corrigidos_pelo_vivo} excluído(s) por etapa desatualizada, "
+              f"{resgatados_pelo_vivo} resgatado(s) que o histórico tinha perdido")
     return linhas
 
 
@@ -349,6 +405,14 @@ def montar_data(real_rows, prev_rows):
         for r in rows:
             f = r["familia"]
             if f is None:
+                continue
+            # Vendas do Mercado Livre (is_ml) já contam inteiras para a HUB/Jéssica (hub_fat/hub_prev
+            # mais abaixo, calculado direto de real_rows/prev_rows) — não podem também entrar aqui,
+            # senão duplicam dentro da família/grupo de produto (ex: Papel térmico) e inflam a meta de
+            # quem não vendeu aquilo (ex: Rhamayana). Regra confirmada por Thais em 01/09/2026: só o que
+            # foi vendido direto pelo sistema da Papéis (fora do Mercado Livre/licitação) conta pra
+            # família/vendedor responsável.
+            if r.get("is_ml"):
                 continue
             e = fam.setdefault(f, {"faturado": 0.0, "previsto": 0.0, "devolucoes": 0.0, "aguardando": 0.0, "hoje": 0.0})
             val = r["total"]
@@ -430,9 +494,21 @@ def montar_data(real_rows, prev_rows):
             "cor_tint": g["cor_tint"], "cor_texto": g["cor_texto"], "row_bg": g["row_bg"],
         })
 
-    tot_fat = sum(g["faturado_total"] for g in grupos_familia_out)
-    tot_prev = sum(g["previsto_total"] for g in grupos_familia_out)
-    tot_dev = sum(g["devolucoes_total"] for g in grupos_familia_out)
+    # HUB (Marketplace/Licitação) — calculado ANTES do "TOTAL GERAL" porque, a partir de
+    # setembro/2026, a meta da HUB passou a contar dentro da Meta Geral (a pedido da Thais,
+    # 01/09/2026). Antes disso a HUB era só uma linha separada, fora do total.
+    ml_real = [r for r in real_rows if r["is_ml"]]
+    ml_prev = [r for r in prev_rows if r["is_ml"]]
+    lic_real = [r for r in real_rows if (r["familia"] or "").upper().startswith("LICITA")]
+    lic_prev = [r for r in prev_rows if (r["familia"] or "").upper().startswith("LICITA")]
+    hub_fat = sum(r["total"] for r in ml_real + lic_real if r["operacao"] == "Orçamento")
+    hub_dev = sum(r["total"] for r in ml_real + lic_real if r["operacao"] != "Orçamento")
+    hub_prev_v = sum(r["total"] for r in ml_prev + lic_prev)
+    hub_prevfat = hub_fat + hub_dev + hub_prev_v
+
+    tot_fat = sum(g["faturado_total"] for g in grupos_familia_out) + hub_fat
+    tot_prev = sum(g["previsto_total"] for g in grupos_familia_out) + hub_prev_v
+    tot_dev = sum(g["devolucoes_total"] for g in grupos_familia_out) + hub_dev
     tot_prevfat = tot_fat + tot_prev + tot_dev
     grupos_familia_out.append({
         "id": "total_geral", "cor": "#122038", "meta": META_GERAL,
@@ -448,14 +524,6 @@ def montar_data(real_rows, prev_rows):
     })
     grupos_familia_out.append({"id": "spacer", "is_spacer": True})
 
-    ml_real = [r for r in real_rows if r["is_ml"]]
-    ml_prev = [r for r in prev_rows if r["is_ml"]]
-    lic_real = [r for r in real_rows if (r["familia"] or "").upper().startswith("LICITA")]
-    lic_prev = [r for r in prev_rows if (r["familia"] or "").upper().startswith("LICITA")]
-    hub_fat = sum(r["total"] for r in ml_real + lic_real if r["operacao"] == "Orçamento")
-    hub_dev = sum(r["total"] for r in ml_real + lic_real if r["operacao"] != "Orçamento")
-    hub_prev_v = sum(r["total"] for r in ml_prev + lic_prev)
-    hub_prevfat = hub_fat + hub_dev + hub_prev_v
     grupos_familia_out.append({
         "id": "pigatto_hub", "cor": "#C9A227", "meta": HUB_META,
         "linhas": [{"familia": "Pigatto HUB - Marketplace/Licitação", "faturado": round(hub_fat, 2),
