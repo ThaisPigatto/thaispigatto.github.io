@@ -1,13 +1,17 @@
 name: Atualizar Painel Comercial Pigatto
 on:
   schedule:
-    - cron: '0 11 * * *'   # 08:00 SP
+    - cron: '45 10 * * *'  # 07:45 SP
+    - cron: '15 11 * * *'  # 08:15 SP
+    - cron: '0 12 * * *'   # 09:00 SP
     - cron: '0 13 * * *'   # 10:00 SP
-    - cron: '0 16 * * *'   # 13:00 SP
+    - cron: '0 14 * * *'   # 11:00 SP
+    - cron: '0 17 * * *'   # 14:00 SP
     - cron: '0 18 * * *'   # 15:00 SP
     - cron: '0 19 * * *'   # 16:00 SP
+    - cron: '30 19 * * *'  # 16:30 SP
     - cron: '0 20 * * *'   # 17:00 SP
-    - cron: '15 20 * * *'  # 17:15 SP
+    - cron: '30 20 * * *'  # 17:30 SP
     - cron: '0 21 * * *'   # 18:00 SP
   workflow_dispatch: {}
 permissions:
