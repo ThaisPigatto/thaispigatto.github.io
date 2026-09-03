@@ -617,10 +617,7 @@ const DATA = {"totais": {"meta": 1465000, "previsto": 0.0, "faturado": 1101695.2
 // robô do GitHub Actions continua atualizando sozinho. MES_ATUAL identifica QUAL arquivo é este
 // (muda 1x, manualmente, quando o mês fecha e um arquivo novo é criado para o mês seguinte).
 const MES_ATUAL = '2026-08';
-const MESES_DISPONIVEIS = [
-  { id: '2026-08', label: 'Agosto 2026', arquivo: '2026-08.html' },
-  { id: '2026-09', label: 'Setembro 2026', arquivo: 'index.html' },
-];
+const MESES_DISPONIVEIS = [{"id": "2026-08", "label": "Agosto 2026", "arquivo": "2026-08.html"}, {"id": "2026-09", "label": "Setembro 2026", "arquivo": "index.html"}];
 (function montarSeletorMes(){
   const box = document.getElementById('seletorMes');
   if (!box) return;
