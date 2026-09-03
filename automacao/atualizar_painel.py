@@ -61,9 +61,25 @@ EMPRESAS = {
 }
 
 PREVISAO_ETAPAS = {"matriz": {"20", "80", "50"}, "papeis": {"20", "50"}}
-REALIZADO_ETAPAS = {"matriz": {"60", "70"}, "papeis": {"60", "80"}}
-CFOP_PREVISAO = {"5.102", "6.102", "5.112"}
-CFOP_REALIZADO = {"5.102", "6.102", "5.112", "2.202", "5.202"}
+# Etapa "70" da Papéis passou a contar como Realizado em 03/09/2026 — decisão da Thais:
+# "siga o do financeiro, o dele é sempre o correto, ajuste pra ficar igual". Achado que gerou
+# a mudança: NF 00019902 (R$309,12, pedido em etapa 70 na Papéis) estava Autorizada e presente
+# no relatório oficial do financeiro, mas ficava de fora do painel por essa regra excluir a 70.
+REALIZADO_ETAPAS = {"matriz": {"60", "70"}, "papeis": {"60", "70", "80"}}
+
+# CFOPs de SAÍDA que são venda de verdade (nota emitida pra cliente). 5.112/5.202 foram
+# retirados em 03/09/2026: são "devolução de COMPRA" (a Pigatto devolvendo mercadoria pro
+# FORNECEDOR dela) — não é receita de venda nenhuma, e estava inflando o faturado (achado
+# cruzando o fechamento de agosto com o relatório do financeiro, NF 00019903, R$462,56).
+CFOP_PREVISAO = {"5.102", "6.102"}
+CFOP_REALIZADO = {"5.102", "6.102"}
+
+# CFOPs de ENTRADA que representam devolução de VENDA (cliente devolvendo mercadoria pra
+# Pigatto) — reduz o faturado. Adicionado em 03/09/2026: o robô nunca buscava nota de
+# ENTRADA nenhuma (buscar_nf só pedia tpNF=1/saída), então nenhuma devolução de cliente
+# jamais tinha sido contabilizada, em nenhum mês (achado: devolução ML de R$125,21 em
+# agosto, CFOP 2.202, que não aparecia em lugar nenhum do painel).
+CFOP_DEVOLUCAO_VENDA = {"1.202", "2.202", "3.202"}
 
 TZ_SP = zoneinfo.ZoneInfo("America/Sao_Paulo")
 AGORA = datetime.datetime.now(TZ_SP)
@@ -135,30 +151,38 @@ def gerar_index_novo_mes():
         f.write(html)
 
 
-def checar_virada_de_mes():
+def checar_virada_de_mes(fam_nome_cache, vend_nome_cache, produto_familia):
     """Se o mês corrente ainda não está registrado em meses.json, congela o index.html
-    de hoje (que é do mês anterior) num arquivo separado e cria um index.html novo."""
+    de hoje (que é do mês anterior) num arquivo separado, refaz esse mês fechado do zero
+    com dados frescos da OMIE (ver refazer_fechamento_do_mes) e cria um index.html novo."""
     meses = carregar_meses()
     if not meses:
         # meses.json não existe ainda (primeira vez que essa lógica roda) — não inventa
         # nada sozinho pra trás; só continua sem mexer no index.html atual. A Thais
         # semeia o meses.json manualmente 1x com o histórico já existente.
         print("!! meses.json não encontrado — virada de mês automática desativada até ele existir.")
-        return meses
+        return meses, produto_familia
     if any(m["id"] == MES_ATUAL_ID for m in meses):
-        return meses  # mês corrente já está registrado, nada a fazer
+        return meses, produto_familia  # mês corrente já está registrado, nada a fazer
     print(f">> Virada de mês detectada: {MES_ATUAL_ID} ainda não existe em meses.json.")
     anterior = meses[-1]
     if anterior["arquivo"] == "index.html" and os.path.exists(INDEX_HTML_PATH):
         novo_nome_congelado = f"{anterior['id']}.html"
-        shutil.copyfile(INDEX_HTML_PATH, os.path.join(REPO_DIR, novo_nome_congelado))
+        caminho_congelado = os.path.join(REPO_DIR, novo_nome_congelado)
+        shutil.copyfile(INDEX_HTML_PATH, caminho_congelado)
         anterior["arquivo"] = novo_nome_congelado
-        print(f"   Mês {anterior['id']} congelado em {novo_nome_congelado} (não muda mais).")
+        print(f"   Mês {anterior['id']} congelado em {novo_nome_congelado} (snapshot do último horário rodado).")
+        try:
+            produto_familia = refazer_fechamento_do_mes(
+                anterior["id"], caminho_congelado, fam_nome_cache, vend_nome_cache, produto_familia)
+        except Exception as e:
+            print(f"!! Recomputo do fechamento de {anterior['id']} falhou ({e}) — "
+                  f"mantendo o snapshot cru do último horário rodado, sem travar a virada de mês.")
     meses.append({"id": MES_ATUAL_ID, "label": f"{NOME_MES_PT[MES]} {ANO}", "arquivo": "index.html"})
     gerar_index_novo_mes()
     salvar_meses(meses)
     print(f"   index.html novo criado para {MES_ATUAL_ID}.")
-    return meses
+    return meses, produto_familia
 
 
 # Feriados nacionais/confirmados que NÃO contam como dia útil (nem para o total de
@@ -213,26 +237,37 @@ def call(url_path, call_name, param, app_key, app_secret, retries=8):
 # ----------------------------------------------------------------------------
 # 1) NF-e emitidas no mês corrente (Realizado)
 # ----------------------------------------------------------------------------
+def _listar_nf_tipo(app_key, app_secret, d_ini, d_fim, tp_nf):
+    todas = []
+    pagina = 1
+    while True:
+        r = call("produtos/nfconsultar", "ListarNF", {
+            "pagina": pagina, "registros_por_pagina": 50,
+            "dEmiInicial": d_ini, "dEmiFinal": d_fim,
+            "tpNF": tp_nf, "tpAmb": "1",
+        }, app_key, app_secret)
+        todas.extend(r.get("nfCadastro", []))
+        if pagina >= r.get("total_de_paginas", 1):
+            break
+        pagina += 1
+        time.sleep(1.0)
+    return todas
+
+
 def buscar_nf():
+    """Busca as notas do período corrente. Desde 03/09/2026 busca tpNF="1" (saída — vendas)
+    E tpNF="0" (entrada) — antes só se buscava saída, e por isso NENHUMA devolução de venda
+    de cliente (que é sempre uma nota de ENTRADA) jamais tinha sido capturada pelo robô, em
+    nenhum mês (achado cruzando agosto com o relatório do financeiro, 03/09/2026)."""
     dados = {}
     d_ini = f"01/{MES:02d}/{ANO}"
     d_fim = HOJE.strftime("%d/%m/%Y")
     for empresa, (app_key, app_secret) in EMPRESAS.items():
-        todas = []
-        pagina = 1
-        while True:
-            r = call("produtos/nfconsultar", "ListarNF", {
-                "pagina": pagina, "registros_por_pagina": 50,
-                "dEmiInicial": d_ini, "dEmiFinal": d_fim,
-                "tpNF": "1", "tpAmb": "1",
-            }, app_key, app_secret)
-            todas.extend(r.get("nfCadastro", []))
-            if pagina >= r.get("total_de_paginas", 1):
-                break
-            pagina += 1
-            time.sleep(1.0)
-        dados[empresa] = todas
-        print(f"{empresa} NFs: {len(todas)}")
+        saida = _listar_nf_tipo(app_key, app_secret, d_ini, d_fim, "1")
+        time.sleep(1.0)
+        entrada = _listar_nf_tipo(app_key, app_secret, d_ini, d_fim, "0")
+        dados[empresa] = {"saida": saida, "entrada": entrada}
+        print(f"{empresa} NFs: {len(saida)} saída, {len(entrada)} entrada")
         time.sleep(1.0)
     return dados
 
@@ -340,11 +375,17 @@ def confirmar_etapa_ao_vivo(empresa, nIdPedido):
 
     Motivo (achado em 01/09/2026, cruzando o fechamento de agosto com o relatório oficial
     da OMIE a pedido da Thais): o pedido papeis/5110935412 (NF 00020009, R$120,24) tinha,
-    no histórico de pedidoetapas, um registro desatualizado mostrando etapa de Faturado —
-    mas o estado ao vivo do pedido já tinha avançado pra etapa 70, que pela regra
-    documentada (Seção 2-A: "nunca usar etapa 70 da Papéis sem validar de novo") NÃO conta
-    como Realizado. O histórico ficou "para trás" e o pedido foi contado errado.
-    Essa função faz uma segunda checagem, ao vivo, pra pegar exatamente esse tipo de caso.
+    no histórico de pedidoetapas, um registro desatualizado mostrando uma etapa antiga —
+    o estado ao vivo já tinha avançado, e o histórico paginado ficou "para trás". Essa função
+    faz uma segunda checagem, ao vivo, pra pegar exatamente esse tipo de caso.
+
+    Nota sobre a etapa "70" da Papéis (atualizado em 03/09/2026): até 02/09/2026 essa etapa
+    era tratada como excluída do Realizado pra Papéis (só 60/80 contavam). Cruzando outro caso
+    real (NF 00019902, R$309,12, pedido em etapa 70, Autorizada e presente no relatório oficial
+    do financeiro) a Thais confirmou a regra de ouro do projeto: "siga o do financeiro, o dele
+    é sempre o correto" — então a etapa 70 passou a contar também pra Papéis (ver
+    REALIZADO_ETAPAS). Essa checagem ao vivo continua existindo pra pegar histórico desatualizado
+    em qualquer etapa, não só a 70.
     Cacheada por pedido pra não repetir a mesma chamada em NFs com múltiplos itens.
     """
     key = (empresa, nIdPedido)
@@ -384,7 +425,7 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
     corrigidos_pelo_vivo = 0
     resgatados_pelo_vivo = 0
     for empresa in nf_dados:
-        for nf in nf_dados[empresa]:
+        for nf in nf_dados[empresa]["saida"]:
             if nf["ide"].get("cDeneg") != "N" or nf["ide"].get("dCan"):
                 continue
             nIdPedido = nf["compl"].get("nIdPedido")
@@ -420,9 +461,37 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
                     "empresa": empresa, "nota": nf["ide"]["nNF"], "cfop": cfop,
                     "valor": item["prod"]["vProd"],
                     "cod_produto": item["nfProdInt"]["nCodProd"], "cod_vend": cod_vend,
+                    "is_devolucao": False, "data_fatura": nf["ide"].get("dEmi", ""),
                 })
+
+        # Devoluções de venda (nota de ENTRADA — cliente devolvendo mercadoria). Não passa
+        # pelo filtro de etapa do pedido: a devolução, uma vez Autorizada, já é o fato fiscal
+        # completo por si só (o pedido de origem pode até já não existir mais na etapa viva).
+        # Adicionado em 03/09/2026 — antes essas notas nem eram buscadas (ver buscar_nf).
+        devolucoes_achadas = 0
+        for nf in nf_dados[empresa]["entrada"]:
+            if nf["ide"].get("cDeneg") != "N" or nf["ide"].get("dCan"):
+                continue
+            cod_vend = None
+            if nf.get("titulos"):
+                cod_vend = nf["titulos"][0].get("nCodVendedor")
+            for item in nf["det"]:
+                cfop = item["prod"]["CFOP"]
+                if cfop not in CFOP_DEVOLUCAO_VENDA:
+                    continue
+                linhas.append({
+                    "empresa": empresa, "nota": nf["ide"]["nNF"], "cfop": cfop,
+                    "valor": -abs(item["prod"]["vProd"]),
+                    "cod_produto": item["nfProdInt"]["nCodProd"], "cod_vend": cod_vend,
+                    "is_devolucao": True, "data_fatura": nf["ide"].get("dEmi", ""),
+                })
+                devolucoes_achadas += 1
+        if devolucoes_achadas:
+            print(f"{empresa}: {devolucoes_achadas} linha(s) de devolução de venda encontrada(s)")
+
     total = sum(l["valor"] for l in linhas)
-    print(f"Realizado — Linhas incluidas: {len(linhas)}  Total: {round(total, 2)}")
+    total_dev = sum(l["valor"] for l in linhas if l["is_devolucao"])
+    print(f"Realizado — Linhas incluidas: {len(linhas)}  Total: {round(total, 2)} (devoluções: {round(total_dev, 2)})")
     print(f"Itens SEM info de etapa: {len(sem_etapa)}")
     if corrigidos_pelo_vivo or resgatados_pelo_vivo:
         print(f"Confirmação ao vivo: {corrigidos_pelo_vivo} excluído(s) por etapa desatualizada, "
@@ -467,12 +536,19 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
     def montar_real(l):
         vend = nome_vendedor(l["empresa"], l["cod_vend"])
         is_ml = (vend == "Mercado Livre")
+        # Antes de 03/09/2026 "operacao" vinha sempre fixo em "Orçamento", mesmo pra devolução
+        # de venda — isso fazia a devolução (quando existia) cair junto do faturado em vez de
+        # ser contada à parte, e a HUB nunca enxergava devolução nenhuma. Agora reflete o que
+        # a linha realmente é.
         return {
             "familia": nome_familia(l["empresa"], l["cod_produto"]),
             "vendedor": "Jéssica" if is_ml else vend, "is_ml": is_ml,
             "nota_fiscal": l["nota"], "pedido": None, "situacao": "Autorizado",
-            "empresa": l["empresa"], "operacao": "Orçamento", "cfop": l["cfop"], "total": l["valor"],
+            "empresa": l["empresa"],
+            "operacao": "Devolução de Venda" if l.get("is_devolucao") else "Orçamento",
+            "cfop": l["cfop"], "total": l["valor"],
             "data_previsao": "",  # não se aplica ao faturado — já tem nota fiscal emitida
+            "data_fatura": l.get("data_fatura", ""),  # data de emissão da nota (venda ou devolução)
         }
 
     def montar_prev(l):
@@ -484,6 +560,7 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
             "nota_fiscal": "N/D", "pedido": l["pedido"], "situacao": "Aguardando faturamento",
             "empresa": l["empresa"], "operacao": "Orçamento", "cfop": l["cfop"], "total": l["valor"],
             "data_previsao": l.get("data_previsao", ""),
+            "data_fatura": "",  # não se aplica ao previsto — ainda não tem nota emitida
         }
 
     real_rows = [montar_real(l) for l in linhas_real]
@@ -706,7 +783,8 @@ def montar_data(real_rows, prev_rows):
             vf[key] = vf.get(key, 0.0) + r["total"]
         return [{"Vendedor": k[0], "Família de Produto": k[1], "Total de Mercadoria": round(v, 2)} for k, v in vf.items()]
 
-    raw_cols = ["familia", "vendedor", "nota_fiscal", "pedido", "situacao", "empresa", "operacao", "cfop", "total", "data_previsao"]
+    raw_cols = ["familia", "vendedor", "nota_fiscal", "pedido", "situacao", "empresa", "operacao", "cfop", "total",
+                "data_previsao", "data_fatura"]
 
     return {
         "totais": totais,
@@ -723,18 +801,127 @@ def montar_data(real_rows, prev_rows):
     }
 
 
+# ----------------------------------------------------------------------------
+# 8) Recomputo de mês fechado (desde 03/09/2026): quando o mês vira, além de congelar o
+# último snapshot rodado, o robô refaz esse mês do zero com dados frescos da OMIE. Isso
+# existe pra pegar nota emitida (ou pedido que avançou de etapa) DEPOIS do último horário
+# programado do último dia do mês — o robô só roda até um horário fixo, a operação não.
+# Usa monkeypatch temporário das globais de período (MES/ANO/HOJE/etc) e das metas, pra
+# reaproveitar as mesmas funções de busca/montagem do mês corrente sem duplicar lógica —
+# e desfaz tudo no final (bloco finally), mesmo se der erro no meio.
+# ----------------------------------------------------------------------------
+def recomputar_mes_fechado(ano, mes, meta_geral_hist, grupos_metas_hist, hub_meta_hist,
+                            fam_nome_cache, vend_nome_cache, produto_familia):
+    global MES, ANO, HOJE, ULTIMO_DIA_MES, INICIO_PREVISAO, LIMITE_PREVISAO
+    global DIAS_UTEIS_TOTAL, DIAS_UTEIS_DECORRIDOS, DIAS_UTEIS_RESTANTES, ESPERADO_PCT
+    global META_GERAL, HUB_META
+
+    estado_anterior = dict(
+        MES=MES, ANO=ANO, HOJE=HOJE, ULTIMO_DIA_MES=ULTIMO_DIA_MES,
+        INICIO_PREVISAO=INICIO_PREVISAO, LIMITE_PREVISAO=LIMITE_PREVISAO,
+        DIAS_UTEIS_TOTAL=DIAS_UTEIS_TOTAL, DIAS_UTEIS_DECORRIDOS=DIAS_UTEIS_DECORRIDOS,
+        DIAS_UTEIS_RESTANTES=DIAS_UTEIS_RESTANTES, ESPERADO_PCT=ESPERADO_PCT,
+        META_GERAL=META_GERAL, HUB_META=HUB_META,
+    )
+    metas_grupos_anteriores = [g["meta"] for g in GRUPOS]
+    try:
+        ultimo_dia = calendar.monthrange(ano, mes)[1]
+        MES, ANO = mes, ano
+        ULTIMO_DIA_MES = ultimo_dia
+        HOJE = datetime.date(ano, mes, ultimo_dia)  # janela de busca fecha no último dia DAQUELE mês
+        INICIO_PREVISAO = datetime.datetime(ano, mes, 1)
+        LIMITE_PREVISAO = datetime.datetime(ano, mes, ultimo_dia)
+        DIAS_UTEIS_TOTAL = dias_uteis_no_intervalo(datetime.date(ano, mes, 1), datetime.date(ano, mes, ultimo_dia))
+        DIAS_UTEIS_DECORRIDOS = DIAS_UTEIS_TOTAL  # mês fechado: decorrido = total
+        DIAS_UTEIS_RESTANTES = 1  # mês fechado não tem "restante" de verdade — só evita divisão por zero
+        ESPERADO_PCT = 1.0
+        META_GERAL = meta_geral_hist
+        for g in GRUPOS:
+            if g["id"] in grupos_metas_hist:
+                g["meta"] = grupos_metas_hist[g["id"]]
+        HUB_META = hub_meta_hist
+
+        nf_dados = buscar_nf()
+        etapas_matriz = buscar_etapas("matriz")
+        etapas_papeis = buscar_etapas("papeis")
+        pedidos_previsao = buscar_previsao()
+
+        linhas_prev = montar_linhas_previsao(pedidos_previsao)
+        linhas_real = montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis)
+
+        produto_familia = atualizar_cache_familias(linhas_real, linhas_prev, produto_familia)
+        real_rows, prev_rows = montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia)
+        data = montar_data(real_rows, prev_rows)
+        return data, produto_familia
+    finally:
+        MES = estado_anterior["MES"]; ANO = estado_anterior["ANO"]; HOJE = estado_anterior["HOJE"]
+        ULTIMO_DIA_MES = estado_anterior["ULTIMO_DIA_MES"]
+        INICIO_PREVISAO = estado_anterior["INICIO_PREVISAO"]; LIMITE_PREVISAO = estado_anterior["LIMITE_PREVISAO"]
+        DIAS_UTEIS_TOTAL = estado_anterior["DIAS_UTEIS_TOTAL"]
+        DIAS_UTEIS_DECORRIDOS = estado_anterior["DIAS_UTEIS_DECORRIDOS"]
+        DIAS_UTEIS_RESTANTES = estado_anterior["DIAS_UTEIS_RESTANTES"]
+        ESPERADO_PCT = estado_anterior["ESPERADO_PCT"]
+        META_GERAL = estado_anterior["META_GERAL"]; HUB_META = estado_anterior["HUB_META"]
+        for g, meta_orig in zip(GRUPOS, metas_grupos_anteriores):
+            g["meta"] = meta_orig
+
+
+def refazer_fechamento_do_mes(mes_id, caminho_arquivo, fam_nome_cache, vend_nome_cache, produto_familia):
+    """Lê o arquivo recém-congelado, pega as metas que ele já tinha (não usa a meta do mês
+    novo!), reprocessa aquele mês do zero com dados frescos da OMIE e regrava só o bloco
+    DATA desse arquivo — sem tocar em mais nada (layout, seletor de mês, etc)."""
+    with open(caminho_arquivo, "r", encoding="utf-8") as f:
+        html = f.read()
+    m = re.search(r"const DATA = (\{.*?\});\n", html, re.S)
+    if not m:
+        raise RuntimeError("não achei o bloco 'const DATA = {...};' no arquivo congelado")
+    data_antiga = json.loads(m.group(1))
+    ano, mes = (int(x) for x in mes_id.split("-"))
+    meta_geral_hist = data_antiga["totais"]["meta"]
+    grupos_metas_hist = {g["id"]: g["meta"] for g in data_antiga["grupos_familia"] if g.get("meta")}
+    hub_grp_antigo = next((g for g in data_antiga["grupos_familia"] if g["id"] == "pigatto_hub"), None)
+    hub_meta_hist = hub_grp_antigo["meta"] if hub_grp_antigo else HUB_META
+
+    data_novo, produto_familia = recomputar_mes_fechado(
+        ano, mes, meta_geral_hist, grupos_metas_hist, hub_meta_hist,
+        fam_nome_cache, vend_nome_cache, produto_familia,
+    )
+
+    # Mesma checagem de consistência do main() — se não bater, mantém o snapshot antigo
+    # em vez de publicar um recomputo quebrado.
+    hub_grp_novo = next((g for g in data_novo["grupos_familia"] if g["id"] == "pigatto_hub"), None)
+    hub_fat_dev = (hub_grp_novo["faturado_total"] + hub_grp_novo["devolucoes_total"]) if hub_grp_novo else 0.0
+    soma_vend = round(sum(v["total"] for v in data_novo["vend_real"]), 2)
+    soma_fat_dev = round(data_novo["totais"]["faturado"] + data_novo["totais"]["devolucoes"] + hub_fat_dev, 2)
+    if abs(soma_vend - soma_fat_dev) > 0.5:
+        raise RuntimeError(f"validação falhou no recomputo de {mes_id} ({soma_vend} vs {soma_fat_dev})")
+
+    novo_html, n = re.subn(
+        r"const DATA = \{.*?\};\n", "const DATA = " + json.dumps(data_novo, ensure_ascii=False) + ";\n",
+        html, count=1, flags=re.S,
+    )
+    if n != 1:
+        raise RuntimeError(f"não consegui regravar o bloco DATA de {mes_id}")
+    with open(caminho_arquivo, "w", encoding="utf-8") as f:
+        f.write(novo_html)
+    print(f"   {mes_id}: recomputado com dados frescos da OMIE (regras corrigidas em 03/09/2026).")
+    return produto_familia
+
+
 def main():
-    # Vira o mês? Congela o mês anterior e nasce um index.html novo antes de mais nada.
-    meses = checar_virada_de_mes()
+    fam_nome_cache = json.load(open(CACHE_FAM_NOME, encoding="utf-8"))
+    vend_nome_cache = json.load(open(CACHE_VEND_NOME, encoding="utf-8"))
+    produto_familia = json.load(open(CACHE_PRODUTO_FAMILIA, encoding="utf-8"))
+
+    # Vira o mês? Congela o mês anterior, refaz esse fechamento com dados frescos da OMIE
+    # e nasce um index.html novo — antes de mais nada. (Precisa dos caches carregados
+    # acima porque o recomputo do mês fechado usa as mesmas funções de busca/montagem.)
+    meses, produto_familia = checar_virada_de_mes(fam_nome_cache, vend_nome_cache, produto_familia)
     if meses:
         for m in meses:
             caminho = os.path.join(REPO_DIR, m["arquivo"])
             if os.path.exists(caminho):
                 atualizar_seletor_mes_no_arquivo(caminho, meses)
-
-    fam_nome_cache = json.load(open(CACHE_FAM_NOME, encoding="utf-8"))
-    vend_nome_cache = json.load(open(CACHE_VEND_NOME, encoding="utf-8"))
-    produto_familia = json.load(open(CACHE_PRODUTO_FAMILIA, encoding="utf-8"))
 
     nf_dados = buscar_nf()
     etapas_matriz = buscar_etapas("matriz")
@@ -781,5 +968,33 @@ def main():
     print("index.html atualizado com sucesso.")
 
 
+def reprocessar_mes_manual(mes_id):
+    """Caminho separado, disparado manualmente (ver workflow_dispatch, input
+    'reprocessar_mes'): reprocessa do zero um mês JÁ FECHADO específico (ex: '2026-08'),
+    usando dados frescos da OMIE com as regras corrigidas em 03/09/2026. Não mexe no
+    index.html do mês corrente nem depende de ter havido virada de mês agora — serve pra
+    corrigir um mês fechado sob demanda, uma vez, quando precisar (ex: cruzou com o
+    financeiro e achou divergência)."""
+    meses = carregar_meses()
+    alvo = next((m for m in meses if m["id"] == mes_id), None)
+    if alvo is None:
+        print(f"!! Mês {mes_id} não encontrado em meses.json. Nada a fazer.")
+        sys.exit(1)
+    caminho = os.path.join(REPO_DIR, alvo["arquivo"])
+    if not os.path.exists(caminho):
+        print(f"!! Arquivo {alvo['arquivo']} não encontrado. Nada a fazer.")
+        sys.exit(1)
+    fam_nome_cache = json.load(open(CACHE_FAM_NOME, encoding="utf-8"))
+    vend_nome_cache = json.load(open(CACHE_VEND_NOME, encoding="utf-8"))
+    produto_familia = json.load(open(CACHE_PRODUTO_FAMILIA, encoding="utf-8"))
+    produto_familia = refazer_fechamento_do_mes(mes_id, caminho, fam_nome_cache, vend_nome_cache, produto_familia)
+    json.dump(produto_familia, open(CACHE_PRODUTO_FAMILIA, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"Reprocessamento manual de {mes_id} concluído com sucesso.")
+
+
 if __name__ == "__main__":
-    main()
+    _mes_manual = os.environ.get("REPROCESSAR_MES", "").strip()
+    if _mes_manual:
+        reprocessar_mes_manual(_mes_manual)
+    else:
+        main()
