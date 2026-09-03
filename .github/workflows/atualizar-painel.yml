@@ -13,7 +13,13 @@ on:
     - cron: '0 20 * * *'   # 17:00 SP
     - cron: '30 20 * * *'  # 17:30 SP
     - cron: '0 21 * * *'   # 18:00 SP
-  workflow_dispatch: {}
+    - cron: '59 2 * * *'   # 23:59 SP (do dia anterior em UTC, roda todo dia)
+  workflow_dispatch:
+    inputs:
+      reprocessar_mes:
+        description: 'Só preencher pra CORRIGIR um mês já fechado (ex: 2026-08). Deixe em branco pra rodar normal (mês corrente).'
+        required: false
+        default: ''
 permissions:
   contents: write
 concurrency:
@@ -22,7 +28,7 @@ concurrency:
 jobs:
   atualizar:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v4
@@ -36,12 +42,14 @@ jobs:
           OMIE_MATRIZ_APP_SECRET: ${{ secrets.OMIE_MATRIZ_APP_SECRET }}
           OMIE_PAPEIS_APP_KEY: ${{ secrets.OMIE_PAPEIS_APP_KEY }}
           OMIE_PAPEIS_APP_SECRET: ${{ secrets.OMIE_PAPEIS_APP_SECRET }}
+          REPROCESSAR_MES: ${{ github.event.inputs.reprocessar_mes }}
         run: python automacao/atualizar_painel.py
       - name: Publicar (commit + push) só se algo mudou
         run: |
           git config user.name "Painel Pigatto (robô)"
           git config user.email "actions@github.com"
-          git add index.html automacao/produto_familia_cache.json
+          git add index.html meses.json automacao/produto_familia_cache.json
+          git add -- *.html
           if git diff --cached --quiet; then
             echo "Nada mudou desde a última atualização."
           else
