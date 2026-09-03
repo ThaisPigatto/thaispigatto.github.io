@@ -14,6 +14,7 @@ CONFIG que precisa de ajuste manual (1x por mês, no início do mês):
 import json
 import os
 import re
+import shutil
 import sys
 import time
 import urllib.request
@@ -25,6 +26,8 @@ import zoneinfo
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(BASE_DIR)
 INDEX_HTML_PATH = os.path.join(REPO_DIR, "index.html")
+TEMPLATE_HTML_PATH = os.path.join(BASE_DIR, "template_painel.html")
+MESES_JSON_PATH = os.path.join(REPO_DIR, "meses.json")
 
 CACHE_FAM_NOME = os.path.join(BASE_DIR, "fam_nome_cache.json")
 CACHE_VEND_NOME = os.path.join(BASE_DIR, "vend_nome_cache.json")
@@ -34,7 +37,7 @@ CACHE_PRODUTO_FAMILIA = os.path.join(BASE_DIR, "produto_familia_cache.json")
 # CONFIG — ajustar manualmente quando a meta do mês mudar (normalmente só
 # no começo de cada mês). O resto (dias úteis, datas) é calculado sozinho.
 # ----------------------------------------------------------------------------
-META_GERAL = 1575000  # a partir de set/2026 já inclui a meta da HUB (100.000) — pedido Thais 01/09/2026
+META_GERAL = 1475000  # só os 4 grupos (870+105+200+300) — HUB tem meta própria, separada (Thais, 02/09/2026)
 GRUPOS = [
     {"id": "adesivos", "cor": "#C0392B", "meta": 870000,
      "familias": ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT"],
@@ -67,7 +70,95 @@ AGORA = datetime.datetime.now(TZ_SP)
 HOJE = AGORA.date()
 MES, ANO = HOJE.month, HOJE.year
 ULTIMO_DIA_MES = calendar.monthrange(ANO, MES)[1]
+INICIO_PREVISAO = datetime.datetime(ANO, MES, 1)
 LIMITE_PREVISAO = datetime.datetime(ANO, MES, ULTIMO_DIA_MES)
+
+# ----------------------------------------------------------------------------
+# Virada de mês automática (desde 02/09/2026, pedido da Thais): o robô mesmo detecta
+# quando o mês mudou, congela o index.html do mês anterior num arquivo separado
+# (ex: 2026-09.html) e já nasce um index.html novo para o mês corrente, atualizando o
+# seletor "Agosto / Setembro / ..." em TODOS os arquivos de mês existentes. Não precisa
+# mais eu (Claude) gerar isso na mão todo início de mês.
+# ----------------------------------------------------------------------------
+MES_ATUAL_ID = f"{ANO:04d}-{MES:02d}"
+NOME_MES_PT = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho",
+    7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+}
+
+
+def carregar_meses():
+    if os.path.exists(MESES_JSON_PATH):
+        with open(MESES_JSON_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+
+def salvar_meses(meses):
+    with open(MESES_JSON_PATH, "w", encoding="utf-8") as f:
+        json.dump(meses, f, ensure_ascii=False, indent=2)
+
+
+def atualizar_seletor_mes_no_arquivo(caminho, meses):
+    """Reescreve só a linha 'const MESES_DISPONIVEIS = [...]' de um arquivo de mês
+    (index.html atual ou um arquivo congelado), sem tocar em mais nada — inclusive um
+    arquivo já congelado pode e deve continuar recebendo essa atualização, pra sempre
+    listar todos os meses (inclusive os que vierem depois dele)."""
+    with open(caminho, "r", encoding="utf-8") as f:
+        html = f.read()
+    meses_json_str = json.dumps(meses, ensure_ascii=False)
+    new_html, n = re.subn(
+        r"const MESES_DISPONIVEIS = \[.*?\];\n",
+        "const MESES_DISPONIVEIS = " + meses_json_str + ";\n",
+        html, count=1, flags=re.S,
+    )
+    if n == 1 and new_html != html:
+        with open(caminho, "w", encoding="utf-8") as f:
+            f.write(new_html)
+        return True
+    return False
+
+
+def gerar_index_novo_mes():
+    """Cria um index.html do zero (a partir do template) pro mês corrente, quando
+    o mês vira. O DATA é preenchido depois, no fluxo normal do main()."""
+    with open(TEMPLATE_HTML_PATH, "r", encoding="utf-8") as f:
+        tpl = f.read()
+    titulo_mes = f"{NOME_MES_PT[MES]}/{ANO}"
+    range_mes = f"01/{MES:02d} a {ULTIMO_DIA_MES:02d}/{MES:02d}"
+    html = tpl.replace("__PIGATTO_TITULO_MES__", titulo_mes)
+    html = html.replace("__PIGATTO_RANGE_MES__", range_mes)
+    html = html.replace("__PIGATTO_MES_ATUAL_ID__", MES_ATUAL_ID)
+    html = html.replace("const MESES_DISPONIVEIS = __PIGATTO_MESES_JSON__;\n", "const MESES_DISPONIVEIS = [];\n")
+    html = html.replace("const DATA = __PIGATTO_DATA_JSON__;\n", "const DATA = {};\n")
+    with open(INDEX_HTML_PATH, "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+def checar_virada_de_mes():
+    """Se o mês corrente ainda não está registrado em meses.json, congela o index.html
+    de hoje (que é do mês anterior) num arquivo separado e cria um index.html novo."""
+    meses = carregar_meses()
+    if not meses:
+        # meses.json não existe ainda (primeira vez que essa lógica roda) — não inventa
+        # nada sozinho pra trás; só continua sem mexer no index.html atual. A Thais
+        # semeia o meses.json manualmente 1x com o histórico já existente.
+        print("!! meses.json não encontrado — virada de mês automática desativada até ele existir.")
+        return meses
+    if any(m["id"] == MES_ATUAL_ID for m in meses):
+        return meses  # mês corrente já está registrado, nada a fazer
+    print(f">> Virada de mês detectada: {MES_ATUAL_ID} ainda não existe em meses.json.")
+    anterior = meses[-1]
+    if anterior["arquivo"] == "index.html" and os.path.exists(INDEX_HTML_PATH):
+        novo_nome_congelado = f"{anterior['id']}.html"
+        shutil.copyfile(INDEX_HTML_PATH, os.path.join(REPO_DIR, novo_nome_congelado))
+        anterior["arquivo"] = novo_nome_congelado
+        print(f"   Mês {anterior['id']} congelado em {novo_nome_congelado} (não muda mais).")
+    meses.append({"id": MES_ATUAL_ID, "label": f"{NOME_MES_PT[MES]} {ANO}", "arquivo": "index.html"})
+    gerar_index_novo_mes()
+    salvar_meses(meses)
+    print(f"   index.html novo criado para {MES_ATUAL_ID}.")
+    return meses
 
 
 # Feriados nacionais/confirmados que NÃO contam como dia útil (nem para o total de
@@ -214,7 +305,12 @@ def montar_linhas_previsao(pedidos_por_empresa):
                 dp = datetime.datetime.strptime(cab.get("data_previsao", ""), "%d/%m/%Y")
             except Exception:
                 pass
-            if dp is None or dp > LIMITE_PREVISAO:
+            # Só conta como "Previsto" do mês corrente o que tem data de previsão DENTRO do mês
+            # (>= dia 1 e <= último dia). Pedido com previsão atrasada de mês anterior, ainda
+            # aberto (não cancelado, não faturado), NÃO entra aqui — mesma lógica do que foi
+            # decidido pra etapa "10" em agosto/2026: previsão vencida não é previsão confiável
+            # do mês. Confirmado por Thais, 02/09/2026.
+            if dp is None or dp > LIMITE_PREVISAO or dp < INICIO_PREVISAO:
                 continue
             cod_vend = p.get("informacoes_adicionais", {}).get("codVend")
             for item in p.get("det", []):
@@ -225,6 +321,7 @@ def montar_linhas_previsao(pedidos_por_empresa):
                     "empresa": empresa, "pedido": cab["numero_pedido"], "cfop": cfop,
                     "valor": item["produto"]["valor_mercadoria"],
                     "cod_produto": item["produto"]["codigo_produto"], "cod_vend": cod_vend,
+                    "data_previsao": dp.strftime("%d/%m/%Y"),
                 })
     total = sum(l["valor"] for l in linhas)
     print(f"Previsao — Linhas: {len(linhas)} Total: {round(total, 2)}")
@@ -375,6 +472,7 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
             "vendedor": "Jéssica" if is_ml else vend, "is_ml": is_ml,
             "nota_fiscal": l["nota"], "pedido": None, "situacao": "Autorizado",
             "empresa": l["empresa"], "operacao": "Orçamento", "cfop": l["cfop"], "total": l["valor"],
+            "data_previsao": "",  # não se aplica ao faturado — já tem nota fiscal emitida
         }
 
     def montar_prev(l):
@@ -385,6 +483,7 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
             "vendedor": "Jéssica" if is_ml else vend, "is_ml": is_ml,
             "nota_fiscal": "N/D", "pedido": l["pedido"], "situacao": "Aguardando faturamento",
             "empresa": l["empresa"], "operacao": "Orçamento", "cfop": l["cfop"], "total": l["valor"],
+            "data_previsao": l.get("data_previsao", ""),
         }
 
     real_rows = [montar_real(l) for l in linhas_real]
@@ -506,9 +605,12 @@ def montar_data(real_rows, prev_rows):
     hub_prev_v = sum(r["total"] for r in ml_prev + lic_prev)
     hub_prevfat = hub_fat + hub_dev + hub_prev_v
 
-    tot_fat = sum(g["faturado_total"] for g in grupos_familia_out) + hub_fat
-    tot_prev = sum(g["previsto_total"] for g in grupos_familia_out) + hub_prev_v
-    tot_dev = sum(g["devolucoes_total"] for g in grupos_familia_out) + hub_dev
+    # HUB tem meta própria e NÃO entra no total geral da empresa (voltou pra regra original em
+    # 02/09/2026 — só durou 1 dia a versão que somava). hub_fat/hub_prev_v/hub_dev continuam
+    # calculados aqui só porque precisam existir antes, pro bloco "pigatto_hub" mais abaixo.
+    tot_fat = sum(g["faturado_total"] for g in grupos_familia_out)
+    tot_prev = sum(g["previsto_total"] for g in grupos_familia_out)
+    tot_dev = sum(g["devolucoes_total"] for g in grupos_familia_out)
     tot_prevfat = tot_fat + tot_prev + tot_dev
     grupos_familia_out.append({
         "id": "total_geral", "cor": "#122038", "meta": META_GERAL,
@@ -604,7 +706,7 @@ def montar_data(real_rows, prev_rows):
             vf[key] = vf.get(key, 0.0) + r["total"]
         return [{"Vendedor": k[0], "Família de Produto": k[1], "Total de Mercadoria": round(v, 2)} for k, v in vf.items()]
 
-    raw_cols = ["familia", "vendedor", "nota_fiscal", "pedido", "situacao", "empresa", "operacao", "cfop", "total"]
+    raw_cols = ["familia", "vendedor", "nota_fiscal", "pedido", "situacao", "empresa", "operacao", "cfop", "total", "data_previsao"]
 
     return {
         "totais": totais,
@@ -622,6 +724,14 @@ def montar_data(real_rows, prev_rows):
 
 
 def main():
+    # Vira o mês? Congela o mês anterior e nasce um index.html novo antes de mais nada.
+    meses = checar_virada_de_mes()
+    if meses:
+        for m in meses:
+            caminho = os.path.join(REPO_DIR, m["arquivo"])
+            if os.path.exists(caminho):
+                atualizar_seletor_mes_no_arquivo(caminho, meses)
+
     fam_nome_cache = json.load(open(CACHE_FAM_NOME, encoding="utf-8"))
     vend_nome_cache = json.load(open(CACHE_VEND_NOME, encoding="utf-8"))
     produto_familia = json.load(open(CACHE_PRODUTO_FAMILIA, encoding="utf-8"))
@@ -641,10 +751,15 @@ def main():
 
     data = montar_data(real_rows, prev_rows)
 
+    # soma_vend (vend_real) inclui TODO mundo, inclusive a HUB/Jéssica. Desde 02/09/2026 a HUB
+    # tem meta própria e não entra em data["totais"] (total geral da empresa) — então o total
+    # "esperado" pra bater com soma_vend precisa somar de volta o faturado+devolução da HUB.
+    hub_grp = next((g for g in data["grupos_familia"] if g["id"] == "pigatto_hub"), None)
+    hub_fat_dev = (hub_grp["faturado_total"] + hub_grp["devolucoes_total"]) if hub_grp else 0.0
     soma_vend = round(sum(v["total"] for v in data["vend_real"]), 2)
-    soma_fat_dev = round(data["totais"]["faturado"] + data["totais"]["devolucoes"], 2)
+    soma_fat_dev = round(data["totais"]["faturado"] + data["totais"]["devolucoes"] + hub_fat_dev, 2)
     print(f"Total geral faturado: {data['totais']['faturado']} | previsto: {data['totais']['previsto']}")
-    print(f"Soma vend_real: {soma_vend} vs faturado+dev: {soma_fat_dev}")
+    print(f"Soma vend_real: {soma_vend} vs faturado+dev (+HUB): {soma_fat_dev}")
 
     if abs(soma_vend - soma_fat_dev) > 0.5:
         print("!! VALIDAÇÃO FALHOU: soma por vendedor não bate com o total geral. Abortando sem publicar.")
