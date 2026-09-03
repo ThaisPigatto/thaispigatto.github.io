@@ -189,7 +189,12 @@ def checar_virada_de_mes(fam_nome_cache, vend_nome_cache, produto_familia):
 # dias úteis do mês, nem para "dias decorridos"/ESPERADO, nem para "dias restantes").
 # Adicionar aqui manualmente conforme confirmado — nunca supor feriado sem confirmação.
 FERIADOS = {
-    datetime.date(2026, 9, 7),  # Independência do Brasil — confirmado por Thais (01/09/2026)
+    datetime.date(2026, 9, 7),   # Independência do Brasil — confirmado por Thais (01/09/2026)
+    datetime.date(2026, 10, 12),  # Nossa Senhora Aparecida — confirmado por Thais (03/09/2026)
+    datetime.date(2026, 11, 2),   # Finados — confirmado por Thais (03/09/2026)
+    datetime.date(2026, 11, 15),  # Proclamação da República — confirmado por Thais (03/09/2026)
+    datetime.date(2026, 11, 20),  # Consciência Negra — confirmado por Thais (03/09/2026)
+    datetime.date(2026, 12, 25),  # Natal — confirmado por Thais (03/09/2026)
 }
 
 
