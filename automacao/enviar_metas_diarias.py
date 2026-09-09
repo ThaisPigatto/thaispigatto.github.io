@@ -319,7 +319,7 @@ def montar_email_gestores_html(data):
 
     ranking_html = f"""
     <div style="font-weight:700;color:{COR_GERAL};margin-bottom:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;">
-      Desempenho por vendedor (% Faturado da meta da família, do melhor para o pior)
+      Ranking por % Faturado da meta da família
     </div>
     <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:13.5px;">
       {linhas_ranking}
@@ -333,7 +333,7 @@ def montar_email_gestores_texto(data):
     t = data["totais"]
     linhas = ranking_vendedores(data)
     ranking_txt = "\n".join(
-        f"{i+1}. {v}: {fmt_pct(pct)} da meta da família" for i, (v, pct) in enumerate(linhas)
+        f"{i+1}º {v}: {fmt_pct(pct)} da meta da família" for i, (v, pct) in enumerate(linhas)
     )
     falta = max(t["meta"] - (t["faturado"] + t["devolucoes"]), 0)
     falta_pct = (1 - t["realizado_pct"]) if t.get("realizado_pct") is not None else None
@@ -342,7 +342,7 @@ def montar_email_gestores_texto(data):
         f"Faturado até o momento: {fmt_brl(t['faturado'])} ({fmt_pct(t['realizado_pct'])})\n"
         f"Previsto até o momento: {fmt_brl(t['previsto'])} ({fmt_pct(t['previsto_pct'])})\n"
         f"Falta para a meta (considerando o faturado): {fmt_brl(falta)} ({fmt_pct(falta_pct)})\n\n"
-        f"Desempenho por vendedor (% Faturado da meta da família, do melhor para o pior):\n"
+        f"Ranking por % Faturado da meta da família:\n"
         f"{ranking_txt}\n"
     )
 
