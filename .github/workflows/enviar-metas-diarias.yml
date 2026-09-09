@@ -1,0 +1,25 @@
+name: Enviar Metas Diárias por E-mail
+
+on:
+  schedule:
+    - cron: '0 11 * * 1-5'  # 08:00 SP, segunda a sexta (usa o index.html já atualizado às 07:45 SP)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  enviar-metas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Enviar e-mails de meta diária (modo teste)
+        env:
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+        run: python automacao/enviar_metas_diarias.py
