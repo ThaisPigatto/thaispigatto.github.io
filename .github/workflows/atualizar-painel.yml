@@ -53,6 +53,18 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nada mudou desde a última atualização."
           else
-            git commit -m "Atualização automática do painel — $(date -u '+%Y-%m-%d %H:%M UTC')"
-            git push
+                        git commit -m "Atualização automática do painel — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            for i in 1 2 3 4 5; do
+              if git push; then
+                echo "Publicado com sucesso."
+                break
+              fi
+              echo "Push rejeitado — tentativa $i, atualizando e tentando de novo..."
+              git pull --rebase origin main
+              if [ "$i" -eq 5 ]; then
+                echo "Falhou após 5 tentativas."
+                exit 1
+              fi
+              sleep 5
+            done
           fi
