@@ -11,6 +11,21 @@ nada por conta própria, só formata o que já está lá.
 E-mail em HTML com cores (mesma paleta do painel), com fallback em texto
 simples pra clientes de e-mail que não renderizam HTML.
 
+CORREÇÃO 09/09/2026 (a pedido de Thais): a lista VENDOR_FAMILIAS_RESP do
+template_painel.html listava Wellington/Tiago também dentro da família de
+Marcelo (Chemlok/Bio-Chem/Marbocote), fazendo o ranking deste e-mail
+"vazar" o % de um time pro outro. Aqui usamos uma lista própria, sem
+sobreposição, confirmada por Thais:
+  - Wellington e Tiago: Adesivos Estruturais + Aplicadores + Linha TT
+  - Marcelo: Chemlok + Bio-Chem + Marbocote (sozinho)
+  - Maria: Plásticos de Engenharia
+  - Rhamayana: Papel térmico + Etiquetas
+  - Jéssica: sem família própria — indicador é só o canal Pigatto HUB
+    (Mercado Livre / Licitação), ver VENDOR_CANAL_ML.
+Também trocamos o % do ranking de "Atingimento" (Previsto+Faturado/meta)
+para "% Faturado" (Faturado/meta), que é o número que Thais usa como
+referência (confirmado batendo com o painel: Marcelo = 19,1%).
+
 MODO_TESTE = False -> envio real para vendedores e gestores (aprovado por
 Thais em 09/09/2026, após teste aprovado enviando só para ela).
 """
@@ -51,16 +66,18 @@ COR_MUTED = "#5B6675"
 COR_TEXTO = "#1B222C"
 COR_LINHA = "#E1E6EB"
 
-# Mesma lista de responsabilidade usada no template_painel.html (VENDOR_FAMILIAS_RESP).
-# Se essa lista mudar lá (nova contratação, remanejo de família), replicar aqui também.
+# Lista de responsabilidade PRÓPRIA deste script (sem sobreposição entre times),
+# confirmada por Thais em 09/09/2026 — ver nota no topo do arquivo. Não é a
+# mesma lista usada dentro do template_painel.html (aquela tem sobreposição
+# proposital pra outro fim, a Corrida das Famílias).
 VENDOR_FAMILIAS_RESP = {
-    "Wellington Azevedo": ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT", "Chemlok", "Bio-Chem", "Marbocote"],
-    "Tiago Fruet":         ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT", "Chemlok", "Bio-Chem", "Marbocote"],
+    "Wellington Azevedo": ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT"],
+    "Tiago Fruet":         ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT"],
     "Marcelo Ribeiro":     ["Chemlok", "Bio-Chem", "Marbocote"],
     "Rhamayana":           ["Papel térmico", "Etiquetas"],
     "Maria Cristina":      ["Plásticos de Engenharia"],
 }
-# Jéssica não tem família própria — meta é só o canal Pigatto HUB (ver template)
+# Jéssica não tem família própria — meta é só o canal Pigatto HUB (Mercado Livre/Licitação)
 VENDOR_CANAL_ML = {"Jéssica": 100000}
 
 # E-mail(s) de cada vendedor (pode ter mais de um, separados por vírgula)
@@ -227,8 +244,12 @@ def montar_email_vendedor_texto(vendedor, data):
 # E-mail dos gestores
 # ----------------------------------------------------------------------------
 def ranking_vendedores(data):
-    """Mesma lógica do ranking do painel: ordena do maior para o menor % de
-    atingimento (Prev+Fat / meta da família), incluindo HUB."""
+    """Ranking por % FATURADO da meta da família (Faturado / meta) — não o %
+    de Atingimento (Previsto+Faturado/meta) que o painel usa na tabela de
+    ranking. Escolhido em 09/09/2026 porque é o número que Thais acompanha
+    como referência (bate com o campo 'Faturado %' da Visão Individual do
+    painel). Cada vendedor entra só pela família que é responsabilidade dele
+    (VENDOR_FAMILIAS_RESP acima, sem sobreposição entre times)."""
     gfp = grupos_por_meta(data)
     linhas = []
     for grupo in data["grupo_map"]:
@@ -239,12 +260,12 @@ def ranking_vendedores(data):
             continue
         responsaveis = [v for v, fams in VENDOR_FAMILIAS_RESP.items()
                          if any(f in fams for f in grupo["familias"])]
-        pct = g["prevfat_pct"]
+        pct = g["realizado_pct"]
         linhas.append((responsaveis, pct))
 
     hub = next((g for g in data["grupos_familia"] if g["id"] == "pigatto_hub"), None)
     if hub and hub.get("meta"):
-        linhas.append((list(VENDOR_CANAL_ML.keys()), hub["prevfat_pct"]))
+        linhas.append((list(VENDOR_CANAL_ML.keys()), hub["realizado_pct"]))
 
     por_vendedor = {}
     for responsaveis, pct in linhas:
@@ -298,7 +319,7 @@ def montar_email_gestores_html(data):
 
     ranking_html = f"""
     <div style="font-weight:700;color:{COR_GERAL};margin-bottom:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;">
-      Desempenho por vendedor (do melhor para o pior % da meta da família)
+      Desempenho por vendedor (% Faturado da meta da família, do melhor para o pior)
     </div>
     <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:13.5px;">
       {linhas_ranking}
@@ -321,7 +342,7 @@ def montar_email_gestores_texto(data):
         f"Faturado até o momento: {fmt_brl(t['faturado'])} ({fmt_pct(t['realizado_pct'])})\n"
         f"Previsto até o momento: {fmt_brl(t['previsto'])} ({fmt_pct(t['previsto_pct'])})\n"
         f"Falta para a meta (considerando o faturado): {fmt_brl(falta)} ({fmt_pct(falta_pct)})\n\n"
-        f"Desempenho por vendedor (do melhor para o pior % da meta da família):\n"
+        f"Desempenho por vendedor (% Faturado da meta da família, do melhor para o pior):\n"
         f"{ranking_txt}\n"
     )
 
