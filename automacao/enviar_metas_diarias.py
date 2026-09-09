@@ -8,9 +8,8 @@ Lê o index.html publicado (mesmo arquivo que atualizar_painel.py mantém
 atualizado) e reaproveita o bloco `const DATA = {...};` — não recalcula
 nada por conta própria, só formata o que já está lá.
 
-FASE DE TESTE (ver seção CONFIG): todos os e-mails saem só para
-thais.furlanbrito@gmail.com, independente do destinatário real.
-Quando aprovado, trocar MODO_TESTE para False.
+MODO_TESTE = False -> envio real para vendedores e gestores (aprovado por
+Thais em 09/09/2026, após teste aprovado enviando só para ela).
 """
 import json
 import os
@@ -31,7 +30,7 @@ HOJE = datetime.datetime.now(TZ_SP).strftime("%d/%m/%Y")
 # ----------------------------------------------------------------------------
 # CONFIG
 # ----------------------------------------------------------------------------
-MODO_TESTE = True  # enquanto True, TODO mundo recebe cópia só em EMAIL_TESTE
+MODO_TESTE = False  # aprovado por Thais em 09/09/2026 — envio real ativado
 EMAIL_TESTE = "thais.furlanbrito@gmail.com"
 
 SMTP_HOST = "smtp.gmail.com"
@@ -86,6 +85,13 @@ def fmt_pct(v):
     return f"{v*100:.1f}%".replace(".", ",")
 
 
+def caixa_destaque(titulo, valor):
+    """Moldura em texto simples (asteriscos) para destacar a meta do dia."""
+    linha = f"  {titulo}: {valor}  "
+    borda = "*" * max(len(linha), 30)
+    return f"{borda}\n{linha}\n{borda}"
+
+
 def grupos_por_meta(data):
     """Mapa meta -> objeto do grupo em grupos_familia (exclui total_geral/spacer/hub)."""
     mapa = {}
@@ -97,14 +103,16 @@ def grupos_por_meta(data):
 
 
 def montar_email_vendedor(vendedor, data):
-    """Monta o corpo em texto simples do e-mail de um vendedor: um bloco por família."""
+    """Monta o corpo em texto simples do e-mail de um vendedor: um bloco por
+    família, com a meta do dia daquela família em destaque, e — quando o
+    vendedor responde por mais de uma família — um resumo com a soma de
+    todas as metas do dia logo no topo."""
     gfp = grupos_por_meta(data)
     grupo_map = data["grupo_map"]  # [{"meta":..., "familias":[...]}, ...]
     familias_resp = set(VENDOR_FAMILIAS_RESP.get(vendedor, []))
 
-    blocos = []
+    itens = []  # cada item: (nome_familia, meta_dia, faturado, previsto, falta_mes)
 
-    # Famílias/grupos de meta compartilhada pelos quais o vendedor é responsável
     for grupo in grupo_map:
         if not grupo.get("meta"):
             continue
@@ -113,30 +121,44 @@ def montar_email_vendedor(vendedor, data):
         g = gfp.get(grupo["meta"])
         if not g:
             continue
-        nome_familia = " + ".join(grupo["familias"])
-        blocos.append(
-            f"Família: {nome_familia}\n"
-            f"Meta do dia ({HOJE}): {fmt_brl(g['meta_diaria_necessaria'])}\n"
-            f"Faturado: {fmt_brl(g['faturado_total'])}\n"
-            f"Previsto: {fmt_brl(g['previsto_total'])}\n"
-            f"Falta para bater a meta do mês: {fmt_brl(max(g['meta'] - g['prev_fat_total'], 0))}\n"
-        )
+        itens.append((
+            " + ".join(grupo["familias"]),
+            g["meta_diaria_necessaria"],
+            g["faturado_total"],
+            g["previsto_total"],
+            max(g["meta"] - g["prev_fat_total"], 0),
+        ))
 
-    # Canal Pigatto HUB (só Jéssica, hoje)
     if vendedor in VENDOR_CANAL_ML:
         hub = next((g for g in data["grupos_familia"] if g["id"] == "pigatto_hub"), None)
         if hub:
-            blocos.append(
-                f"Família: Pigatto HUB - Marketplace/Licitação\n"
-                f"Meta do dia ({HOJE}): {fmt_brl(hub['meta_diaria_necessaria'])}\n"
-                f"Faturado: {fmt_brl(hub['faturado_total'])}\n"
-                f"Previsto: {fmt_brl(hub['previsto_total'])}\n"
-                f"Falta para bater a meta do mês: {fmt_brl(max(hub['meta'] - hub['prev_fat_total'], 0))}\n"
-            )
+            itens.append((
+                "Pigatto HUB - Marketplace/Licitação",
+                hub["meta_diaria_necessaria"],
+                hub["faturado_total"],
+                hub["previsto_total"],
+                max(hub["meta"] - hub["prev_fat_total"], 0),
+            ))
 
-    if not blocos:
+    if not itens:
         return None
-    return "\n\n".join(blocos)
+
+    partes = []
+
+    if len(itens) > 1:
+        total_meta_dia = sum(i[1] for i in itens)
+        partes.append(caixa_destaque(f"META DE HOJE ({HOJE}) - TOTAL DE TODAS AS FAMÍLIAS", fmt_brl(total_meta_dia)))
+        partes.append("")
+
+    for nome_familia, meta_dia, faturado, previsto, falta_mes in itens:
+        partes.append(caixa_destaque(f"META DE HOJE - {nome_familia}", fmt_brl(meta_dia)))
+        partes.append(
+            f"Faturado: {fmt_brl(faturado)}\n"
+            f"Previsto: {fmt_brl(previsto)}\n"
+            f"Falta para bater a meta do mês: {fmt_brl(falta_mes)}\n"
+        )
+
+    return "\n".join(partes)
 
 
 def ranking_vendedores(data):
@@ -178,14 +200,17 @@ def montar_email_gestores(data):
     )
     falta = max(t["meta"] - (t["faturado"] + t["devolucoes"]), 0)
     falta_pct = (1 - t["realizado_pct"]) if t.get("realizado_pct") is not None else None
-    return (
-        f"Meta geral do dia ({HOJE}): {fmt_brl(t['meta_diaria_necessaria'])}\n\n"
+
+    corpo = caixa_destaque(f"META GERAL DE HOJE ({HOJE})", fmt_brl(t["meta_diaria_necessaria"]))
+    corpo += "\n\n"
+    corpo += (
         f"Faturado até o momento: {fmt_brl(t['faturado'])} ({fmt_pct(t['realizado_pct'])})\n"
         f"Previsto até o momento: {fmt_brl(t['previsto'])} ({fmt_pct(t['previsto_pct'])})\n"
         f"Falta para a meta (considerando o faturado): {fmt_brl(falta)} ({fmt_pct(falta_pct)})\n\n"
         f"Desempenho por vendedor (do melhor para o pior % da meta da família):\n"
         f"{ranking_txt}\n"
     )
+    return corpo
 
 
 def enviar_email(destinatarios, assunto, corpo):
