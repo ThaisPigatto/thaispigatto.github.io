@@ -10,6 +10,7 @@ nada por conta própria, só formata o que já está lá.
 
 FASE DE TESTE (ver seção CONFIG): todos os e-mails saem só para
 thais.furlanbrito@gmail.com, independente do destinatário real.
+Quando aprovado, trocar MODO_TESTE para False.
 """
 import json
 import os
@@ -36,9 +37,10 @@ EMAIL_TESTE = "thais.furlanbrito@gmail.com"
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USER = "thais.brito@pigattodistribuidora.com.br"
-SMTP_PASSWORD = os.environ["SMTP_APP_PASSWORD"]  # nome do GitHub Secret a definir
+SMTP_PASSWORD = os.environ["SMTP_APP_PASSWORD"]  # GitHub Secret
 
-# Mesma lista de responsabilidade usada no template_painel.html (VENDOR_FAMILIAS_RESP)
+# Mesma lista de responsabilidade usada no template_painel.html (VENDOR_FAMILIAS_RESP).
+# Se essa lista mudar lá (nova contratação, remanejo de família), replicar aqui também.
 VENDOR_FAMILIAS_RESP = {
     "Wellington Azevedo": ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT", "Chemlok", "Bio-Chem", "Marbocote"],
     "Tiago Fruet":         ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT", "Chemlok", "Bio-Chem", "Marbocote"],
@@ -157,13 +159,11 @@ def ranking_vendedores(data):
     if hub and hub.get("meta"):
         linhas.append((list(VENDOR_CANAL_ML.keys()), hub["prevfat_pct"]))
 
-    # Achata por vendedor (um vendedor pode aparecer 1x por grupo do qual participa)
+    # Achata por vendedor (guarda o maior % entre os grupos que ele participa)
     por_vendedor = {}
     for responsaveis, pct in linhas:
         for v in responsaveis:
-            # se o vendedor está em mais de um grupo, guarda o maior % (ou poderia listar todos;
-            # mantemos simples: melhor % dele entre os grupos que participa)
-            if v not in por_vendedor or pct > por_vendedor[v]:
+            if v not in por_vendedor or (pct is not None and (por_vendedor[v] is None or pct > por_vendedor[v])):
                 por_vendedor[v] = pct
 
     ranking = sorted(por_vendedor.items(), key=lambda kv: (kv[1] if kv[1] is not None else -1), reverse=True)
@@ -177,11 +177,12 @@ def montar_email_gestores(data):
         f"{i+1}. {v}: {fmt_pct(pct)} da meta da família" for i, (v, pct) in enumerate(linhas)
     )
     falta = max(t["meta"] - (t["faturado"] + t["devolucoes"]), 0)
+    falta_pct = (1 - t["realizado_pct"]) if t.get("realizado_pct") is not None else None
     return (
         f"Meta geral do dia ({HOJE}): {fmt_brl(t['meta_diaria_necessaria'])}\n\n"
         f"Faturado até o momento: {fmt_brl(t['faturado'])} ({fmt_pct(t['realizado_pct'])})\n"
         f"Previsto até o momento: {fmt_brl(t['previsto'])} ({fmt_pct(t['previsto_pct'])})\n"
-        f"Falta para a meta (considerando o faturado): {fmt_brl(falta)} ({fmt_pct(1 - t['realizado_pct'] if t['realizado_pct'] is not None else None)})\n\n"
+        f"Falta para a meta (considerando o faturado): {fmt_brl(falta)} ({fmt_pct(falta_pct)})\n\n"
         f"Desempenho por vendedor (do melhor para o pior % da meta da família):\n"
         f"{ranking_txt}\n"
     )
