@@ -8,6 +8,9 @@ Lê o index.html publicado (mesmo arquivo que atualizar_painel.py mantém
 atualizado) e reaproveita o bloco `const DATA = {...};` — não recalcula
 nada por conta própria, só formata o que já está lá.
 
+E-mail em HTML com cores (mesma paleta do painel), com fallback em texto
+simples pra clientes de e-mail que não renderizam HTML.
+
 MODO_TESTE = False -> envio real para vendedores e gestores (aprovado por
 Thais em 09/09/2026, após teste aprovado enviando só para ela).
 """
@@ -37,6 +40,16 @@ SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USER = "thais.brito@pigattodistribuidora.com.br"
 SMTP_PASSWORD = os.environ["SMTP_APP_PASSWORD"]  # GitHub Secret
+
+# Mesma paleta de cores do painel (template_painel.html), pra ficar consistente
+COR_META = "#6B1E28"      # vermelho escuro usado no cabeçalho das tabelas do painel
+COR_GERAL = "#122038"     # navy usado no header do painel
+COR_FATURADO = "#1E7A4C"  # verde (--dark-green / --green)
+COR_PREVISTO = "#B4650A"  # amber (--amber)
+COR_FALTA = "#B3261E"     # vermelho (--red)
+COR_MUTED = "#5B6675"
+COR_TEXTO = "#1B222C"
+COR_LINHA = "#E1E6EB"
 
 # Mesma lista de responsabilidade usada no template_painel.html (VENDOR_FAMILIAS_RESP).
 # Se essa lista mudar lá (nova contratação, remanejo de família), replicar aqui também.
@@ -85,13 +98,6 @@ def fmt_pct(v):
     return f"{v*100:.1f}%".replace(".", ",")
 
 
-def caixa_destaque(titulo, valor):
-    """Moldura em texto simples (asteriscos) para destacar a meta do dia."""
-    linha = f"  {titulo}: {valor}  "
-    borda = "*" * max(len(linha), 30)
-    return f"{borda}\n{linha}\n{borda}"
-
-
 def grupos_por_meta(data):
     """Mapa meta -> objeto do grupo em grupos_familia (exclui total_geral/spacer/hub)."""
     mapa = {}
@@ -102,16 +108,55 @@ def grupos_por_meta(data):
     return mapa
 
 
-def montar_email_vendedor(vendedor, data):
-    """Monta o corpo em texto simples do e-mail de um vendedor: um bloco por
-    família, com a meta do dia daquela família em destaque, e — quando o
-    vendedor responde por mais de uma família — um resumo com a soma de
-    todas as metas do dia logo no topo."""
-    gfp = grupos_por_meta(data)
-    grupo_map = data["grupo_map"]  # [{"meta":..., "familias":[...]}, ...]
-    familias_resp = set(VENDOR_FAMILIAS_RESP.get(vendedor, []))
+# ----------------------------------------------------------------------------
+# Helpers de HTML (mesma paleta de cores do painel)
+# ----------------------------------------------------------------------------
+def html_caixa_meta(titulo, valor, cor_fundo):
+    return f"""
+    <div style="background:{cor_fundo};color:#FFFFFF;padding:14px 18px;border-radius:8px;
+                font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;margin-bottom:16px;">
+      🎯 {titulo}: {valor}
+    </div>"""
 
-    itens = []  # cada item: (nome_familia, meta_dia, faturado, previsto, falta_mes)
+
+def html_bloco_familia(nome_familia, meta_dia, faturado, previsto, falta_mes):
+    caixa = html_caixa_meta(f"META DE HOJE — {nome_familia}", fmt_brl(meta_dia), COR_META)
+    return f"""
+    <div style="border:1px solid {COR_LINHA};border-radius:8px;padding:16px 18px;margin-bottom:18px;">
+      {caixa}
+      <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px;">
+        <tr><td style="padding:5px 0;color:{COR_MUTED};">Faturado</td>
+            <td style="padding:5px 0;text-align:right;font-weight:700;color:{COR_FATURADO};">{fmt_brl(faturado)}</td></tr>
+        <tr><td style="padding:5px 0;color:{COR_MUTED};">Previsto</td>
+            <td style="padding:5px 0;text-align:right;font-weight:700;color:{COR_PREVISTO};">{fmt_brl(previsto)}</td></tr>
+        <tr><td style="padding:5px 0;color:{COR_MUTED};">Falta para bater a meta do mês</td>
+            <td style="padding:5px 0;text-align:right;font-weight:700;color:{COR_FALTA};">{fmt_brl(falta_mes)}</td></tr>
+      </table>
+    </div>"""
+
+
+def envolver_html(titulo, conteudo_html):
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F4F5F6;">
+  <div style="max-width:560px;margin:0 auto;padding:24px 18px;font-family:Arial,Helvetica,sans-serif;">
+    <h2 style="color:{COR_GERAL};font-size:18px;margin:0 0 18px;">{titulo}</h2>
+    {conteudo_html}
+    <div style="color:{COR_MUTED};font-size:11px;margin-top:22px;">
+      Painel Comercial Pigatto — envio automático diário.
+    </div>
+  </div>
+</body></html>"""
+
+
+# ----------------------------------------------------------------------------
+# E-mail dos vendedores
+# ----------------------------------------------------------------------------
+def coletar_itens_vendedor(vendedor, data):
+    gfp = grupos_por_meta(data)
+    grupo_map = data["grupo_map"]
+    familias_resp = set(VENDOR_FAMILIAS_RESP.get(vendedor, []))
+    itens = []
 
     for grupo in grupo_map:
         if not grupo.get("meta"):
@@ -139,28 +184,48 @@ def montar_email_vendedor(vendedor, data):
                 hub["previsto_total"],
                 max(hub["meta"] - hub["prev_fat_total"], 0),
             ))
+    return itens
 
+
+def montar_email_vendedor_html(vendedor, data):
+    itens = coletar_itens_vendedor(vendedor, data)
     if not itens:
         return None
 
     partes = []
-
     if len(itens) > 1:
         total_meta_dia = sum(i[1] for i in itens)
-        partes.append(caixa_destaque(f"META DE HOJE ({HOJE}) - TOTAL DE TODAS AS FAMÍLIAS", fmt_brl(total_meta_dia)))
-        partes.append("")
-
+        partes.append(html_caixa_meta(f"META DE HOJE ({HOJE}) — TOTAL DE TODAS AS FAMÍLIAS",
+                                       fmt_brl(total_meta_dia), COR_GERAL))
     for nome_familia, meta_dia, faturado, previsto, falta_mes in itens:
-        partes.append(caixa_destaque(f"META DE HOJE - {nome_familia}", fmt_brl(meta_dia)))
-        partes.append(
+        partes.append(html_bloco_familia(nome_familia, meta_dia, faturado, previsto, falta_mes))
+
+    return envolver_html(f"Meta de vendas do dia — {HOJE}", "".join(partes))
+
+
+def montar_email_vendedor_texto(vendedor, data):
+    """Fallback em texto simples (mesmos números, sem formatação/cor)."""
+    itens = coletar_itens_vendedor(vendedor, data)
+    if not itens:
+        return None
+    linhas = []
+    if len(itens) > 1:
+        total_meta_dia = sum(i[1] for i in itens)
+        linhas.append(f"META DE HOJE ({HOJE}) - TOTAL DE TODAS AS FAMÍLIAS: {fmt_brl(total_meta_dia)}\n")
+    for nome_familia, meta_dia, faturado, previsto, falta_mes in itens:
+        linhas.append(
+            f"Família: {nome_familia}\n"
+            f"Meta de hoje: {fmt_brl(meta_dia)}\n"
             f"Faturado: {fmt_brl(faturado)}\n"
             f"Previsto: {fmt_brl(previsto)}\n"
             f"Falta para bater a meta do mês: {fmt_brl(falta_mes)}\n"
         )
+    return "\n".join(linhas)
 
-    return "\n".join(partes)
 
-
+# ----------------------------------------------------------------------------
+# E-mail dos gestores
+# ----------------------------------------------------------------------------
 def ranking_vendedores(data):
     """Mesma lógica do ranking do painel: ordena do maior para o menor % de
     atingimento (Prev+Fat / meta da família), incluindo HUB."""
@@ -181,18 +246,69 @@ def ranking_vendedores(data):
     if hub and hub.get("meta"):
         linhas.append((list(VENDOR_CANAL_ML.keys()), hub["prevfat_pct"]))
 
-    # Achata por vendedor (guarda o maior % entre os grupos que ele participa)
     por_vendedor = {}
     for responsaveis, pct in linhas:
         for v in responsaveis:
             if v not in por_vendedor or (pct is not None and (por_vendedor[v] is None or pct > por_vendedor[v])):
                 por_vendedor[v] = pct
 
-    ranking = sorted(por_vendedor.items(), key=lambda kv: (kv[1] if kv[1] is not None else -1), reverse=True)
-    return ranking
+    return sorted(por_vendedor.items(), key=lambda kv: (kv[1] if kv[1] is not None else -1), reverse=True)
 
 
-def montar_email_gestores(data):
+def cor_pct(pct):
+    """Mesmos limiares do painel (pct_pill ok/warn/bad): >=100% verde, >=70% âmbar, resto vermelho."""
+    if pct is None:
+        return COR_MUTED
+    if pct >= 1.0:
+        return COR_FATURADO
+    if pct >= 0.7:
+        return COR_PREVISTO
+    return COR_FALTA
+
+
+def montar_email_gestores_html(data):
+    t = data["totais"]
+    linhas = ranking_vendedores(data)
+    falta = max(t["meta"] - (t["faturado"] + t["devolucoes"]), 0)
+    falta_pct = (1 - t["realizado_pct"]) if t.get("realizado_pct") is not None else None
+
+    caixa = html_caixa_meta(f"META GERAL DE HOJE ({HOJE})", fmt_brl(t["meta_diaria_necessaria"]), COR_GERAL)
+
+    resumo = f"""
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px;margin-bottom:20px;">
+      <tr><td style="padding:6px 0;color:{COR_MUTED};">Faturado até o momento</td>
+          <td style="padding:6px 0;text-align:right;font-weight:700;color:{COR_FATURADO};">{fmt_brl(t['faturado'])} ({fmt_pct(t['realizado_pct'])})</td></tr>
+      <tr><td style="padding:6px 0;color:{COR_MUTED};">Previsto até o momento</td>
+          <td style="padding:6px 0;text-align:right;font-weight:700;color:{COR_PREVISTO};">{fmt_brl(t['previsto'])} ({fmt_pct(t['previsto_pct'])})</td></tr>
+      <tr><td style="padding:6px 0;color:{COR_MUTED};">Falta para a meta (considerando o faturado)</td>
+          <td style="padding:6px 0;text-align:right;font-weight:700;color:{COR_FALTA};">{fmt_brl(falta)} ({fmt_pct(falta_pct)})</td></tr>
+    </table>"""
+
+    linhas_ranking = ""
+    for i, (v, pct) in enumerate(linhas):
+        cor = cor_pct(pct)
+        linhas_ranking += f"""
+        <tr>
+          <td style="padding:6px 4px;border-bottom:1px solid {COR_LINHA};color:{COR_TEXTO};">{i+1}º</td>
+          <td style="padding:6px 4px;border-bottom:1px solid {COR_LINHA};color:{COR_TEXTO};">{v}</td>
+          <td style="padding:6px 4px;border-bottom:1px solid {COR_LINHA};text-align:right;">
+            <span style="background:{cor};color:#FFFFFF;padding:2px 10px;border-radius:12px;font-weight:700;font-size:12.5px;">{fmt_pct(pct)}</span>
+          </td>
+        </tr>"""
+
+    ranking_html = f"""
+    <div style="font-weight:700;color:{COR_GERAL};margin-bottom:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;">
+      Desempenho por vendedor (do melhor para o pior % da meta da família)
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:13.5px;">
+      {linhas_ranking}
+    </table>"""
+
+    return envolver_html(f"Resultado geral de faturamento — {HOJE}", caixa + resumo + ranking_html)
+
+
+def montar_email_gestores_texto(data):
+    """Fallback em texto simples."""
     t = data["totais"]
     linhas = ranking_vendedores(data)
     ranking_txt = "\n".join(
@@ -200,30 +316,30 @@ def montar_email_gestores(data):
     )
     falta = max(t["meta"] - (t["faturado"] + t["devolucoes"]), 0)
     falta_pct = (1 - t["realizado_pct"]) if t.get("realizado_pct") is not None else None
-
-    corpo = caixa_destaque(f"META GERAL DE HOJE ({HOJE})", fmt_brl(t["meta_diaria_necessaria"]))
-    corpo += "\n\n"
-    corpo += (
+    return (
+        f"Meta geral do dia ({HOJE}): {fmt_brl(t['meta_diaria_necessaria'])}\n\n"
         f"Faturado até o momento: {fmt_brl(t['faturado'])} ({fmt_pct(t['realizado_pct'])})\n"
         f"Previsto até o momento: {fmt_brl(t['previsto'])} ({fmt_pct(t['previsto_pct'])})\n"
         f"Falta para a meta (considerando o faturado): {fmt_brl(falta)} ({fmt_pct(falta_pct)})\n\n"
         f"Desempenho por vendedor (do melhor para o pior % da meta da família):\n"
         f"{ranking_txt}\n"
     )
-    return corpo
 
 
-def enviar_email(destinatarios, assunto, corpo):
+def enviar_email(destinatarios, assunto, corpo_texto, corpo_html):
     if MODO_TESTE:
         destinatarios_reais = destinatarios
         destinatarios = [EMAIL_TESTE]
-        corpo = f"[TESTE - destinatário real seria: {', '.join(destinatarios_reais)}]\n\n" + corpo
+        aviso = f"[TESTE - destinatário real seria: {', '.join(destinatarios_reais)}]\n\n"
+        corpo_texto = aviso + corpo_texto
+        corpo_html = f"<p style='color:#B3261E;font-family:Arial;'>{aviso}</p>" + corpo_html
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart("alternative")
     msg["From"] = SMTP_USER
     msg["To"] = ", ".join(destinatarios)
     msg["Subject"] = assunto
-    msg.attach(MIMEText(corpo, "plain", "utf-8"))
+    msg.attach(MIMEText(corpo_texto, "plain", "utf-8"))
+    msg.attach(MIMEText(corpo_html, "html", "utf-8"))
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.starttls()
@@ -236,16 +352,18 @@ def main():
     data = carregar_data()
 
     for vendedor, emails in VENDOR_EMAILS.items():
-        corpo = montar_email_vendedor(vendedor, data)
-        if corpo is None:
+        corpo_html = montar_email_vendedor_html(vendedor, data)
+        if corpo_html is None:
             print(f"{vendedor}: nenhuma família/meta encontrada, e-mail não enviado.")
             continue
+        corpo_texto = montar_email_vendedor_texto(vendedor, data)
         assunto = f"META DE VENDAS DO DIA - {HOJE}"
-        enviar_email(emails, assunto, corpo)
+        enviar_email(emails, assunto, corpo_texto, corpo_html)
 
-    corpo_gestores = montar_email_gestores(data)
+    corpo_html_gestores = montar_email_gestores_html(data)
+    corpo_texto_gestores = montar_email_gestores_texto(data)
     assunto_gestores = f"RESULTADO GERAL DE FATURAMENTO ATÉ HOJE - {HOJE}"
-    enviar_email(GESTORES_EMAILS, assunto_gestores, corpo_gestores)
+    enviar_email(GESTORES_EMAILS, assunto_gestores, corpo_texto_gestores, corpo_html_gestores)
 
 
 if __name__ == "__main__":
