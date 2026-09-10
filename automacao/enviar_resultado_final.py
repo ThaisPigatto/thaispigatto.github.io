@@ -19,6 +19,9 @@ não contar aquilo duas vezes na família do produto.
 % mostrado = % da META DO MÊS já faturada até agora (mesmo número do e-mail
 da manhã) — confirmado por Thais em 10/09/2026, não é o % da meta do dia.
 
+LAYOUT 10/09/2026 (a pedido de Thais): formato simples, sem caixa colorida
+de destaque — só texto direto, família como cabeçalho e 4 linhas embaixo.
+
 Aprovado por Thais em 10/09/2026 para envio real direto (sem fase de teste).
 """
 import json
@@ -49,14 +52,12 @@ SMTP_PORT = 587
 SMTP_USER = "thais.brito@pigattodistribuidora.com.br"
 SMTP_PASSWORD = os.environ["SMTP_APP_PASSWORD"]
 
-COR_META = "#6B1E28"
 COR_GERAL = "#122038"
 COR_FATURADO = "#1E7A4C"
 COR_PREVISTO = "#B4650A"
 COR_FALTA = "#B3261E"
 COR_MUTED = "#5B6675"
 COR_TEXTO = "#1B222C"
-COR_LINHA = "#E1E6EB"
 
 VENDOR_FAMILIAS_RESP = {
     "Wellington Azevedo": ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT"],
@@ -140,16 +141,8 @@ def vendido_hoje_hub(data):
 
 
 # ----------------------------------------------------------------------------
-# HTML helpers (mesma paleta do painel)
+# HTML helpers (mesma paleta do painel, layout simples sem caixa)
 # ----------------------------------------------------------------------------
-def html_caixa(titulo, valor, cor_fundo):
-    return f"""
-    <div style="background:{cor_fundo};color:#FFFFFF;padding:14px 18px;border-radius:8px;
-                font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;margin-bottom:16px;">
-      ✅ {titulo}: {valor}
-    </div>"""
-
-
 def envolver_html(titulo, conteudo_html):
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -213,18 +206,15 @@ def coletar_itens_vendedor(vendedor, data):
 
 
 def bloco_familia_html(item):
-    caixa = html_caixa(f"VENDIDO HOJE — {item['nome']}", fmt_brl(item["vendido_hoje"]), COR_FATURADO)
     return f"""
-    <div style="border:1px solid {COR_LINHA};border-radius:8px;padding:16px 18px;margin-bottom:18px;">
-      {caixa}
-      <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px;">
-        <tr><td style="padding:5px 0;color:{COR_MUTED};">Meta que era pra bater hoje</td>
-            <td style="padding:5px 0;text-align:right;font-weight:700;color:{COR_META};">{fmt_brl(item['meta_dia'])}</td></tr>
-        <tr><td style="padding:5px 0;color:{COR_MUTED};">Faturado até hoje (mês)</td>
-            <td style="padding:5px 0;text-align:right;font-weight:700;color:{COR_TEXTO};">{fmt_brl(item['faturado_mes'])}</td></tr>
-        <tr><td style="padding:5px 0;color:{COR_MUTED};">% da meta do mês já faturada</td>
-            <td style="padding:5px 0;text-align:right;font-weight:700;color:{cor_pct(item['pct'])};">{fmt_pct(item['pct'])}</td></tr>
-      </table>
+    <div style="margin-bottom:22px;">
+      <div style="font-weight:700;color:{COR_GERAL};font-size:15px;margin-bottom:6px;">{item['nome']}:</div>
+      <div style="font-size:14px;line-height:1.9;color:{COR_TEXTO};">
+        Meta de hoje: <b>{fmt_brl(item['meta_dia'])}</b><br>
+        Realizado hoje: <b style="color:{COR_FATURADO};">{fmt_brl(item['vendido_hoje'])}</b><br>
+        Faturado no mês: <b>{fmt_brl(item['faturado_mes'])}</b><br>
+        % faturada: <b style="color:{cor_pct(item['pct'])};">{fmt_pct(item['pct'])}</b>
+      </div>
     </div>"""
 
 
@@ -243,11 +233,11 @@ def montar_email_vendedor_texto(vendedor, data):
     linhas = []
     for i in itens:
         linhas.append(
-            f"Família: {i['nome']}\n"
-            f"Meta que era pra bater hoje: {fmt_brl(i['meta_dia'])}\n"
-            f"Vendido hoje: {fmt_brl(i['vendido_hoje'])}\n"
-            f"Faturado até hoje (mês): {fmt_brl(i['faturado_mes'])}\n"
-            f"% da meta do mês já faturada: {fmt_pct(i['pct'])}\n"
+            f"{i['nome']}:\n\n"
+            f"Meta de hoje: {fmt_brl(i['meta_dia'])}\n"
+            f"Realizado hoje: {fmt_brl(i['vendido_hoje'])}\n"
+            f"Faturado no mês: {fmt_brl(i['faturado_mes'])}\n"
+            f"% faturada: {fmt_pct(i['pct'])}\n"
         )
     return "\n".join(linhas)
 
@@ -256,10 +246,10 @@ def montar_email_vendedor_texto(vendedor, data):
 # E-mail dos gestores
 # ----------------------------------------------------------------------------
 def resultado_time_comercial(data):
-    """Uma linha por vendedor: família, meta do dia, vendido hoje, faturado do
-    mês e % da meta do mês — ordenado do maior para o menor %."""
+    """Uma linha por vendedor: família, meta do dia, realizado hoje, faturado
+    do mês e % da meta do mês — ordenado do maior para o menor %."""
     linhas = []
-    for vendedor, familias in VENDOR_FAMILIAS_RESP.items():
+    for vendedor in VENDOR_FAMILIAS_RESP:
         itens = coletar_itens_vendedor(vendedor, data)
         for i in itens:
             linhas.append((vendedor, i))
@@ -283,45 +273,40 @@ def montar_email_gestores_html(data):
         vendido_hoje_familias(data, set(grupo["familias"]))
         for grupo in data["grupo_map"] if grupo.get("meta")
     )
-    caixa_meta = html_caixa(f"META GERAL DE HOJE ({HOJE})", fmt_brl(t["meta_diaria_necessaria"]), COR_GERAL)
-    caixa_realizado = html_caixa(f"REALIZADO HOJE ({HOJE})", fmt_brl(vendido_hoje_geral), COR_FATURADO)
 
-    resumo = f"""
-    <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px;margin-bottom:20px;">
-      <tr><td style="padding:6px 0;color:{COR_MUTED};">Faturado até hoje (mês)</td>
-          <td style="padding:6px 0;text-align:right;font-weight:700;color:{COR_TEXTO};">{fmt_brl(t['faturado'])} ({fmt_pct(t['realizado_pct'])})</td></tr>
-    </table>"""
+    topo = f"""
+    <div style="font-size:15px;line-height:1.9;color:{COR_TEXTO};margin-bottom:18px;">
+      ✅ Meta de hoje: <b>{fmt_brl(t['meta_diaria_necessaria'])}</b><br>
+      ✅ Realizado Hoje: <b style="color:{COR_FATURADO};">{fmt_brl(vendido_hoje_geral)}</b>
+    </div>
+    <div style="font-size:14px;line-height:1.9;color:{COR_TEXTO};margin-bottom:22px;">
+      Faturado no mês: <b>{fmt_brl(t['faturado'])}</b><br>
+      % Faturado: <b style="color:{cor_pct(t['realizado_pct'])};">{fmt_pct(t['realizado_pct'])}</b>
+    </div>"""
 
     linhas_time = resultado_time_comercial(data)
-    linhas_html = ""
+    blocos_time = ""
     for vendedor, i in linhas_time:
-        cor = cor_pct(i["pct"])
-        linhas_html += f"""
-        <tr>
-          <td style="padding:8px 4px;border-bottom:1px solid {COR_LINHA};color:{COR_TEXTO};vertical-align:top;">
-            <div style="font-weight:700;">{vendedor}</div>
-            <div style="font-size:11.5px;color:{COR_MUTED};margin-top:2px;">{i['nome']}</div>
-            <div style="font-size:11.5px;color:{COR_MUTED};margin-top:2px;">
-              Meta do dia: {fmt_brl(i['meta_dia'])} &nbsp;•&nbsp;
-              Vendido hoje: <span style="color:{COR_FATURADO};font-weight:700;">{fmt_brl(i['vendido_hoje'])}</span>
-              &nbsp;•&nbsp; Faturado no mês: {fmt_brl(i['faturado_mes'])}
-            </div>
-          </td>
-          <td style="padding:8px 4px;border-bottom:1px solid {COR_LINHA};text-align:right;vertical-align:top;">
-            <span style="background:{cor};color:#FFFFFF;padding:2px 10px;border-radius:12px;font-weight:700;font-size:12.5px;">{fmt_pct(i['pct'])}</span>
-          </td>
-        </tr>"""
+        blocos_time += f"""
+        <div style="margin-bottom:20px;">
+          <div style="font-weight:700;color:{COR_GERAL};font-size:14.5px;margin-bottom:6px;font-style:italic;">
+            {vendedor} — {i['nome']}
+          </div>
+          <div style="font-size:14px;line-height:1.9;color:{COR_TEXTO};">
+            Meta do dia: <b>{fmt_brl(i['meta_dia'])}</b><br>
+            Realizado hoje: <b style="color:{COR_FATURADO};">{fmt_brl(i['vendido_hoje'])}</b><br>
+            Faturado no mês: <b>{fmt_brl(i['faturado_mes'])}</b><br>
+            % Faturada: <b style="color:{cor_pct(i['pct'])};">{fmt_pct(i['pct'])}</b>
+          </div>
+        </div>"""
 
     time_html = f"""
-    <div style="font-weight:700;color:{COR_GERAL};margin-bottom:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;">
-      Resultado do time comercial
+    <div style="font-weight:700;color:{COR_GERAL};margin-bottom:14px;font-size:15px;">
+      Resultado do time comercial:
     </div>
-    <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:13.5px;">
-      {linhas_html}
-    </table>"""
+    {blocos_time}"""
 
-    return envolver_html(f"Resultado final do faturamento de hoje — {HOJE}",
-                          caixa_meta + caixa_realizado + resumo + time_html)
+    return envolver_html(f"Resultado final do faturamento de hoje — {HOJE}", topo + time_html)
 
 
 def montar_email_gestores_texto(data):
@@ -331,17 +316,20 @@ def montar_email_gestores_texto(data):
         for grupo in data["grupo_map"] if grupo.get("meta")
     )
     linhas_time = resultado_time_comercial(data)
-    time_txt = "\n".join(
+    time_txt = "\n\n".join(
         f"{vendedor} — {i['nome']}\n"
-        f"  Meta do dia: {fmt_brl(i['meta_dia'])} | Vendido hoje: {fmt_brl(i['vendido_hoje'])} | "
-        f"Faturado no mês: {fmt_brl(i['faturado_mes'])} | {fmt_pct(i['pct'])}"
+        f"Meta do dia: {fmt_brl(i['meta_dia'])}\n"
+        f"Realizado hoje: {fmt_brl(i['vendido_hoje'])}\n"
+        f"Faturado no mês: {fmt_brl(i['faturado_mes'])}\n"
+        f"% Faturada: {fmt_pct(i['pct'])}"
         for vendedor, i in linhas_time
     )
     return (
-        f"Meta geral de hoje ({HOJE}): {fmt_brl(t['meta_diaria_necessaria'])}\n"
-        f"Realizado hoje: {fmt_brl(vendido_hoje_geral)}\n"
-        f"Faturado até hoje (mês): {fmt_brl(t['faturado'])} ({fmt_pct(t['realizado_pct'])})\n\n"
-        f"Resultado do time comercial:\n{time_txt}\n"
+        f"Meta de hoje: {fmt_brl(t['meta_diaria_necessaria'])}\n"
+        f"Realizado Hoje: {fmt_brl(vendido_hoje_geral)}\n\n"
+        f"Faturado no mês: {fmt_brl(t['faturado'])}\n"
+        f"% Faturado: {fmt_pct(t['realizado_pct'])}\n\n"
+        f"Resultado do time comercial:\n\n{time_txt}\n"
     )
 
 
