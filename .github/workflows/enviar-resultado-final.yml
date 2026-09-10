@@ -1,0 +1,25 @@
+name: Enviar Resultado Final do Dia por E-mail
+
+on:
+  schedule:
+    - cron: '30 20 * * 1-5'  # 17:30 SP, segunda a sexta
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  enviar-resultado:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Enviar e-mail de resultado final do dia
+        env:
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+        run: python automacao/enviar_resultado_final.py
