@@ -2,7 +2,7 @@ name: Enviar Metas Diárias por E-mail
 
 on:
   schedule:
-    - cron: '0 11 * * 1-5'  # 08:00 SP, segunda a sexta (usa o index.html já atualizado às 07:45 SP)
+        - cron: '50 10 * * 1-5'  # 07:50 SP, segunda a sexta
   workflow_dispatch: {}
 
 permissions:
