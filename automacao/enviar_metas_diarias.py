@@ -26,6 +26,10 @@ Também trocamos o % do ranking de "Atingimento" (Previsto+Faturado/meta)
 para "% Faturado" (Faturado/meta), que é o número que Thais usa como
 referência (confirmado batendo com o painel: Marcelo = 19,1%).
 
+AJUSTE 10/09/2026 (a pedido do Gabriel Pigatto, via Thais): no e-mail dos
+gestores, mostrar a Meta e o Faturado de cada vendedor ao lado do nome no
+ranking, não só o %.
+
 MODO_TESTE = False -> envio real para vendedores e gestores (aprovado por
 Thais em 09/09/2026, após teste aprovado enviando só para ela).
 """
@@ -249,7 +253,11 @@ def ranking_vendedores(data):
     ranking. Escolhido em 09/09/2026 porque é o número que Thais acompanha
     como referência (bate com o campo 'Faturado %' da Visão Individual do
     painel). Cada vendedor entra só pela família que é responsabilidade dele
-    (VENDOR_FAMILIAS_RESP acima, sem sobreposição entre times)."""
+    (VENDOR_FAMILIAS_RESP acima, sem sobreposição entre times).
+
+    Retorna lista de tuplas (vendedor, pct, meta_familia, faturado_familia),
+    ordenada do maior para o menor % (a pedido do Gabriel Pigatto, 10/09/2026,
+    a Meta e o Faturado aparecem ao lado do nome no e-mail dos gestores)."""
     gfp = grupos_por_meta(data)
     linhas = []
     for grupo in data["grupo_map"]:
@@ -260,20 +268,21 @@ def ranking_vendedores(data):
             continue
         responsaveis = [v for v, fams in VENDOR_FAMILIAS_RESP.items()
                          if any(f in fams for f in grupo["familias"])]
-        pct = g["realizado_pct"]
-        linhas.append((responsaveis, pct))
+        linhas.append((responsaveis, g["realizado_pct"], g["meta"], g["faturado_total"]))
 
     hub = next((g for g in data["grupos_familia"] if g["id"] == "pigatto_hub"), None)
     if hub and hub.get("meta"):
-        linhas.append((list(VENDOR_CANAL_ML.keys()), hub["realizado_pct"]))
+        linhas.append((list(VENDOR_CANAL_ML.keys()), hub["realizado_pct"], hub["meta"], hub["faturado_total"]))
 
     por_vendedor = {}
-    for responsaveis, pct in linhas:
+    for responsaveis, pct, meta, faturado in linhas:
         for v in responsaveis:
-            if v not in por_vendedor or (pct is not None and (por_vendedor[v] is None or pct > por_vendedor[v])):
-                por_vendedor[v] = pct
+            atual = por_vendedor.get(v)
+            if atual is None or (pct is not None and (atual[0] is None or pct > atual[0])):
+                por_vendedor[v] = (pct, meta, faturado)
 
-    return sorted(por_vendedor.items(), key=lambda kv: (kv[1] if kv[1] is not None else -1), reverse=True)
+    ranking = sorted(por_vendedor.items(), key=lambda kv: (kv[1][0] if kv[1][0] is not None else -1), reverse=True)
+    return [(v, pct, meta, faturado) for v, (pct, meta, faturado) in ranking]
 
 
 def cor_pct(pct):
@@ -306,13 +315,18 @@ def montar_email_gestores_html(data):
     </table>"""
 
     linhas_ranking = ""
-    for i, (v, pct) in enumerate(linhas):
+    for i, (v, pct, meta, faturado) in enumerate(linhas):
         cor = cor_pct(pct)
         linhas_ranking += f"""
         <tr>
-          <td style="padding:6px 4px;border-bottom:1px solid {COR_LINHA};color:{COR_TEXTO};">{i+1}º</td>
-          <td style="padding:6px 4px;border-bottom:1px solid {COR_LINHA};color:{COR_TEXTO};">{v}</td>
-          <td style="padding:6px 4px;border-bottom:1px solid {COR_LINHA};text-align:right;">
+          <td style="padding:8px 4px;border-bottom:1px solid {COR_LINHA};color:{COR_TEXTO};vertical-align:top;width:28px;">{i+1}º</td>
+          <td style="padding:8px 4px;border-bottom:1px solid {COR_LINHA};color:{COR_TEXTO};vertical-align:top;">
+            <div style="font-weight:700;">{v}</div>
+            <div style="font-size:11.5px;color:{COR_MUTED};margin-top:2px;">
+              Meta: {fmt_brl(meta)} &nbsp;•&nbsp; Faturado: <span style="color:{COR_FATURADO};font-weight:700;">{fmt_brl(faturado)}</span>
+            </div>
+          </td>
+          <td style="padding:8px 4px;border-bottom:1px solid {COR_LINHA};text-align:right;vertical-align:top;">
             <span style="background:{cor};color:#FFFFFF;padding:2px 10px;border-radius:12px;font-weight:700;font-size:12.5px;">{fmt_pct(pct)}</span>
           </td>
         </tr>"""
@@ -333,7 +347,8 @@ def montar_email_gestores_texto(data):
     t = data["totais"]
     linhas = ranking_vendedores(data)
     ranking_txt = "\n".join(
-        f"{i+1}º {v}: {fmt_pct(pct)} da meta da família" for i, (v, pct) in enumerate(linhas)
+        f"{i+1}º {v} — Meta: {fmt_brl(meta)} | Faturado: {fmt_brl(faturado)} | {fmt_pct(pct)}"
+        for i, (v, pct, meta, faturado) in enumerate(linhas)
     )
     falta = max(t["meta"] - (t["faturado"] + t["devolucoes"]), 0)
     falta_pct = (1 - t["realizado_pct"]) if t.get("realizado_pct") is not None else None
