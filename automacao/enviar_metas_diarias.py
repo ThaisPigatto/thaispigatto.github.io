@@ -30,6 +30,10 @@ AJUSTE 10/09/2026 (a pedido do Gabriel Pigatto, via Thais): no e-mail dos
 gestores, mostrar a Meta e o Faturado de cada vendedor ao lado do nome no
 ranking, não só o %.
 
+AJUSTE 10/09/2026 (Thais): assunto do e-mail dos gestores padronizado para
+o mesmo assunto usado pelos vendedores ("META DE VENDAS DO DIA"), igual
+para todo mundo às 07:50.
+
 MODO_TESTE = False -> envio real para vendedores e gestores (aprovado por
 Thais em 09/09/2026, após teste aprovado enviando só para ela).
 """
@@ -339,7 +343,7 @@ def montar_email_gestores_html(data):
       {linhas_ranking}
     </table>"""
 
-    return envolver_html(f"Resultado geral de faturamento — {HOJE}", caixa + resumo + ranking_html)
+    return envolver_html(f"Meta de vendas do dia — {HOJE}", caixa + resumo + ranking_html)
 
 
 def montar_email_gestores_texto(data):
@@ -398,7 +402,7 @@ def main():
 
     corpo_html_gestores = montar_email_gestores_html(data)
     corpo_texto_gestores = montar_email_gestores_texto(data)
-    assunto_gestores = f"RESULTADO GERAL DE FATURAMENTO ATÉ HOJE - {HOJE}"
+    assunto_gestores = f"META DE VENDAS DO DIA - {HOJE}"
     enviar_email(GESTORES_EMAILS, assunto_gestores, corpo_texto_gestores, corpo_html_gestores)
 
 
