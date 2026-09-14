@@ -22,6 +22,9 @@ da manhã) — confirmado por Thais em 10/09/2026, não é o % da meta do dia.
 LAYOUT 10/09/2026 (a pedido de Thais): formato simples, sem caixa colorida
 de destaque — só texto direto, família como cabeçalho e 4 linhas embaixo.
 
+ASSUNTO 14/09/2026 (a pedido de Thais): "RESULTADO FINAL DO FATURAMENTO DO
+DIA" (era "...DE HOJE"), igual para vendedores e gestores.
+
 Aprovado por Thais em 10/09/2026 para envio real direto (sem fase de teste).
 """
 import json
@@ -223,7 +226,7 @@ def montar_email_vendedor_html(vendedor, data):
     if not itens:
         return None
     partes = [bloco_familia_html(i) for i in itens]
-    return envolver_html(f"Resultado final do faturamento de hoje — {HOJE}", "".join(partes))
+    return envolver_html(f"Resultado final do faturamento do dia — {HOJE}", "".join(partes))
 
 
 def montar_email_vendedor_texto(vendedor, data):
@@ -306,7 +309,7 @@ def montar_email_gestores_html(data):
     </div>
     {blocos_time}"""
 
-    return envolver_html(f"Resultado final do faturamento de hoje — {HOJE}", topo + time_html)
+    return envolver_html(f"Resultado final do faturamento do dia — {HOJE}", topo + time_html)
 
 
 def montar_email_gestores_texto(data):
@@ -357,7 +360,7 @@ def enviar_email(destinatarios, assunto, corpo_texto, corpo_html):
 
 def main():
     data = carregar_data()
-    assunto = f"RESULTADO FINAL DO FATURAMENTO DE HOJE - {HOJE}"
+    assunto = f"RESULTADO FINAL DO FATURAMENTO DO DIA - {HOJE}"
 
     for vendedor, emails in VENDOR_EMAILS.items():
         corpo_html = montar_email_vendedor_html(vendedor, data)
