@@ -541,13 +541,21 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
     def montar_real(l):
         vend = nome_vendedor(l["empresa"], l["cod_vend"])
         is_ml = (vend == "Mercado Livre")
+        # Licitação identificada pelo campo Vendedor = "Licitação" (confirmado por Thais,
+        # 16/09/2026) — mesmo critério do Mercado Livre, e não mais pelo nome da Família do
+        # produto. Antes disso o robô procurava família começando com "LICITA", que nunca
+        # bate com dado real (a família do produto vendido continua sendo a família de
+        # verdade; quem muda é só o vendedor). Sem essa troca, uma venda de Licitação de
+        # verdade não seria identificada e cairia (errado) na família/vendedor do produto.
+        is_lic = (vend == "Licitação")
+        is_hub = is_ml or is_lic
         # Antes de 03/09/2026 "operacao" vinha sempre fixo em "Orçamento", mesmo pra devolução
         # de venda — isso fazia a devolução (quando existia) cair junto do faturado em vez de
         # ser contada à parte, e a HUB nunca enxergava devolução nenhuma. Agora reflete o que
         # a linha realmente é.
         return {
             "familia": nome_familia(l["empresa"], l["cod_produto"]),
-            "vendedor": "Jéssica" if is_ml else vend, "is_ml": is_ml,
+            "vendedor": "Jéssica" if is_hub else vend, "is_ml": is_ml, "is_lic": is_lic,
             "nota_fiscal": l["nota"], "pedido": None, "situacao": "Autorizado",
             "empresa": l["empresa"],
             "operacao": "Devolução de Venda" if l.get("is_devolucao") else "Orçamento",
@@ -559,9 +567,11 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
     def montar_prev(l):
         vend = nome_vendedor(l["empresa"], l["cod_vend"])
         is_ml = (vend == "Mercado Livre")
+        is_lic = (vend == "Licitação")  # ver nota em montar_real (16/09/2026)
+        is_hub = is_ml or is_lic
         return {
             "familia": nome_familia(l["empresa"], l["cod_produto"]),
-            "vendedor": "Jéssica" if is_ml else vend, "is_ml": is_ml,
+            "vendedor": "Jéssica" if is_hub else vend, "is_ml": is_ml, "is_lic": is_lic,
             "nota_fiscal": "N/D", "pedido": l["pedido"], "situacao": "Aguardando faturamento",
             "empresa": l["empresa"], "operacao": "Orçamento", "cfop": l["cfop"], "total": l["valor"],
             "data_previsao": l.get("data_previsao", ""),
@@ -587,13 +597,14 @@ def montar_data(real_rows, prev_rows):
             f = r["familia"]
             if f is None:
                 continue
-            # Vendas do Mercado Livre (is_ml) já contam inteiras para a HUB/Jéssica (hub_fat/hub_prev
-            # mais abaixo, calculado direto de real_rows/prev_rows) — não podem também entrar aqui,
-            # senão duplicam dentro da família/grupo de produto (ex: Papel térmico) e inflam a meta de
-            # quem não vendeu aquilo (ex: Rhamayana). Regra confirmada por Thais em 01/09/2026: só o que
-            # foi vendido direto pelo sistema da Papéis (fora do Mercado Livre/licitação) conta pra
-            # família/vendedor responsável.
-            if r.get("is_ml"):
+            # Vendas do Mercado Livre OU Licitação (is_ml/is_lic) já contam inteiras para a
+            # HUB/Jéssica (hub_fat/hub_prev mais abaixo, calculado direto de real_rows/prev_rows)
+            # — não podem também entrar aqui, senão duplicam dentro da família/grupo de produto
+            # (ex: Papel térmico) e inflam a meta de quem não vendeu aquilo (ex: Rhamayana). Regra
+            # do Mercado Livre confirmada por Thais em 01/09/2026; estendida à Licitação (mesmo
+            # critério, campo Vendedor) em 16/09/2026 — só o que foi vendido direto pelo sistema,
+            # fora do Mercado Livre/Licitação, conta pra família/vendedor responsável.
+            if r.get("is_ml") or r.get("is_lic"):
                 continue
             e = fam.setdefault(f, {"faturado": 0.0, "previsto": 0.0, "devolucoes": 0.0, "aguardando": 0.0, "hoje": 0.0})
             val = r["total"]
@@ -680,8 +691,12 @@ def montar_data(real_rows, prev_rows):
     # 01/09/2026). Antes disso a HUB era só uma linha separada, fora do total.
     ml_real = [r for r in real_rows if r["is_ml"]]
     ml_prev = [r for r in prev_rows if r["is_ml"]]
-    lic_real = [r for r in real_rows if (r["familia"] or "").upper().startswith("LICITA")]
-    lic_prev = [r for r in prev_rows if (r["familia"] or "").upper().startswith("LICITA")]
+    # Até 15/09/2026 a Licitação era identificada pelo nome da Família do produto (começando
+    # com "LICITA") — critério que nunca batia com dado real, porque a família do produto
+    # vendido continua sendo a família de verdade. Corrigido em 16/09/2026: agora usa o mesmo
+    # critério do Mercado Livre, o campo Vendedor = "Licitação" (is_lic, ver montar_real/montar_prev).
+    lic_real = [r for r in real_rows if r["is_lic"]]
+    lic_prev = [r for r in prev_rows if r["is_lic"]]
     hub_fat = sum(r["total"] for r in ml_real + lic_real if r["operacao"] == "Orçamento")
     hub_dev = sum(r["total"] for r in ml_real + lic_real if r["operacao"] != "Orçamento")
     hub_prev_v = sum(r["total"] for r in ml_prev + lic_prev)
