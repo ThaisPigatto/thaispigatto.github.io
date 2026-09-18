@@ -591,20 +591,25 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
 # 7) Monta o DATA final (mesma lógica de build_data5.py)
 # ----------------------------------------------------------------------------
 def montar_data(real_rows, prev_rows):
-    def agg_by_familia(rows, is_prev):
+    def agg_by_familia(rows, is_prev, incluir_hub=False):
+        """Agrega por família. incluir_hub=False (padrão) EXCLUI linhas de Mercado Livre/Licitação
+        — usado só para montar o Total Geral/Meta Geral da empresa, que nunca pode contar essa
+        venda de novo (ela já está no canal Pigatto HUB). incluir_hub=True INCLUI essas linhas —
+        usado para os totais de família/grupo exibidos na tabela "Resultados por Família" e na
+        "Corrida das Famílias" (pedido de Gabriel Pigatto, repassado por Thais em 18/09/2026: o
+        valor vendido por Mercado Livre/Licitação de uma família passa a contar no resultado/
+        prêmio daquela família — mas sem gerar comissão pessoal para o vendedor dono da família,
+        o que já é garantido em outro lugar: o campo "vendedor" de toda venda ML/Licitação é
+        sempre reescrito para "Jéssica" antes de chegar nas tabelas pessoais, então nunca aparece
+        como resultado pessoal da Rhamayana/Maria Cristina/etc — ver montar_real/montar_prev).
+        Regra original (Mercado Livre confirmada por Thais em 01/09/2026, estendida à Licitação
+        em 16/09/2026) ainda vale integralmente para o Total Geral — ver montar_data abaixo."""
         fam = {}
         for r in rows:
             f = r["familia"]
             if f is None:
                 continue
-            # Vendas do Mercado Livre OU Licitação (is_ml/is_lic) já contam inteiras para a
-            # HUB/Jéssica (hub_fat/hub_prev mais abaixo, calculado direto de real_rows/prev_rows)
-            # — não podem também entrar aqui, senão duplicam dentro da família/grupo de produto
-            # (ex: Papel térmico) e inflam a meta de quem não vendeu aquilo (ex: Rhamayana). Regra
-            # do Mercado Livre confirmada por Thais em 01/09/2026; estendida à Licitação (mesmo
-            # critério, campo Vendedor) em 16/09/2026 — só o que foi vendido direto pelo sistema,
-            # fora do Mercado Livre/Licitação, conta pra família/vendedor responsável.
-            if r.get("is_ml") or r.get("is_lic"):
+            if not incluir_hub and (r.get("is_ml") or r.get("is_lic")):
                 continue
             e = fam.setdefault(f, {"faturado": 0.0, "previsto": 0.0, "devolucoes": 0.0, "aguardando": 0.0, "hoje": 0.0})
             val = r["total"]
@@ -625,8 +630,16 @@ def montar_data(real_rows, prev_rows):
                     e["devolucoes"] += val
         return fam
 
-    fam_real = agg_by_familia(real_rows, False)
-    fam_prev = agg_by_familia(prev_rows, True)
+    # fam_real/fam_prev (COM Mercado Livre/Licitação): alimentam os totais de FAMÍLIA e GRUPO
+    # exibidos na tabela e na Corrida das Famílias (ver comentário de agg_by_familia acima).
+    fam_real = agg_by_familia(real_rows, False, incluir_hub=True)
+    fam_prev = agg_by_familia(prev_rows, True, incluir_hub=True)
+    # fam_real_geral/fam_prev_geral (SEM Mercado Livre/Licitação): usadas EXCLUSIVAMENTE para
+    # compor tot_fat/tot_prev/tot_dev (Total Geral/Meta Geral) mais abaixo — nunca usar fam_real/
+    # fam_prev (com HUB) pra isso, senão a venda de ML/Licitação seria contada duas vezes dentro
+    # do Total Geral (ela já entra no canal Pigatto HUB).
+    fam_real_geral = agg_by_familia(real_rows, False, incluir_hub=False)
+    fam_prev_geral = agg_by_familia(prev_rows, True, incluir_hub=False)
 
     all_familias = set(fam_real.keys()) | set(fam_prev.keys())
     for g in GRUPOS:
@@ -665,6 +678,12 @@ def montar_data(real_rows, prev_rows):
         return entry
 
     grupos_familia_out = []
+    # Soma paralela SEM Mercado Livre/Licitação, acumulada família por família dentro do mesmo
+    # loop abaixo — alimenta só o Total Geral/Meta Geral mais adiante (ver uso de tot_fat_geral/
+    # tot_prev_geral/tot_dev_geral logo após o bloco da HUB). fat_t/prev_t/dev_t abaixo já incluem
+    # ML/Licitação (fam_real/fam_prev com incluir_hub=True) e alimentam a exibição de família/
+    # grupo (linhas, faturado_total, etc.) — as duas somas nunca se misturam.
+    tot_fat_geral = tot_prev_geral = tot_dev_geral = 0.0
     for g in GRUPOS:
         linhas = []
         fat_t = prev_t = dev_t = 0.0
@@ -674,6 +693,9 @@ def montar_data(real_rows, prev_rows):
             linhas.append({"familia": f, "faturado": round(r["faturado"], 2),
                             "previsto": round(p["previsto"], 2), "devolucoes": round(r["devolucoes"], 2)})
             fat_t += r["faturado"]; prev_t += p["previsto"]; dev_t += r["devolucoes"]
+            r_geral = fam_real_geral.get(f, {"faturado": 0.0, "devolucoes": 0.0})
+            p_geral = fam_prev_geral.get(f, {"previsto": 0.0})
+            tot_fat_geral += r_geral["faturado"]; tot_prev_geral += p_geral["previsto"]; tot_dev_geral += r_geral["devolucoes"]
         prev_fat_t = fat_t + prev_t + dev_t
         meta = g["meta"]
         grupos_familia_out.append({
@@ -705,9 +727,18 @@ def montar_data(real_rows, prev_rows):
     # HUB tem meta própria e NÃO entra no total geral da empresa (voltou pra regra original em
     # 02/09/2026 — só durou 1 dia a versão que somava). hub_fat/hub_prev_v/hub_dev continuam
     # calculados aqui só porque precisam existir antes, pro bloco "pigatto_hub" mais abaixo.
-    tot_fat = sum(g["faturado_total"] for g in grupos_familia_out)
-    tot_prev = sum(g["previsto_total"] for g in grupos_familia_out)
-    tot_dev = sum(g["devolucoes_total"] for g in grupos_familia_out)
+    #
+    # IMPORTANTE (18/09/2026, pedido de Gabriel Pigatto): o Total Geral usa tot_fat_geral/
+    # tot_prev_geral/tot_dev_geral (acumulados no loop de grupos acima, SEM Mercado Livre/
+    # Licitação) — nunca soma g["faturado_total"]/g["previsto_total"]/g["devolucoes_total"] de
+    # grupos_familia_out, porque esses já incluem ML/Licitação (usados só pra exibição de
+    # família/grupo/Corrida das Famílias). Se o Total Geral somasse esses valores, a mesma venda
+    # de ML/Licitação seria contada duas vezes aqui dentro (ela já está, corretamente, dentro do
+    # canal Pigatto HUB, calculado separadamente hub_fat/hub_dev/hub_prev_v acima). Garante que o
+    # Total Geral continua batendo com o financeiro exatamente como batia antes dessa mudança.
+    tot_fat = round(tot_fat_geral, 2)
+    tot_prev = round(tot_prev_geral, 2)
+    tot_dev = round(tot_dev_geral, 2)
     tot_prevfat = tot_fat + tot_prev + tot_dev
     grupos_familia_out.append({
         "id": "total_geral", "cor": "#122038", "meta": META_GERAL,
