@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OPERAÇÃO ESPREMENDO A LARANJA — Grupo Pigatto</title>
+<style>
+  :root{
+    --ink: #1D1D1B;
+    --ink-dim: #6B6B66;
+    --line: #DDDAD2;
+    --orange: #E8631C;
+    --talvez: #FFEB3B;
+    --certeza: #A9D8B8;
+    --todos: #AEDCF5;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:#FFFFFF;
+    color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .wrap{ max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
+
+  header{ display:flex; align-items:center; gap:14px; padding-bottom:16px; border-bottom: 2px solid var(--ink); margin-bottom: 24px; }
+  header img{ height:28px; width:auto; }
+  .status{ margin-left:auto; font-size:12px; color: var(--ink-dim); }
+
+  .title-row{ display:flex; align-items:center; gap:14px; margin-bottom: 28px; }
+  .title-row svg{ width:36px; height:36px; flex-shrink:0; }
+  h1{ font-size: 26px; margin:0; font-weight:bold; }
+  h1 span{ color: var(--orange); }
+
+  h2{ font-size: 17px; margin: 30px 0 12px; }
+
+  table{ border-collapse:collapse; width:100%; }
+  th{ text-align:center; font-size:14px; padding:8px; border:1px solid var(--line); }
+  th.talvez{ background:var(--talvez); }
+  th.certeza{ background:var(--certeza); }
+  th.todos{ background:var(--todos); }
+  td{ padding:7px 10px; border:1px solid var(--line); font-size:13.5px; white-space:nowrap; }
+  td.v{ font-weight:normal; }
+  tr.total td{ font-weight:bold; }
+  tr.total td.talvez{ background:var(--talvez); }
+  tr.total td.certeza{ background:var(--certeza); }
+  tr.total td.todos{ background:var(--todos); }
+
+  .funnel{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .funnel table{ height:100%; }
+
+  .objetivo{ font-weight:bold; font-size:16px; margin: 8px 0 14px; }
+  .objetivo b{ color: var(--orange); }
+
+  .acoes-table th{ font-size:13px; }
+  .acoes-table td{ font-size:13px; white-space:normal; }
+  th.adesivos{ background:#B3161C; color:#fff; }
+  th.especialidades{ background:#4CAF50; color:#fff; }
+  th.hub{ background:#FFEB3B; }
+  th.plasticos{ background:#4FC3F7; }
+  th.papeis{ background:#E1A6E8; }
+
+  .revisar{ margin-top: 26px; }
+  .revisar p{ margin:3px 0; font-size:14px; }
+  .revisar b{ display:block; margin-top:14px; }
+
+  .valor-quem{ max-width:380px; margin-top:14px; }
+  .valor-quem td{ font-weight:bold; }
+  td.adesivos{ background:#B3161C; color:#fff; }
+  td.especialidades{ background:#4CAF50; color:#fff; }
+  td.hub{ background:#FFEB3B; }
+  td.plasticos{ background:#4FC3F7; }
+  td.papeis{ background:#E1A6E8; }
+
+  .aviso{ color:#E8631C; font-weight:bold; font-size:14px; margin-top:20px; }
+
+  footer{ margin-top:32px; padding-top:12px; border-top:1px solid var(--line); font-size:11px; color: var(--ink-dim); }
+
+  @media (max-width: 720px){ .funnel{ grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKIAAABBCAYAAABSIn83AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAABQSSURBVHhe7Zx5dBRV2oefqnSn051OiFlYsgEOIjuon0LYQQiL7DqjoAMqrug4wOi4IqAgiIrigooyKLI4iKAic3QcZSeAIDIqEjYhaBKyp5f0Wn2/PzqppCuLMUoMTD3n1Dm5731vpar7V/e+9963WhJCCHR0fmdkrUFH5/dAF6JOk0AXok6TQBeiTpNAF6JOk0AXok6TQBeiTpNAF6JOk0AXok6TQBeiTpNAF6JOk0AXok6TQBeiTpNAF6JOk0BqSBpY9sw7sG14F2poamrfkTabdyKFh4fY8w4eZNOoMSgeT4gdIMxkYtQHG2hx5ZXaKp3/ERrUI3qOHK5RhADeUycJuMq0ZkqPHa9RhACKx0P+of9qzTr/QzRIiJLWoKPzK2mQEP8XEELg8Xhwu90oiqKtPu8RQuD1enG73TQgOvvNaVCMeGpkX9zfHdKaAZDCTbTbf5ywZjEh9mPr3mPLtHtCbFXpvXABXW6bqjXXyNGjmaxds0prxmg0EBsXT6eOnejcpRuxsbFIUrD/djgcLFu2FLvNDkDnLl247rrrQ9oLIcjNzSEjYxc7tm/lzJksFCVAdHQ0PXpcxoCBg+nUqQsREREh7apy/PhRXnnlRXxeLwA9e/XmxhsnI8vVn/mXXnyBoqJCrblG0ocNp1ev3ix7fSm5ubna6hq57fY7SUpKVstCCM6ezWXv3gy2b9tKVtYpFEUhPj6BXr1607//QNq0vRiDwRBynsbgvBTi3r0ZzH78Ea1ZRZZlkpNT+Mt9M+jatTsAxcVF3HvPHRQWBr/4AQMG8/Ajs9Q2Qgj+859PWfXO2+Tlna2xlwg3mbj8siuYPuN+YmIu0lYDsGbNSt5Z+ZbaPjW1Nc8+t4To6GZaV2695Say Cw==
+    <script>
+  </script>
+</body>
+</html>
