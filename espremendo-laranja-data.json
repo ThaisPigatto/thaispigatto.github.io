@@ -1,5 +1,5 @@
 {
-  "atualizado_em": "2026-09-21T18:00:00-03:00",
+  "atualizado_em": "2026-09-21T21:30:00-03:00",
   "talvez": {
     "total": 265000.0,
     "itens": [
@@ -30,7 +30,7 @@
     ]
   },
   "certeza": {
-    "total": 71000.0,
+    "total": 75185.6,
     "itens": [
       {
         "nome": "Marcelo",
@@ -43,11 +43,15 @@
       {
         "nome": "Tiago",
         "valor": 15000.0
+      },
+      {
+        "nome": "Rhamayana",
+        "valor": 4185.6
       }
     ]
   },
   "pipeline_atual": {
-    "total": 336000.0
+    "total": 340185.6
   },
   "novo_topo_funil": 300000.0,
   "acoes_por_area": [
