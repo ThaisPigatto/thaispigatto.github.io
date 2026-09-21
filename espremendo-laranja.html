@@ -29,7 +29,9 @@
     color:var(--ink);
     font-family:'Space Grotesk', system-ui, sans-serif;
   }
-  .wrap{ max-width:1180px; margin:0 auto; padding:30px 28px 56px; }
+  .wrap{ max-width:1760px; margin:0 auto; padding:30px 28px 56px; }
+  .page{ display:grid; grid-template-columns: 1fr 1fr; gap:48px; align-items:start; }
+  @media (max-width:1100px){ .page{ grid-template-columns:1fr; } }
 
   header{ display:flex; align-items:baseline; justify-content:space-between; padding-bottom:14px; border-bottom:1px solid var(--line); margin-bottom:34px; }
   header img.logo{ height:38px; width:auto; display:block; }
@@ -137,6 +139,9 @@
     <div class="status" id="statusText"></div>
   </header>
 
+  <div class="page">
+  <div class="col-left">
+
   <div class="title-row">
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <circle cx="50" cy="50" r="46" fill="#E8631C"/>
@@ -172,6 +177,10 @@
     </div>
   </div>
 
+  </div>
+
+  <div class="col-right">
+
   <div class="goal">
     <span class="num" id="goalNum">—</span>
     <span class="lbl">NOVO OBJETIVO TOPO DE FUNIL</span>
@@ -199,6 +208,10 @@
       </table>
       <div class="aviso" id="aviso"></div>
     </div>
+  </div>
+
+  </div>
+
   </div>
 
   <footer><span id="updated"></span></footer>
