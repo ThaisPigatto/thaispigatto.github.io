@@ -25,6 +25,9 @@ de destaque — só texto direto, família como cabeçalho e 4 linhas embaixo.
 ASSUNTO 14/09/2026 (a pedido de Thais): "RESULTADO FINAL DO FATURAMENTO DO
 DIA" (era "...DE HOJE"), igual para vendedores e gestores.
 
+AJUSTE 15/09/2026 (Thais): adicionado jessica.farias@pigattodistribuidora.com.br
+como destinatária extra dos e-mails da Maria Cristina (funcionária nova).
+
 Aprovado por Thais em 10/09/2026 para envio real direto (sem fase de teste).
 """
 import json
@@ -72,7 +75,7 @@ VENDOR_FAMILIAS_RESP = {
 VENDOR_CANAL_ML = {"Jéssica": 100000}
 
 VENDOR_EMAILS = {
-    "Maria Cristina":      ["maria.cristina@pigattodistribuidora.com.br"],
+    "Maria Cristina":      ["maria.cristina@pigattodistribuidora.com.br", "jessica.farias@pigattodistribuidora.com.br"],
     "Jéssica":             ["vendas1@pigattodistribuidora.com.br", "jessica@pigattodistribuidora.com.br"],
     "Rhamayana":           ["vendas3@pigattodistribuidora.com.br", "rhamayana@pigattodistribuidora.com.br"],
     "Marcelo Ribeiro":     ["marcelo@pigattodistribuidora.com.br"],
