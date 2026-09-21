@@ -1,0 +1,137 @@
+{
+  "atualizado_em": "2026-09-21T18:00:00-03:00",
+  "talvez": {
+    "total": 265000.0,
+    "itens": [
+      {
+        "nome": "Tiago - Espumatec",
+        "valor": 20000.0
+      },
+      {
+        "nome": "Jessica - Licitação",
+        "valor": 90000.0
+      },
+      {
+        "nome": "Jessica - Licitação",
+        "valor": 53000.0
+      },
+      {
+        "nome": "Wellington",
+        "valor": 50000.0
+      },
+      {
+        "nome": "Maria - Diam",
+        "valor": 40000.0
+      },
+      {
+        "nome": "Jessica - Licitação",
+        "valor": 12000.0
+      }
+    ]
+  },
+  "certeza": {
+    "total": 71000.0,
+    "itens": [
+      {
+        "nome": "Marcelo",
+        "valor": 16000.0
+      },
+      {
+        "nome": "Maria - ticcolor",
+        "valor": 40000.0
+      },
+      {
+        "nome": "Tiago",
+        "valor": 15000.0
+      }
+    ]
+  },
+  "pipeline_atual": {
+    "total": 336000.0
+  },
+  "novo_topo_funil": 300000.0,
+  "acoes_por_area": [
+    {
+      "area": "Adesivos",
+      "itens": [
+        "Revisar clientes que compram",
+        "Quais produtos estão vencendo?",
+        "Conseguimos adiantar algo?"
+      ]
+    },
+    {
+      "area": "Especialidades",
+      "itens": [
+        "Revisar clientes que compram",
+        "Quais produtos estão vencendo?",
+        "Conseguimos adiantar algo?"
+      ]
+    },
+    {
+      "area": "HUB",
+      "itens": [
+        "foco em dispensa",
+        "Contar com o compras",
+        "se precisar auxilio/Major"
+      ]
+    },
+    {
+      "area": "Plasticos de Eng",
+      "itens": [
+        "Revisar clientes que compram",
+        "Produtos Parados",
+        "Conseguimos adiantar algo?"
+      ]
+    },
+    {
+      "area": "Papeis",
+      "itens": [
+        "Revisar clientes que compram",
+        "Ofertas ou dar o Frete",
+        "Conseguimos adiantar algo?"
+      ]
+    }
+  ],
+  "revisar_clientes": {
+    "titulo": "01) REVISAR CLIENTES",
+    "itens": [
+      "Ofertar Prazo (Pagamento)",
+      "Ofertar Frete (Grátis)",
+      "Puxar pedidos (Conseguimos adiantar algo?)"
+    ]
+  },
+  "produtos_vencendo": {
+    "titulo": "02) QUAIS PRODUTOS ESTÃO VENCENDO?",
+    "itens": [
+      "Preço atrativo"
+    ]
+  },
+  "distribuicao_por_area": [
+    {
+      "area": "Adesivos",
+      "valor": 100000.0,
+      "classe": "adesivos"
+    },
+    {
+      "area": "Especialidades",
+      "valor": 50000.0,
+      "classe": "especialidades"
+    },
+    {
+      "area": "HUB",
+      "valor": 50000.0,
+      "classe": "hub"
+    },
+    {
+      "area": "Plasticos de Eng",
+      "valor": 50000.0,
+      "classe": "plasticos"
+    },
+    {
+      "area": "Papeis",
+      "valor": 50000.0,
+      "classe": "papeis"
+    }
+  ],
+  "aviso": "TRAZER NÚMEROS DIÁRIAMENTE!"
+}
