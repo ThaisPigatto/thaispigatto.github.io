@@ -4,88 +4,131 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OPERAÇÃO ESPREMENDO A LARANJA — Grupo Pigatto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink: #1D1D1B;
-    --ink-dim: #6B6B66;
-    --line: #DDDAD2;
-    --orange: #E8631C;
-    --talvez: #FFEB3B;
-    --certeza: #A9D8B8;
-    --todos: #AEDCF5;
+    --ink:#1B1B18;
+    --ink-dim:#726F66;
+    --line:#E7E3DA;
+    --paper:#FFFFFF;
+    --panel:#FBF9F5;
+    --orange:#E8631C;
+    --orange-deep:#B84B14;
+    --talvez:#C9971A;
+    --talvez-bg:#FBF1DA;
+    --certeza:#1E7A4C;
+    --certeza-bg:#E3F1E8;
+    --todos-bg:#F3EFE6;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
-    background:#FFFFFF;
-    color: var(--ink);
-    font-family: Arial, Helvetica, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk', system-ui, sans-serif;
   }
-  .wrap{ max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:30px 28px 56px; }
 
-  header{ display:flex; align-items:center; gap:14px; padding-bottom:16px; border-bottom: 2px solid var(--ink); margin-bottom: 24px; }
-  .brand{ font-weight:bold; font-size:15px; letter-spacing:0.02em; }
-  .brand span{ font-weight:normal; color: var(--ink-dim); }
-  .status{ margin-left:auto; font-size:12px; color: var(--ink-dim); }
+  header{ display:flex; align-items:baseline; justify-content:space-between; padding-bottom:14px; border-bottom:1px solid var(--line); margin-bottom:34px; }
+  .brand{ font-weight:600; font-size:13px; letter-spacing:0.06em; }
+  .brand em{ font-style:normal; color:var(--ink-dim); font-weight:500; }
+  .status{ font-size:12px; color:var(--ink-dim); font-variant-numeric:tabular-nums; }
 
-  .title-row{ display:flex; align-items:center; gap:14px; margin-bottom: 28px; }
-  .title-row svg{ width:36px; height:36px; flex-shrink:0; }
-  h1{ font-size: 26px; margin:0; font-weight:bold; }
-  h1 span{ color: var(--orange); }
+  .title-row{ display:flex; align-items:center; gap:18px; margin-bottom:8px; }
+  .title-row svg{ width:44px; height:44px; flex-shrink:0; }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size: clamp(28px, 3.4vw, 42px);
+    margin:0;
+    letter-spacing:-0.01em;
+    line-height:1.05;
+  }
+  h1 i{ font-style:italic; color:var(--orange); font-weight:600; }
+  .kicker{ font-size:13px; color:var(--ink-dim); margin:0 0 34px 62px; }
 
-  h2{ font-size: 17px; margin: 30px 0 12px; }
+  .funnel{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-bottom:38px; }
+  .fcard{ background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .fcard-top{ height:4px; }
+  .fcard-top.talvez{ background:var(--talvez); }
+  .fcard-top.certeza{ background:var(--certeza); }
+  .fcard-top.todos{ background:var(--orange); }
+  .fcard-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px 10px; }
+  .fcard-label{ font-size:12px; font-weight:700; letter-spacing:0.08em; }
+  .fcard-label.talvez{ color:var(--talvez); }
+  .fcard-label.certeza{ color:var(--certeza); }
+  .fcard-label.todos{ color:var(--orange-deep); }
+  .fcard-total{ font-family:'Fraunces', serif; font-weight:700; font-size:19px; }
+  .fcard ul{ list-style:none; margin:0; padding:0 18px 16px; }
+  .fcard li{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:7px 0; border-top:1px solid var(--line); }
+  .fcard li:first-child{ border-top:none; }
+  .fcard .name{ color:var(--ink-dim); }
+  .fcard .val{ font-weight:600; white-space:nowrap; }
 
-  table{ border-collapse:collapse; width:100%; }
-  th{ text-align:center; font-size:14px; padding:8px; border:1px solid var(--line); }
-  th.talvez{ background:var(--talvez); }
-  th.certeza{ background:var(--certeza); }
-  th.todos{ background:var(--todos); }
-  td{ padding:7px 10px; border:1px solid var(--line); font-size:13.5px; white-space:nowrap; }
-  td.v{ font-weight:normal; }
-  tr.total td{ font-weight:bold; }
-  tr.total td.talvez{ background:var(--talvez); }
-  tr.total td.certeza{ background:var(--certeza); }
-  tr.total td.todos{ background:var(--todos); }
+  .goal{
+    display:flex; align-items:baseline; gap:12px;
+    background:linear-gradient(100deg, var(--orange), var(--orange-deep));
+    color:#fff; border-radius:14px; padding:16px 22px; margin-bottom:34px;
+  }
+  .goal .num{ font-family:'Fraunces', serif; font-weight:700; font-size:24px; }
+  .goal .lbl{ font-size:13px; letter-spacing:0.05em; font-weight:600; opacity:0.92; }
 
-  .funnel{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
-  .funnel table{ height:100%; }
+  h2{ font-family:'Fraunces', serif; font-size:19px; font-weight:600; margin:0 0 14px; }
 
-  .objetivo{ font-weight:bold; font-size:16px; margin: 8px 0 14px; }
-  .objetivo b{ color: var(--orange); }
+  .acoes{ border-collapse:separate; border-spacing:0; width:100%; margin-bottom:36px; }
+  .acoes th{
+    font-size:12.5px; font-weight:700; letter-spacing:0.04em; text-align:left;
+    padding:10px 14px; color:#fff;
+  }
+  .acoes th:first-child{ background:transparent; }
+  .acoes th.adesivos{ background:#A5271C; border-radius:8px 8px 0 0; }
+  .acoes th.especialidades{ background:#2E7D4F; border-radius:8px 8px 0 0; }
+  .acoes th.hub{ background:#C99A1B; color:#1B1B18; border-radius:8px 8px 0 0; }
+  .acoes th.plasticos{ background:#2E86AB; border-radius:8px 8px 0 0; }
+  .acoes th.papeis{ background:#8E5AA6; border-radius:8px 8px 0 0; }
+  .acoes td{ padding:10px 14px; font-size:13.5px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .acoes td:first-child{ color:var(--ink-dim); font-weight:600; width:24px; }
+  .acoes tr:nth-child(odd) td{ background:var(--panel); }
 
-  .acoes-table th{ font-size:13px; }
-  .acoes-table td{ font-size:13px; white-space:normal; }
-  th.adesivos{ background:#B3161C; color:#fff; }
-  th.especialidades{ background:#4CAF50; color:#fff; }
-  th.hub{ background:#FFEB3B; }
-  th.plasticos{ background:#4FC3F7; }
-  th.papeis{ background:#E1A6E8; }
+  .lower{ display:grid; grid-template-columns: 1.1fr 1fr; gap:40px; align-items:start; }
+  .revisar b{ display:block; font-size:14.5px; margin:0 0 6px; }
+  .revisar p{ margin:0 0 4px; font-size:13.5px; color:var(--ink-dim); }
+  .revisar .grupo{ margin-bottom:18px; }
 
-  .revisar{ margin-top: 26px; }
-  .revisar p{ margin:3px 0; font-size:14px; }
-  .revisar b{ display:block; margin-top:14px; }
+  .vq{ border-collapse:separate; border-spacing:0 8px; width:100%; max-width:400px; }
+  .vq th{ text-align:left; font-size:12px; letter-spacing:0.06em; color:var(--ink-dim); font-weight:600; padding:0 14px 4px; }
+  .vq td{ padding:10px 14px; font-weight:600; font-size:14px; }
+  .vq tr.row td:first-child{ border-radius:8px 0 0 8px; background:var(--panel); }
+  .vq tr.row td:last-child{ border-radius:0 8px 8px 0; color:#fff; }
+  .vq td.adesivos{ background:#A5271C; }
+  .vq td.especialidades{ background:#2E7D4F; }
+  .vq td.hub{ background:#C99A1B; color:#1B1B18 !important; }
+  .vq td.plasticos{ background:#2E86AB; }
+  .vq td.papeis{ background:#8E5AA6; }
 
-  .valor-quem{ max-width:380px; margin-top:14px; }
-  .valor-quem td{ font-weight:bold; }
-  td.adesivos{ background:#B3161C; color:#fff; }
-  td.especialidades{ background:#4CAF50; color:#fff; }
-  td.hub{ background:#FFEB3B; }
-  td.plasticos{ background:#4FC3F7; }
-  td.papeis{ background:#E1A6E8; }
+  .aviso{
+    margin-top:26px; padding:14px 18px; border-radius:10px;
+    background:var(--talvez-bg); border-left:4px solid var(--orange);
+    font-weight:700; font-size:13.5px; color:var(--orange-deep);
+  }
 
-  .aviso{ color:#E8631C; font-weight:bold; font-size:14px; margin-top:20px; }
+  footer{ margin-top:36px; padding-top:12px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-dim); }
 
-  footer{ margin-top:32px; padding-top:12px; border-top:1px solid var(--line); font-size:11px; color: var(--ink-dim); }
-
-  @media (max-width: 720px){ .funnel{ grid-template-columns: 1fr; } }
+  @media (max-width:900px){
+    .funnel{ grid-template-columns:1fr; }
+    .lower{ grid-template-columns:1fr; }
+    .kicker{ margin-left:0; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header>
-    <div class="brand">PIGATTO <span>DISTRIBUIDORA</span></div>
-    <span class="status" id="statusText"></span>
+    <div class="brand">PIGATTO <em>DISTRIBUIDORA</em></div>
+    <div class="status" id="statusText"></div>
   </header>
 
   <div class="title-row">
@@ -102,24 +145,35 @@
       </g>
       <circle cx="50" cy="50" r="8" fill="#FFDDA8"/>
     </svg>
-    <h1>OPERAÇÃO <span>ESPREMENDO A LARANJA</span></h1>
+    <h1>OPERAÇÃO <i>ESPREMENDO A LARANJA</i></h1>
   </div>
+  <p class="kicker" id="kicker"></p>
 
   <div class="funnel">
-    <table id="talvezTable">
-      <tr><th class="talvez">TALVEZ</th></tr>
-    </table>
-    <table id="certezaTable">
-      <tr><th class="certeza">CERTEZA</th></tr>
-    </table>
-    <table id="todosTable">
-      <tr><th class="todos">TODOS</th></tr>
-    </table>
+    <div class="fcard">
+      <div class="fcard-top talvez"></div>
+      <div class="fcard-head"><span class="fcard-label talvez">TALVEZ</span><span class="fcard-total" id="talvezTotal">—</span></div>
+      <ul id="talvezItems"></ul>
+    </div>
+    <div class="fcard">
+      <div class="fcard-top certeza"></div>
+      <div class="fcard-head"><span class="fcard-label certeza">CERTEZA</span><span class="fcard-total" id="certezaTotal">—</span></div>
+      <ul id="certezaItems"></ul>
+    </div>
+    <div class="fcard">
+      <div class="fcard-top todos"></div>
+      <div class="fcard-head"><span class="fcard-label todos">TODOS</span><span class="fcard-total" id="todosTotal">—</span></div>
+      <ul id="todosItems"></ul>
+    </div>
   </div>
 
-  <div class="objetivo" id="objetivo"></div>
+  <div class="goal">
+    <span class="num" id="goalNum">—</span>
+    <span class="lbl">NOVO OBJETIVO TOPO DE FUNIL</span>
+  </div>
 
-  <table class="acoes-table">
+  <h2>Ações por área</h2>
+  <table class="acoes">
     <tr>
       <th></th>
       <th class="adesivos">Adesivos</th>
@@ -131,17 +185,18 @@
     <tbody id="acoesBody"></tbody>
   </table>
 
-  <div class="revisar" id="revisar"></div>
+  <div class="lower">
+    <div class="revisar" id="revisar"></div>
+    <div>
+      <table class="vq">
+        <tr><th>Valor</th><th>Quem</th></tr>
+        <tbody id="valorQuemBody"></tbody>
+      </table>
+      <div class="aviso" id="aviso"></div>
+    </div>
+  </div>
 
-  <table class="valor-quem" id="valorQuemTable">
-    <tr><th>Valor</th><th>Quem</th></tr>
-  </table>
-
-  <div class="aviso" id="aviso"></div>
-
-  <footer>
-    <span id="updated"></span>
-  </footer>
+  <footer><span id="updated"></span></footer>
 
 </div>
 
@@ -153,54 +208,50 @@
     return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   }
 
-  function buildCol(tableId, cls, itens, total){
-    const rows = itens.map(function(i){
-      return '<tr><td class="' + cls + ' v">' + fmtBRL(i.valor) + '</td><td>' + i.nome + '</td></tr>';
-    }).join('');
-    document.getElementById(tableId).innerHTML =
-      '<tr><th class="' + cls + '" colspan="2">' + document.getElementById(tableId).querySelector('th').textContent + '</th></tr>' +
-      rows +
-      '<tr class="total"><td class="' + cls + '">TOTAL</td><td class="' + cls + '">' + fmtBRL(total) + '</td></tr>';
-  }
-
   function render(data){
-    buildCol('talvezTable', 'talvez', data.talvez.itens, data.talvez.total);
-    buildCol('certezaTable', 'certeza', data.certeza.itens, data.certeza.total);
+    document.getElementById('talvezTotal').textContent = fmtBRL(data.talvez.total);
+    document.getElementById('talvezItems').innerHTML = data.talvez.itens.map(function(i){
+      return '<li><span class="name">'+i.nome+'</span><span class="val">'+fmtBRL(i.valor)+'</span></li>';
+    }).join('');
 
-    const todosItens = data.talvez.itens.concat(data.certeza.itens).map(function(i){ return {valor: i.valor, nome: ''}; });
-    const rowsTodos = todosItens.map(function(i){ return '<tr><td class="todos v">' + fmtBRL(i.valor) + '</td></tr>'; }).join('');
-    document.getElementById('todosTable').innerHTML =
-      '<tr><th class="todos">TODOS</th></tr>' + rowsTodos +
-      '<tr class="total"><td class="todos">TOTAL&nbsp;&nbsp;' + fmtBRL(data.pipeline_atual.total) + '</td></tr>';
+    document.getElementById('certezaTotal').textContent = fmtBRL(data.certeza.total);
+    document.getElementById('certezaItems').innerHTML = data.certeza.itens.map(function(i){
+      return '<li><span class="name">'+i.nome+'</span><span class="val">'+fmtBRL(i.valor)+'</span></li>';
+    }).join('');
 
-    document.getElementById('objetivo').innerHTML = fmtBRL(data.novo_topo_funil) + ' <b>NOVO OBJETIVO TOPO DE FUNIL</b>';
+    document.getElementById('todosTotal').textContent = fmtBRL(data.pipeline_atual.total);
+    const todosItens = data.talvez.itens.concat(data.certeza.itens);
+    document.getElementById('todosItems').innerHTML = todosItens.map(function(i){
+      return '<li><span class="val">'+fmtBRL(i.valor)+'</span></li>';
+    }).join('');
 
-    document.getElementById('acoesBody').innerHTML =
-      [1,2,3].map(function(n){
-        return '<tr><td>' + n + '</td>' + data.acoes_por_area.map(function(a){ return '<td>' + (a.itens[n-1] || '') + '</td>'; }).join('') + '</tr>';
-      }).join('');
+    document.getElementById('goalNum').textContent = fmtBRL(data.novo_topo_funil);
+
+    document.getElementById('acoesBody').innerHTML = [1,2,3].map(function(n){
+      return '<tr><td>'+n+'</td>' + data.acoes_por_area.map(function(a){
+        return '<td>'+(a.itens[n-1]||'')+'</td>';
+      }).join('') + '</tr>';
+    }).join('');
 
     document.getElementById('revisar').innerHTML =
-      '<b>' + data.revisar_clientes.titulo + '</b>' +
-      data.revisar_clientes.itens.map(function(i){ return '<p>' + i + '</p>'; }).join('') +
-      '<b>' + data.produtos_vencendo.titulo + '</b>' +
-      data.produtos_vencendo.itens.map(function(i){ return '<p>' + i + '</p>'; }).join('');
+      '<div class="grupo"><b>'+data.revisar_clientes.titulo+'</b>' +
+      data.revisar_clientes.itens.map(function(i){ return '<p>'+i+'</p>'; }).join('') + '</div>' +
+      '<div class="grupo"><b>'+data.produtos_vencendo.titulo+'</b>' +
+      data.produtos_vencendo.itens.map(function(i){ return '<p>'+i+'</p>'; }).join('') + '</div>';
 
-    document.getElementById('valorQuemTable').innerHTML =
-      '<tr><th>Valor</th><th>Quem</th></tr>' +
-      data.distribuicao_por_area.map(function(d){
-        return '<tr><td>' + fmtBRL(d.valor) + '</td><td class="' + d.classe + '">' + d.area + '</td></tr>';
-      }).join('');
+    document.getElementById('valorQuemBody').innerHTML = data.distribuicao_por_area.map(function(d){
+      return '<tr class="row"><td>'+fmtBRL(d.valor)+'</td><td class="'+d.classe+'">'+d.area+'</td></tr>';
+    }).join('');
 
     document.getElementById('aviso').textContent = data.aviso || '';
 
     const dt = new Date(data.atualizado_em);
     document.getElementById('updated').textContent = 'Atualizado ' + dt.toLocaleString('pt-BR');
     document.getElementById('statusText').textContent = dt.toLocaleTimeString('pt-BR');
+    document.getElementById('kicker').textContent = 'Atualizado automaticamente';
   }
 
   let lastGood = null;
-
   async function load(){
     try{
       const res = await fetch(DATA_URL + '?_=' + Date.now(), {cache:'no-store'});
@@ -212,7 +263,6 @@
       if(lastGood) render(lastGood);
     }
   }
-
   load();
   setInterval(load, REFRESH_MS);
 </script>
