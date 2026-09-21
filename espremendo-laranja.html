@@ -65,6 +65,16 @@
   .fcard li:first-child{ border-top:none; }
   .fcard .name{ color:var(--ink-dim); }
   .fcard .val{ font-weight:600; white-space:nowrap; }
+  .fcard li{ align-items:center; }
+  .fcard li .right{ display:flex; align-items:center; gap:0; }
+  .chk{
+    width:16px; height:16px; border:2px solid var(--line); border-radius:4px;
+    display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+    flex-shrink:0; margin-left:10px; background:#fff;
+  }
+  .chk.done{ background:var(--orange); border-color:var(--orange); }
+  .chk.done::after{ content:"✓"; color:#fff; font-size:11px; font-weight:700; line-height:1; }
+  .fcard li.done .name, .fcard li.done .val{ color:var(--ink-dim); text-decoration:line-through; text-decoration-color:var(--line); }
 
   .goal{
     display:flex; align-items:baseline; gap:12px;
@@ -207,22 +217,52 @@
     return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   }
 
+  function checkKey(section, idx, nome){
+    return 'espremendo-check:' + section + ':' + idx + ':' + nome;
+  }
+
+  function isDone(section, idx, nome){
+    try{ return localStorage.getItem(checkKey(section, idx, nome)) === '1'; }
+    catch(e){ return false; }
+  }
+
+  function toggleDone(section, idx, nome, li, box){
+    const key = checkKey(section, idx, nome);
+    const nowDone = !isDone(section, idx, nome);
+    try{ localStorage.setItem(key, nowDone ? '1' : '0'); } catch(e){}
+    li.classList.toggle('done', nowDone);
+    box.classList.toggle('done', nowDone);
+  }
+
+  function itemLi(section, idx, i, showName){
+    const done = isDone(section, idx, i.nome || '');
+    const li = document.createElement('li');
+    if(done) li.classList.add('done');
+    const nameSpan = showName ? '<span class="name">'+(i.nome||'')+'</span>' : '<span></span>';
+    li.innerHTML = nameSpan + '<span class="right"><span class="val">'+fmtBRL(i.valor)+'</span></span>';
+    const box = document.createElement('span');
+    box.className = 'chk' + (done ? ' done' : '');
+    box.addEventListener('click', function(){ toggleDone(section, idx, i.nome || '', li, box); });
+    li.querySelector('.right').appendChild(box);
+    return li;
+  }
+
+  function fillList(elId, section, itens, showName){
+    const ul = document.getElementById(elId);
+    ul.innerHTML = '';
+    itens.forEach(function(i, idx){ ul.appendChild(itemLi(section, idx, i, showName)); });
+  }
+
   function render(data){
     document.getElementById('talvezTotal').textContent = fmtBRL(data.talvez.total);
-    document.getElementById('talvezItems').innerHTML = data.talvez.itens.map(function(i){
-      return '<li><span class="name">'+i.nome+'</span><span class="val">'+fmtBRL(i.valor)+'</span></li>';
-    }).join('');
+    fillList('talvezItems', 'talvez', data.talvez.itens, true);
 
     document.getElementById('certezaTotal').textContent = fmtBRL(data.certeza.total);
-    document.getElementById('certezaItems').innerHTML = data.certeza.itens.map(function(i){
-      return '<li><span class="name">'+i.nome+'</span><span class="val">'+fmtBRL(i.valor)+'</span></li>';
-    }).join('');
+    fillList('certezaItems', 'certeza', data.certeza.itens, true);
 
     document.getElementById('todosTotal').textContent = fmtBRL(data.pipeline_atual.total);
     const todosItens = data.talvez.itens.concat(data.certeza.itens);
-    document.getElementById('todosItems').innerHTML = todosItens.map(function(i){
-      return '<li><span class="val">'+fmtBRL(i.valor)+'</span></li>';
-    }).join('');
+    fillList('todosItems', 'todos', todosItens, false);
 
     document.getElementById('goalNum').textContent = fmtBRL(data.novo_topo_funil);
 
