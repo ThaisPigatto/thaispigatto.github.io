@@ -34,6 +34,9 @@ AJUSTE 10/09/2026 (Thais): assunto do e-mail dos gestores padronizado para
 o mesmo assunto usado pelos vendedores ("META DE VENDAS DO DIA"), igual
 para todo mundo às 07:50.
 
+AJUSTE 15/09/2026 (Thais): adicionado jessica.farias@pigattodistribuidora.com.br
+como destinatária extra dos e-mails da Maria Cristina (funcionária nova).
+
 MODO_TESTE = False -> envio real para vendedores e gestores (aprovado por
 Thais em 09/09/2026, após teste aprovado enviando só para ela).
 """
@@ -90,7 +93,7 @@ VENDOR_CANAL_ML = {"Jéssica": 100000}
 
 # E-mail(s) de cada vendedor (pode ter mais de um, separados por vírgula)
 VENDOR_EMAILS = {
-    "Maria Cristina":      ["maria.cristina@pigattodistribuidora.com.br"],
+    "Maria Cristina":      ["maria.cristina@pigattodistribuidora.com.br", "jessica.farias@pigattodistribuidora.com.br"],
     "Jéssica":             ["vendas1@pigattodistribuidora.com.br", "jessica@pigattodistribuidora.com.br"],
     "Rhamayana":           ["vendas3@pigattodistribuidora.com.br", "rhamayana@pigattodistribuidora.com.br"],
     "Marcelo Ribeiro":     ["marcelo@pigattodistribuidora.com.br"],
