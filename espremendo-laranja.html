@@ -24,7 +24,8 @@
   .wrap{ max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
 
   header{ display:flex; align-items:center; gap:14px; padding-bottom:16px; border-bottom: 2px solid var(--ink); margin-bottom: 24px; }
-  header img{ height:28px; width:auto; }
+  .brand{ font-weight:bold; font-size:15px; letter-spacing:0.02em; }
+  .brand span{ font-weight:normal; color: var(--ink-dim); }
   .status{ margin-left:auto; font-size:12px; color: var(--ink-dim); }
 
   .title-row{ display:flex; align-items:center; gap:14px; margin-bottom: 28px; }
@@ -83,9 +84,137 @@
 <div class="wrap">
 
   <header>
-    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKIAAABBCAYAAABSIn83AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAABQSSURBVHhe7Zx5dBRV2oefqnSn051OiFlYsgEOIjuon0LYQQiL7DqjoAMqrug4wOi4IqAgiIrigooyKLI4iKAic3QcZSeAIDIqEjYhaBKyp5f0Wn2/PzqppCuLMUoMTD3n1Dm5731vpar7V/e+9963WhJCCHR0fmdkrUFH5/dAF6JOk0AXok6TQBeiTpNAF6JOk0AXok6TQBeiTpNAF6JOk0AXok6TQBeiTpNAF6JOk0AXok6TQBeiTpNAF6JOk0BqSBpY9sw7sG14F2poamrfkTabdyKFh4fY8w4eZNOoMSgeT4gdIMxkYtQHG2hx5ZXaKp3/ERrUI3qOHK5RhADeUycJuMq0ZkqPHa9RhACKx0P+of9qzTr/QzRIiJLWoKPzK2mQEP8XEELg8Xhwu90oiqKtPu8RQuD1enG73TQgOvvNaVCMeGpkX9zfHdKaAZDCTbTbf5ywZjEh9mPr3mPLtHtCbFXpvXABXW6bqjXXyNGjmaxds0prxmg0EBsXT6eOnejcpRuxsbFIUrD/djgcLFu2FLvNDkDnLl247rrrQ9oLIcjNzSEjYxc7tm/lzJksFCVAdHQ0PXpcxoCBg+nUqQsREREh7apy/PhRXnnlRXxeLwA9e/XmxhsnI8vVn/mXXnyBoqJCrblG0ocNp1ev3ix7fSm5ubna6hq57fY7SUpKVstCCM6ezWXv3gy2b9tKVtYpFEUhPj6BXr1607//QNq0vRiDwRBynsbgvBTi3r0ZzH78Ea1ZRZZlkpNT+Mt9M+jatTsAxcVF3HvPHRQWBr/4AQMG8/Ajs9Q2Qgj+859PWfXO2+Tlna2xlwg3mbj8siuYPuN+YmIu0lYDsGbNSt5Z+ZbaPjW1Nc8+t4To6GZaV2695Say Cw==" alt="Pigatto Distribuidora" />
+    <div class="brand">PIGATTO <span>DISTRIBUIDORA</span></div>
     <span class="status" id="statusText"></span>
   </header>
+
+  <div class="title-row">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="46" fill="#E8631C"/>
+      <g stroke="#FFDDA8" stroke-width="2" opacity="0.9">
+        <line x1="50" y1="50" x2="50" y2="8"/>
+        <line x1="50" y1="50" x2="82.6" y2="27.4"/>
+        <line x1="50" y1="50" x2="88.9" y2="65.4"/>
+        <line x1="50" y1="50" x2="68.1" y2="88.6"/>
+        <line x1="50" y1="50" x2="31.9" y2="88.6"/>
+        <line x1="50" y1="50" x2="11.1" y2="65.4"/>
+        <line x1="50" y1="50" x2="17.4" y2="27.4"/>
+      </g>
+      <circle cx="50" cy="50" r="8" fill="#FFDDA8"/>
+    </svg>
+    <h1>OPERAÇÃO <span>ESPREMENDO A LARANJA</span></h1>
+  </div>
+
+  <div class="funnel">
+    <table id="talvezTable">
+      <tr><th class="talvez">TALVEZ</th></tr>
+    </table>
+    <table id="certezaTable">
+      <tr><th class="certeza">CERTEZA</th></tr>
+    </table>
+    <table id="todosTable">
+      <tr><th class="todos">TODOS</th></tr>
+    </table>
+  </div>
+
+  <div class="objetivo" id="objetivo"></div>
+
+  <table class="acoes-table">
+    <tr>
+      <th></th>
+      <th class="adesivos">Adesivos</th>
+      <th class="especialidades">Especialidades</th>
+      <th class="hub">HUB</th>
+      <th class="plasticos">Plasticos de Eng</th>
+      <th class="papeis">Papeis</th>
+    </tr>
+    <tbody id="acoesBody"></tbody>
+  </table>
+
+  <div class="revisar" id="revisar"></div>
+
+  <table class="valor-quem" id="valorQuemTable">
+    <tr><th>Valor</th><th>Quem</th></tr>
+  </table>
+
+  <div class="aviso" id="aviso"></div>
+
+  <footer>
+    <span id="updated"></span>
+  </footer>
+
 </div>
+
+<script>
+  const DATA_URL = 'espremendo-laranja-data.json';
+  const REFRESH_MS = 60000;
+
+  function fmtBRL(v){
+    return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function buildCol(tableId, cls, itens, total){
+    const rows = itens.map(function(i){
+      return '<tr><td class="' + cls + ' v">' + fmtBRL(i.valor) + '</td><td>' + i.nome + '</td></tr>';
+    }).join('');
+    document.getElementById(tableId).innerHTML =
+      '<tr><th class="' + cls + '" colspan="2">' + document.getElementById(tableId).querySelector('th').textContent + '</th></tr>' +
+      rows +
+      '<tr class="total"><td class="' + cls + '">TOTAL</td><td class="' + cls + '">' + fmtBRL(total) + '</td></tr>';
+  }
+
+  function render(data){
+    buildCol('talvezTable', 'talvez', data.talvez.itens, data.talvez.total);
+    buildCol('certezaTable', 'certeza', data.certeza.itens, data.certeza.total);
+
+    const todosItens = data.talvez.itens.concat(data.certeza.itens).map(function(i){ return {valor: i.valor, nome: ''}; });
+    const rowsTodos = todosItens.map(function(i){ return '<tr><td class="todos v">' + fmtBRL(i.valor) + '</td></tr>'; }).join('');
+    document.getElementById('todosTable').innerHTML =
+      '<tr><th class="todos">TODOS</th></tr>' + rowsTodos +
+      '<tr class="total"><td class="todos">TOTAL&nbsp;&nbsp;' + fmtBRL(data.pipeline_atual.total) + '</td></tr>';
+
+    document.getElementById('objetivo').innerHTML = fmtBRL(data.novo_topo_funil) + ' <b>NOVO OBJETIVO TOPO DE FUNIL</b>';
+
+    document.getElementById('acoesBody').innerHTML =
+      [1,2,3].map(function(n){
+        return '<tr><td>' + n + '</td>' + data.acoes_por_area.map(function(a){ return '<td>' + (a.itens[n-1] || '') + '</td>'; }).join('') + '</tr>';
+      }).join('');
+
+    document.getElementById('revisar').innerHTML =
+      '<b>' + data.revisar_clientes.titulo + '</b>' +
+      data.revisar_clientes.itens.map(function(i){ return '<p>' + i + '</p>'; }).join('') +
+      '<b>' + data.produtos_vencendo.titulo + '</b>' +
+      data.produtos_vencendo.itens.map(function(i){ return '<p>' + i + '</p>'; }).join('');
+
+    document.getElementById('valorQuemTable').innerHTML =
+      '<tr><th>Valor</th><th>Quem</th></tr>' +
+      data.distribuicao_por_area.map(function(d){
+        return '<tr><td>' + fmtBRL(d.valor) + '</td><td class="' + d.classe + '">' + d.area + '</td></tr>';
+      }).join('');
+
+    document.getElementById('aviso').textContent = data.aviso || '';
+
+    const dt = new Date(data.atualizado_em);
+    document.getElementById('updated').textContent = 'Atualizado ' + dt.toLocaleString('pt-BR');
+    document.getElementById('statusText').textContent = dt.toLocaleTimeString('pt-BR');
+  }
+
+  let lastGood = null;
+
+  async function load(){
+    try{
+      const res = await fetch(DATA_URL + '?_=' + Date.now(), {cache:'no-store'});
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      lastGood = data;
+      render(data);
+    } catch(e){
+      if(lastGood) render(lastGood);
+    }
+  }
+
+  load();
+  setInterval(load, REFRESH_MS);
+</script>
 </body>
 </html>
