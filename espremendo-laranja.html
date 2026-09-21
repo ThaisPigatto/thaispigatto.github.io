@@ -76,13 +76,9 @@
   .chk.done::after{ content:"✓"; color:#fff; font-size:11px; font-weight:700; line-height:1; }
   .fcard li.done .name, .fcard li.done .val{ color:var(--ink-dim); text-decoration:line-through; text-decoration-color:var(--line); }
 
-  .goal{
-    display:flex; align-items:baseline; gap:12px;
-    background:linear-gradient(100deg, var(--orange), var(--orange-deep));
-    color:#fff; border-radius:14px; padding:16px 22px; margin-bottom:34px;
-  }
-  .goal .num{ font-weight:700; font-size:24px; }
-  .goal .lbl{ font-size:13px; letter-spacing:0.05em; font-weight:600; opacity:0.92; }
+  .goal{ margin-bottom:34px; font-size:15px; color:var(--ink); }
+  .goal .num{ font-weight:700; color:var(--orange-deep); }
+  .goal .lbl{ color:var(--ink-dim); }
 
   h2{ font-size:19px; font-weight:600; margin:0 0 14px; }
 
@@ -101,7 +97,7 @@
   .acoes td:first-child{ color:var(--ink-dim); font-weight:600; width:24px; }
   .acoes tr:nth-child(odd) td{ background:var(--panel); }
 
-  .lower{ display:grid; grid-template-columns: 1.1fr 1fr; gap:40px; align-items:start; }
+  .revisar{ margin-top:26px; }
   .revisar b{ display:block; font-size:14.5px; margin:0 0 6px; }
   .revisar p{ margin:0 0 4px; font-size:13.5px; color:var(--ink-dim); }
   .revisar .grupo{ margin-bottom:18px; }
@@ -127,7 +123,6 @@
 
   @media (max-width:900px){
     .funnel{ grid-template-columns:1fr; }
-    .lower{ grid-template-columns:1fr; }
   }
 </style>
 </head>
@@ -181,10 +176,7 @@
 
   <div class="col-right">
 
-  <div class="goal">
-    <span class="num" id="goalNum">—</span>
-    <span class="lbl">NOVO OBJETIVO TOPO DE FUNIL</span>
-  </div>
+  <p class="goal">Objetivo: <span class="num" id="goalNum">—</span> esse mês <span class="lbl">(sem considerar na soma os previstos que temos como certo e como incertos ainda)</span></p>
 
   <h2>Ações por área</h2>
   <table class="acoes">
@@ -199,16 +191,13 @@
     <tbody id="acoesBody"></tbody>
   </table>
 
-  <div class="lower">
-    <div class="revisar" id="revisar"></div>
-    <div>
-      <table class="vq">
-        <tr><th>Valor</th><th>Quem</th></tr>
-        <tbody id="valorQuemBody"></tbody>
-      </table>
-      <div class="aviso" id="aviso"></div>
-    </div>
-  </div>
+  <table class="vq">
+    <tr><th>Valor</th><th>QUEM VAI ESPREMER</th></tr>
+    <tbody id="valorQuemBody"></tbody>
+  </table>
+  <div class="aviso" id="aviso"></div>
+
+  <div class="revisar" id="revisar"></div>
 
   </div>
 
