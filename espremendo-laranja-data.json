@@ -1,5 +1,5 @@
 {
-  "atualizado_em": "2026-09-22T12:00:00-03:00",
+  "atualizado_em": "2026-09-22T12:15:00-03:00",
   "talvez": {
     "total": 243100.0,
     "itens": [
@@ -35,7 +35,7 @@
     ]
   },
   "certeza": {
-    "total": 123343.32,
+    "total": 125343.32,
     "itens": [
       {
         "nome": "Especialidade",
@@ -78,11 +78,16 @@
         "nome": "Adesivo",
         "valor": 33900.0,
         "data": "22/09"
+      },
+      {
+        "nome": "Plásticos",
+        "valor": 2000.0,
+        "data": "22/09"
       }
     ]
   },
   "pipeline_atual": {
-    "total": 366443.32
+    "total": 368443.32
   },
   "novo_topo_funil": 300000.0,
   "acoes_por_area": [
