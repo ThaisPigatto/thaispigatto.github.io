@@ -1,5 +1,5 @@
 {
-  "atualizado_em": "2026-09-22T12:30:00-03:00",
+  "atualizado_em": "2026-09-22T12:45:00-03:00",
   "talvez": {
     "total": 243100.0,
     "itens": [
@@ -35,7 +35,7 @@
     ]
   },
   "certeza": {
-    "total": 136967.32,
+    "total": 141579.82,
     "itens": [
       {
         "nome": "Especialidade",
@@ -83,11 +83,16 @@
         "nome": "Plásticos",
         "valor": 13624.0,
         "data": "22/09"
+      },
+      {
+        "nome": "Plásticos",
+        "valor": 4612.5,
+        "data": "22/09"
       }
     ]
   },
   "pipeline_atual": {
-    "total": 380067.32
+    "total": 384679.82
   },
   "novo_topo_funil": 300000.0,
   "acoes_por_area": [
