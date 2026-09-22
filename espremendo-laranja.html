@@ -63,7 +63,7 @@
   .fcard-label.certeza{ color:var(--certeza); }
   .fcard-label.todos{ color:var(--ink); }
   .fcard-label.objetivo{ color:var(--orange-deep); }
-  .objetivo-periodo{ padding:16px 18px 20px; font-size:13.5px; color:var(--ink-dim); }
+  .objetivo-periodo{ padding:2px 18px 16px; font-size:12px; color:var(--ink-dim); }
   .fcard-total{ font-weight:700; font-size:19px; white-space:nowrap; }
   .fcard-head{ flex-wrap:wrap; }
   .fcard ul{ list-style:none; margin:0; padding:0 18px 16px; }
@@ -106,9 +106,16 @@
   .acoes td:first-child{ color:var(--ink-dim); font-weight:600; width:24px; }
   .acoes tr:nth-child(odd) td{ background:var(--panel); }
 
+  .revisar{ margin-top:26px; }
+  .revisar b{ display:block; font-size:14.5px; margin:0 0 6px; }
+  .revisar p{ margin:0 0 4px; font-size:13.5px; color:var(--ink-dim); }
+  .revisar .grupo{ margin-bottom:18px; }
+
   .vq{ border-collapse:separate; border-spacing:0 8px; width:100%; max-width:400px; }
   .vq th{ text-align:left; font-size:12px; letter-spacing:0.06em; color:var(--ink-dim); font-weight:600; padding:0 14px 4px; }
   .vq td{ padding:10px 14px; font-weight:600; font-size:14px; }
+  .vq td.vq-chk{ padding-right:0; width:20px; }
+  .vq tr.done td:nth-child(2){ text-decoration:line-through; color:var(--ink-dim); }
   .vq tr.row td:first-child{ border-radius:8px 0 0 8px; background:var(--panel); }
   .vq tr.row td:last-child{ border-radius:0 8px 8px 0; color:#fff; }
   .vq td.adesivos{ background:#A5271C; }
@@ -175,6 +182,10 @@
     <div class="fcard">
       <div class="fcard-top objetivo"></div>
       <div class="fcard-head"><span class="fcard-label objetivo">OBJETIVO</span><span class="fcard-total" id="objetivoTotal">—</span></div>
+      <ul>
+        <li><span class="left"><span class="name">Na mira</span></span><span class="val"><span class="price" id="naMiraVal">—</span></span></li>
+        <li><span class="left"><span class="name">Realizado</span></span><span class="val"><span class="price" id="realizadoVal">—</span></span></li>
+      </ul>
       <div class="objetivo-periodo" id="objetivoPeriodo"></div>
     </div>
   </div>
@@ -197,7 +208,7 @@
   </table>
 
   <table class="vq">
-    <tr><th>Valor</th><th>QUEM VAI ESPREMER</th></tr>
+    <tr><th></th><th>Valor</th><th>QUEM VAI ESPREMER</th></tr>
     <tbody id="valorQuemBody"></tbody>
   </table>
   </div>
@@ -261,7 +272,9 @@
     document.getElementById('certezaTotal').textContent = fmtBRL(data.certeza.total);
     fillList('certezaItems', 'certeza', data.certeza.itens, true);
 
-    document.getElementById('objetivoTotal').textContent = fmtBRL(data.objetivo_periodo.valor);
+    document.getElementById('objetivoTotal').textContent = fmtBRL(data.objetivo_periodo.objetivo);
+    document.getElementById('naMiraVal').textContent = fmtBRL(data.objetivo_periodo.na_mira);
+    document.getElementById('realizadoVal').textContent = fmtBRL(data.objetivo_periodo.realizado);
     document.getElementById('objetivoPeriodo').textContent = data.objetivo_periodo.periodo;
 
     document.getElementById('goalNum').textContent = fmtBRL(data.novo_topo_funil);
@@ -272,9 +285,24 @@
       }).join('') + '</tr>';
     }).join('');
 
-    document.getElementById('valorQuemBody').innerHTML = data.distribuicao_por_area.map(function(d){
-      return '<tr class="row"><td>'+fmtBRL(d.valor)+'</td><td class="'+d.classe+'">'+d.area+'</td></tr>';
-    }).join('');
+    const vqBody = document.getElementById('valorQuemBody');
+    vqBody.innerHTML = '';
+    data.distribuicao_por_area.forEach(function(d, idx){
+      const done = isDone('area', idx, d.area);
+      const tr = document.createElement('tr');
+      tr.className = 'row' + (done ? ' done' : '');
+      tr.innerHTML = '<td class="vq-chk"></td><td>'+fmtBRL(d.valor)+'</td><td class="'+d.classe+'">'+d.area+'</td>';
+      const box = document.createElement('span');
+      box.className = 'chk' + (done ? ' done' : '');
+      box.addEventListener('click', function(){
+        const nowDone = !isDone('area', idx, d.area);
+        try{ localStorage.setItem(checkKey('area', idx, d.area), nowDone ? '1' : '0'); } catch(e){}
+        tr.classList.toggle('done', nowDone);
+        box.classList.toggle('done', nowDone);
+      });
+      tr.querySelector('.vq-chk').appendChild(box);
+      vqBody.appendChild(tr);
+    });
 
     const dt = new Date(data.atualizado_em);
     document.getElementById('updated').textContent = 'Atualizado ' + dt.toLocaleString('pt-BR');
