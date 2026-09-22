@@ -1,10 +1,10 @@
 {
-  "atualizado_em": "2026-09-22T11:00:00-03:00",
+  "atualizado_em": "2026-09-22T11:20:00-03:00",
   "talvez": {
     "total": 249000.0,
     "itens": [
       {
-        "nome": "Adesivos (Espumatec)",
+        "nome": "Adesivos",
         "valor": 20000.0
       },
       {
@@ -20,7 +20,7 @@
         "valor": 22000.0
       },
       {
-        "nome": "Plásticos (Diam)",
+        "nome": "Plásticos",
         "valor": 40000.0
       },
       {
@@ -28,7 +28,7 @@
         "valor": 12000.0
       },
       {
-        "nome": "Plásticos (Imprimarq)",
+        "nome": "Plásticos",
         "valor": 12000.0,
         "data": "22/09"
       }
@@ -38,11 +38,11 @@
     "total": 117443.32,
     "itens": [
       {
-        "nome": "Especialidade (GeJ/Magna)",
+        "nome": "Especialidade",
         "valor": 16000.0
       },
       {
-        "nome": "Plástico (Ticcolor)",
+        "nome": "Plástico",
         "valor": 40000.0
       },
       {
