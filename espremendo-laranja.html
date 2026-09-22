@@ -115,6 +115,12 @@
   .vq th{ text-align:left; font-size:12px; letter-spacing:0.06em; color:var(--ink-dim); font-weight:600; padding:0 14px 4px; }
   .vq td{ padding:10px 14px; font-weight:600; font-size:14px; }
   .vq td.vq-chk{ padding-right:0; width:20px; }
+  .vq td.realizado{ font-weight:600; }
+  .realizado-box{
+    display:inline-block; border:1px solid var(--line); border-radius:8px;
+    padding:8px 14px; font-size:13px; color:var(--ink-dim); white-space:nowrap;
+  }
+  .realizado-box b{ color:var(--ink); font-weight:700; }
   .vq tr.done td:nth-child(2){ text-decoration:line-through; color:var(--ink-dim); }
   .vq tr.row td:first-child{ border-radius:8px 0 0 8px; background:var(--panel); }
   .vq tr.row td:last-child{ border-radius:0 8px 8px 0; color:#fff; }
@@ -208,7 +214,7 @@
   </table>
 
   <table class="vq">
-    <tr><th></th><th>Valor</th><th>QUEM VAI ESPREMER</th></tr>
+    <tr><th></th><th>Valor</th><th>QUEM VAI ESPREMER</th><th>Realizado por família</th></tr>
     <tbody id="valorQuemBody"></tbody>
   </table>
   </div>
@@ -287,13 +293,35 @@
       }).join('') + '</tr>';
     }).join('');
 
+    const FAMILY_STEMS = {
+      adesivos: 'adesiv',
+      especialidades: 'especialidad',
+      hub: 'hub',
+      plasticos: 'plastic',
+      papeis: 'pap'
+    };
+    function normalize(s){
+      return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+    function realizadoPorFamilia(classe){
+      const stem = FAMILY_STEMS[classe];
+      if(!stem || !data.certeza) return 0;
+      let sum = 0;
+      data.certeza.itens.forEach(function(i){
+        if(normalize(i.nome).startsWith(stem)) sum += i.valor;
+      });
+      return sum;
+    }
+
     const vqBody = document.getElementById('valorQuemBody');
     vqBody.innerHTML = '';
     data.distribuicao_por_area.forEach(function(d, idx){
       const done = isDone('area', idx, d.area);
       const tr = document.createElement('tr');
       tr.className = 'row' + (done ? ' done' : '');
-      tr.innerHTML = '<td class="vq-chk"></td><td>'+fmtBRL(d.valor)+'</td><td class="'+d.classe+'">'+d.area+'</td>';
+      const realizado = realizadoPorFamilia(d.classe);
+      tr.innerHTML = '<td class="vq-chk"></td><td>'+fmtBRL(d.valor)+'</td><td class="'+d.classe+'">'+d.area+'</td>' +
+        '<td class="realizado"><span class="realizado-box">REALIZADO: <b>'+fmtBRL(realizado)+'</b></span></td>';
       const box = document.createElement('span');
       box.className = 'chk' + (done ? ' done' : '');
       box.addEventListener('click', function(){
