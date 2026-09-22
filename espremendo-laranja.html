@@ -56,12 +56,16 @@
   .fcard-top.talvez{ background:var(--talvez); }
   .fcard-top.certeza{ background:var(--certeza); }
   .fcard-top.todos{ background:var(--line); }
+  .fcard-top.objetivo{ background:var(--orange); }
   .fcard-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px 10px; }
   .fcard-label{ font-size:12px; font-weight:700; letter-spacing:0.08em; }
   .fcard-label.talvez{ color:var(--talvez); }
   .fcard-label.certeza{ color:var(--certeza); }
   .fcard-label.todos{ color:var(--ink); }
-  .fcard-total{ font-weight:700; font-size:19px; }
+  .fcard-label.objetivo{ color:var(--orange-deep); }
+  .objetivo-periodo{ padding:16px 18px 20px; font-size:13.5px; color:var(--ink-dim); }
+  .fcard-total{ font-weight:700; font-size:19px; white-space:nowrap; }
+  .fcard-head{ flex-wrap:wrap; }
   .fcard ul{ list-style:none; margin:0; padding:0 18px 16px; }
   .fcard li{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:7px 0; border-top:1px solid var(--line); }
   .fcard li:first-child{ border-top:none; }
@@ -166,9 +170,9 @@
       <ul id="certezaItems"></ul>
     </div>
     <div class="fcard">
-      <div class="fcard-top todos"></div>
-      <div class="fcard-head"><span class="fcard-label todos">TODOS</span><span class="fcard-total" id="todosTotal">—</span></div>
-      <ul id="todosItems"></ul>
+      <div class="fcard-top objetivo"></div>
+      <div class="fcard-head"><span class="fcard-label objetivo">OBJETIVO</span><span class="fcard-total" id="objetivoTotal">—</span></div>
+      <div class="objetivo-periodo" id="objetivoPeriodo"></div>
     </div>
   </div>
 
@@ -252,9 +256,8 @@
     document.getElementById('certezaTotal').textContent = fmtBRL(data.certeza.total);
     fillList('certezaItems', 'certeza', data.certeza.itens, true);
 
-    document.getElementById('todosTotal').textContent = fmtBRL(data.pipeline_atual.total);
-    const todosItens = data.talvez.itens.concat(data.certeza.itens);
-    fillList('todosItems', 'todos', todosItens, false);
+    document.getElementById('objetivoTotal').textContent = fmtBRL(data.objetivo_periodo.valor);
+    document.getElementById('objetivoPeriodo').textContent = data.objetivo_periodo.periodo;
 
     document.getElementById('goalNum').textContent = fmtBRL(data.novo_topo_funil);
 
