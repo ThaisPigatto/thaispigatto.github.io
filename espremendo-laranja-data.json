@@ -1,7 +1,7 @@
 {
-  "atualizado_em": "2026-09-22T11:20:00-03:00",
+  "atualizado_em": "2026-09-22T12:00:00-03:00",
   "talvez": {
-    "total": 249000.0,
+    "total": 243100.0,
     "itens": [
       {
         "nome": "Adesivos",
@@ -17,7 +17,7 @@
       },
       {
         "nome": "Adesivos",
-        "valor": 22000.0
+        "valor": 16100.0
       },
       {
         "nome": "Plásticos",
@@ -35,7 +35,7 @@
     ]
   },
   "certeza": {
-    "total": 117443.32,
+    "total": 123343.32,
     "itens": [
       {
         "nome": "Especialidade",
@@ -76,7 +76,7 @@
       },
       {
         "nome": "Adesivo",
-        "valor": 28000.0,
+        "valor": 33900.0,
         "data": "22/09"
       }
     ]
