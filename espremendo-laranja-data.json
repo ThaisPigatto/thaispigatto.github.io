@@ -1,5 +1,5 @@
 {
-  "atualizado_em": "2026-09-22T09:30:00-03:00",
+  "atualizado_em": "2026-09-22T10:15:00-03:00",
   "talvez": {
     "total": 277000.0,
     "itens": [
@@ -34,7 +34,7 @@
     ]
   },
   "certeza": {
-    "total": 77358.52,
+    "total": 89443.32,
     "itens": [
       {
         "nome": "Marcelo",
@@ -57,11 +57,26 @@
         "nome": "Rhamayana",
         "valor": 2172.92,
         "data": "22/09"
+      },
+      {
+        "nome": "Plásticos",
+        "valor": 6859.8,
+        "data": "22/09"
+      },
+      {
+        "nome": "Plásticos",
+        "valor": 3325.0,
+        "data": "22/09"
+      },
+      {
+        "nome": "Especialidades",
+        "valor": 1900.0,
+        "data": "22/09"
       }
     ]
   },
   "pipeline_atual": {
-    "total": 354358.52
+    "total": 366443.32
   },
   "novo_topo_funil": 300000.0,
   "acoes_por_area": [
