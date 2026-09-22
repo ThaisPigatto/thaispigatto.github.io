@@ -1,5 +1,5 @@
 {
-  "atualizado_em": "2026-09-22T09:00:00-03:00",
+  "atualizado_em": "2026-09-22T09:30:00-03:00",
   "talvez": {
     "total": 277000.0,
     "itens": [
@@ -149,7 +149,9 @@
   ],
   "aviso": "TRAZER NÚMEROS DIÁRIAMENTE!",
   "objetivo_periodo": {
-    "valor": 625000.0,
-    "periodo": "22/09 - 30/09"
+    "periodo": "22/09 - 30/09",
+    "objetivo": 625000.0,
+    "na_mira": 348000.0,
+    "realizado": 15443.42
   }
 }
