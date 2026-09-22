@@ -242,24 +242,6 @@
     try{ localStorage.setItem(key, nowDone ? '1' : '0'); } catch(e){}
     li.classList.toggle('done', nowDone);
     box.classList.toggle('done', nowDone);
-    if(section === 'certeza' || section === 'talvez') refreshRealizado();
-  }
-
-  function computeRealizado(){
-    if(!lastGood) return 0;
-    let sum = 0;
-    ['talvez', 'certeza'].forEach(function(section){
-      if(!lastGood[section]) return;
-      lastGood[section].itens.forEach(function(i, idx){
-        if(isDone(section, idx, i.nome || '')) sum += i.valor;
-      });
-    });
-    return sum;
-  }
-
-  function refreshRealizado(){
-    const el = document.getElementById('realizadoVal');
-    if(el) el.textContent = fmtBRL(computeRealizado());
   }
 
   function itemLi(section, idx, i, showName){
@@ -292,8 +274,8 @@
     fillList('certezaItems', 'certeza', data.certeza.itens, true);
 
     document.getElementById('objetivoTotal').textContent = fmtBRL(data.objetivo_periodo.objetivo);
-    document.getElementById('naMiraVal').textContent = fmtBRL(data.objetivo_periodo.na_mira);
-    document.getElementById('realizadoVal').textContent = fmtBRL(computeRealizado());
+    document.getElementById('naMiraVal').textContent = fmtBRL(data.talvez.total);
+    document.getElementById('realizadoVal').textContent = fmtBRL(data.certeza.total);
     document.getElementById('objetivoPeriodo').textContent = data.objetivo_periodo.periodo;
 
     document.getElementById('goalNum').textContent = fmtBRL(data.objetivo_periodo.objetivo);
