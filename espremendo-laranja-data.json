@@ -1,5 +1,5 @@
 {
-  "atualizado_em": "2026-09-21T22:00:00-03:00",
+  "atualizado_em": "2026-09-22T09:00:00-03:00",
   "talvez": {
     "total": 277000.0,
     "itens": [
@@ -50,11 +50,13 @@
       },
       {
         "nome": "Rhamayana",
-        "valor": 4185.6
+        "valor": 4185.6,
+        "data": "22/09"
       },
       {
         "nome": "Rhamayana",
-        "valor": 2172.92
+        "valor": 2172.92,
+        "data": "22/09"
       }
     ]
   },
