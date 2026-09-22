@@ -242,14 +242,17 @@
     try{ localStorage.setItem(key, nowDone ? '1' : '0'); } catch(e){}
     li.classList.toggle('done', nowDone);
     box.classList.toggle('done', nowDone);
-    if(section === 'certeza') refreshRealizado();
+    if(section === 'certeza' || section === 'talvez') refreshRealizado();
   }
 
   function computeRealizado(){
-    if(!lastGood || !lastGood.certeza) return 0;
+    if(!lastGood) return 0;
     let sum = 0;
-    lastGood.certeza.itens.forEach(function(i, idx){
-      if(isDone('certeza', idx, i.nome || '')) sum += i.valor;
+    ['talvez', 'certeza'].forEach(function(section){
+      if(!lastGood[section]) return;
+      lastGood[section].itens.forEach(function(i, idx){
+        if(isDone(section, idx, i.nome || '')) sum += i.valor;
+      });
     });
     return sum;
   }
