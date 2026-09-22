@@ -1,60 +1,61 @@
 {
-  "atualizado_em": "2026-09-22T10:15:00-03:00",
+  "atualizado_em": "2026-09-22T11:00:00-03:00",
   "talvez": {
-    "total": 277000.0,
+    "total": 249000.0,
     "itens": [
       {
-        "nome": "Tiago - Espumatec",
+        "nome": "Adesivos (Espumatec)",
         "valor": 20000.0
       },
       {
-        "nome": "Jessica - Licitação",
+        "nome": "Licitação",
         "valor": 90000.0
       },
       {
-        "nome": "Jessica - Licitação",
+        "nome": "Licitação",
         "valor": 53000.0
       },
       {
-        "nome": "Wellington",
-        "valor": 50000.0
+        "nome": "Adesivos",
+        "valor": 22000.0
       },
       {
-        "nome": "Maria - Diam",
+        "nome": "Plásticos (Diam)",
         "valor": 40000.0
       },
       {
-        "nome": "Jessica - Licitação",
+        "nome": "Licitação",
         "valor": 12000.0
       },
       {
-        "nome": "Maria - Imprimarq",
-        "valor": 12000.0
+        "nome": "Plásticos (Imprimarq)",
+        "valor": 12000.0,
+        "data": "22/09"
       }
     ]
   },
   "certeza": {
-    "total": 89443.32,
+    "total": 117443.32,
     "itens": [
       {
-        "nome": "Marcelo",
+        "nome": "Especialidade (GeJ/Magna)",
         "valor": 16000.0
       },
       {
-        "nome": "Maria - ticcolor",
+        "nome": "Plástico (Ticcolor)",
         "valor": 40000.0
       },
       {
-        "nome": "Tiago",
+        "nome": "Adesivo",
         "valor": 15000.0
       },
       {
-        "nome": "Rhamayana",
+        "nome": "Pápeis",
         "valor": 4185.6,
         "data": "22/09"
       },
       {
-        "nome": "Rhamayana",
+        "nome": "Pápeis",
         "valor": 2172.92,
         "data": "22/09"
       },
@@ -71,6 +72,11 @@
       {
         "nome": "Especialidades",
         "valor": 1900.0,
+        "data": "22/09"
+      },
+      {
+        "nome": "Adesivo",
+        "valor": 28000.0,
         "data": "22/09"
       }
     ]
