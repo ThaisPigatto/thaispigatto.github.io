@@ -159,7 +159,7 @@
 
   <div class="period">SETEMBRO 2026</div>
 
-  <p class="goal">Objetivo: <span class="num" id="goalNum">—</span> esse mês <span class="lbl">(sem considerar na soma os previstos que temos como certo e como incertos ainda)</span></p>
+  <p class="goal">Objetivo: <span class="num" id="goalNum">—</span> <span class="lbl">(<span id="periodoAte"></span>)</span></p>
 
   </div>
 
@@ -277,7 +277,8 @@
     document.getElementById('realizadoVal').textContent = fmtBRL(data.objetivo_periodo.realizado);
     document.getElementById('objetivoPeriodo').textContent = data.objetivo_periodo.periodo;
 
-    document.getElementById('goalNum').textContent = fmtBRL(data.novo_topo_funil);
+    document.getElementById('goalNum').textContent = fmtBRL(data.objetivo_periodo.objetivo);
+    document.getElementById('periodoAte').textContent = data.objetivo_periodo.periodo.replace(' - ', ' até ');
 
     document.getElementById('acoesBody').innerHTML = [1,2,3].map(function(n){
       return '<tr><td>'+n+'</td>' + data.acoes_por_area.map(function(a){
