@@ -70,13 +70,16 @@
   .fcard li{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:7px 0; border-top:1px solid var(--line); }
   .fcard li:first-child{ border-top:none; }
   .fcard .name{ color:var(--ink-dim); }
-  .fcard .val{ font-weight:600; white-space:nowrap; }
   .fcard li{ align-items:center; }
-  .fcard li .right{ display:flex; align-items:center; gap:0; }
+  .fcard li .left{ display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 auto; }
+  .fcard .name{ word-break:break-word; }
+  .fcard .val{ display:flex; flex-direction:column; align-items:flex-end; gap:1px; flex-shrink:0; }
+  .fcard .price{ font-weight:600; font-size:13.5px; white-space:nowrap; }
+  .fcard .date{ font-size:11px; color:var(--ink-dim); font-weight:500; white-space:nowrap; }
   .chk{
     width:16px; height:16px; border:2px solid var(--line); border-radius:4px;
     display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
-    flex-shrink:0; margin-left:10px; background:#fff;
+    flex-shrink:0; background:#fff;
   }
   .chk.done{ background:var(--orange); border-color:var(--orange); }
   .chk.done::after{ content:"✓"; color:#fff; font-size:11px; font-weight:700; line-height:1; }
@@ -234,12 +237,14 @@
     const done = isDone(section, idx, i.nome || '');
     const li = document.createElement('li');
     if(done) li.classList.add('done');
-    const nameSpan = showName ? '<span class="name">'+(i.nome||'')+'</span>' : '<span></span>';
-    li.innerHTML = nameSpan + '<span class="right"><span class="val">'+fmtBRL(i.valor)+'</span></span>';
+    const nameHtml = showName ? '<span class="name">'+(i.nome||'')+'</span>' : '<span></span>';
+    const dateHtml = i.data ? '<span class="date">'+i.data+'</span>' : '';
+    li.innerHTML = '<span class="left"><span class="chk-slot"></span>' + nameHtml + '</span>' +
+      '<span class="val"><span class="price">' + fmtBRL(i.valor) + '</span>' + dateHtml + '</span>';
     const box = document.createElement('span');
     box.className = 'chk' + (done ? ' done' : '');
     box.addEventListener('click', function(){ toggleDone(section, idx, i.nome || '', li, box); });
-    li.querySelector('.right').appendChild(box);
+    li.querySelector('.chk-slot').replaceWith(box);
     return li;
   }
 
