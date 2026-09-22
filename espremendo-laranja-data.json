@@ -1,7 +1,7 @@
 {
-  "atualizado_em": "2026-09-21T21:30:00-03:00",
+  "atualizado_em": "2026-09-21T22:00:00-03:00",
   "talvez": {
-    "total": 265000.0,
+    "total": 277000.0,
     "itens": [
       {
         "nome": "Tiago - Espumatec",
@@ -26,11 +26,15 @@
       {
         "nome": "Jessica - Licitação",
         "valor": 12000.0
+      },
+      {
+        "nome": "Maria - Imprimarq",
+        "valor": 12000.0
       }
     ]
   },
   "certeza": {
-    "total": 75185.6,
+    "total": 77358.52,
     "itens": [
       {
         "nome": "Marcelo",
@@ -47,11 +51,15 @@
       {
         "nome": "Rhamayana",
         "valor": 4185.6
+      },
+      {
+        "nome": "Rhamayana",
+        "valor": 2172.92
       }
     ]
   },
   "pipeline_atual": {
-    "total": 340185.6
+    "total": 354358.52
   },
   "novo_topo_funil": 300000.0,
   "acoes_por_area": [
@@ -137,5 +145,9 @@
       "classe": "papeis"
     }
   ],
-  "aviso": "TRAZER NÚMEROS DIÁRIAMENTE!"
+  "aviso": "TRAZER NÚMEROS DIÁRIAMENTE!",
+  "objetivo_periodo": {
+    "valor": 625000.0,
+    "periodo": "22/09 - 30/09"
+  }
 }
