@@ -106,11 +106,11 @@
   .acoes td:first-child{ color:var(--ink-dim); font-weight:600; width:24px; }
   .acoes tr:nth-child(odd) td{ background:var(--panel); }
 
-  .vq{ border-collapse:separate; border-spacing:0 8px; width:100%; max-width:400px; }
+  .vq{ border-collapse:separate; border-spacing:0 12px; width:100%; max-width:680px; }
   .vq th{ text-align:left; font-size:12px; letter-spacing:0.06em; color:var(--ink-dim); font-weight:600; padding:0 14px 4px; }
-  .vq td{ padding:10px 14px; font-weight:600; font-size:14px; }
+  .vq td{ padding:12px 18px; font-weight:600; font-size:14px; white-space:nowrap; }
   .vq td.vq-chk{ padding-right:0; width:20px; }
-  .vq td.realizado{ font-weight:600; }
+  .vq td.realizado{ font-weight:600; padding-left:24px; background:transparent !important; }
   .realizado-box{
     display:inline-block; border:1px solid var(--line); border-radius:8px;
     padding:8px 14px; font-size:13px; color:var(--ink-dim); white-space:nowrap;
@@ -119,10 +119,10 @@
   .familia-fonte{ font-size:11px; color:var(--ink-dim); margin-top:6px; }
   .vq tr.done td:nth-child(2){ text-decoration:line-through; color:var(--ink-dim); }
   .vq tr.row td:first-child{ border-radius:8px 0 0 8px; background:var(--panel); }
-  .vq tr.row td:last-child{ border-radius:0 8px 8px 0; color:#fff; }
+  .vq td.adesivos, .vq td.especialidades, .vq td.hub, .vq td.plasticos, .vq td.papeis{ border-radius:0 8px 8px 0; color:#fff !important; min-width:170px; }
   .vq td.adesivos{ background:#A5271C; }
   .vq td.especialidades{ background:#2E7D4F; }
-  .vq td.hub{ background:#C99A1B; color:#1B1B18 !important; }
+  .vq td.hub{ background:#C99A1B; }
   .vq td.plasticos{ background:#2E86AB; }
   .vq td.papeis{ background:#8E5AA6; }
 
@@ -131,6 +131,10 @@
   .big-sub{ padding:0 18px 16px; font-size:13px; color:var(--ink-dim); font-weight:600; }
   .fcard-foot{ display:flex; justify-content:space-between; padding:10px 18px 14px; border-top:2px solid var(--line); font-size:13.5px; font-weight:700; }
   .fcard-foot .lbl{ color:var(--talvez); letter-spacing:0.06em; font-size:12px; }
+  .fcard-foot .lbl-extra{ color:var(--certeza); }
+  .fcard-meta{ font-size:12.5px; color:var(--ink-dim); font-weight:600; white-space:nowrap; }
+  .fcard-meta b{ color:var(--ink); font-size:16px; }
+  .big-label{ padding:6px 18px 0; font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--certeza); }
   .fam-row{ cursor:pointer; user-select:none; }
   .fam-row .name{ color:var(--ink); font-weight:600; }
   .fam-row .arrow{ display:inline-block; width:12px; color:var(--ink-dim); font-size:10px; transition:transform .15s; }
@@ -140,13 +144,9 @@
   .fam-list.open{ display:block; }
   .fam-list li{ font-size:12.5px; padding:4px 0 !important; border-top:1px dashed var(--line) !important; }
   .split{ padding:4px 18px 14px; }
-  .split .blk{ padding:10px 0; border-top:1px solid var(--line); }
-  .split .blk:first-child{ border-top:none; }
   .split .row{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:3px 0; }
   .split .row .k{ color:var(--ink-dim); }
   .split .row .v{ font-weight:700; white-space:nowrap; }
-  .split .row.sub .k{ padding-left:12px; }
-  .split .row.sub .v{ color:var(--certeza); }
 
   footer{ margin-top:36px; padding-top:12px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-dim); }
 
@@ -195,35 +195,27 @@
   <div class="funnel">
     <div class="fcard">
       <div class="fcard-top talvez"></div>
-      <div class="fcard-head"><span class="fcard-label talvez">TALVEZ</span><span class="fcard-total" id="talvezTotal">—</span></div>
+      <div class="fcard-head"><span class="fcard-label talvez">TALVEZ</span><span class="fcard-meta">META: <b id="talvezTotal">—</b></span></div>
       <ul id="talvezItems"></ul>
-      <div class="fcard-foot"><span class="lbl">REALIZADO</span><span id="talvezRealizado">—</span></div>
+      <div class="fcard-foot"><span class="lbl">REALIZADO:</span><span id="talvezRealizado">—</span></div>
     </div>
     <div class="fcard">
       <div class="fcard-top certeza"></div>
-      <div class="fcard-head"><span class="fcard-label certeza">REALIZADOS</span><span class="fcard-total" id="realizadosTotal">—</span></div>
+      <div class="fcard-head"><span class="fcard-label certeza">OBJETIVO EXTRA</span><span class="fcard-meta">META: <b id="objetivoExtra">—</b></span></div>
       <ul id="realizadosFamilias"></ul>
+      <div class="fcard-foot"><span class="lbl lbl-extra">REALIZADO:</span><span id="extraRealizado">—</span></div>
     </div>
     <div class="col3">
       <div class="fcard">
         <div class="fcard-top objetivo"></div>
         <div class="fcard-head"><span class="fcard-label objetivo">REALIZADO TOTAL</span></div>
-        <div class="big-total" id="realizadoTotalVal">—</div>
-        <div class="big-sub">(OBJETIVO: <span id="objetivoTotal">—</span>)</div>
-        <div class="objetivo-periodo" id="objetivoPeriodo"></div>
-      </div>
-      <div class="fcard">
-        <div class="fcard-top objetivo"></div>
+        <div class="big-sub" style="padding-bottom:10px;">(considerando talvez + extra)</div>
         <div class="split">
-          <div class="blk">
-            <div class="row"><span class="k">Previsto na reunião</span><span class="v" id="previstoReuniao">—</span></div>
-            <div class="row sub"><span class="k">Realizado desse</span><span class="v" id="previstoRealizado">—</span></div>
-          </div>
-          <div class="blk">
-            <div class="row"><span class="k">Objetivo extra (até 30/09)</span><span class="v" id="objetivoExtra">—</span></div>
-            <div class="row sub"><span class="k">Realizado</span><span class="v" id="extraRealizado">—</span></div>
-          </div>
+          <div class="row"><span class="k">OBJETIVO:</span><span class="v" id="objetivoTotal">—</span></div>
         </div>
+        <div class="big-label">REALIZADO:</div>
+        <div class="big-total" id="realizadoTotalVal">—</div>
+        <div class="objetivo-periodo" id="objetivoPeriodo"></div>
       </div>
     </div>
   </div>
@@ -234,7 +226,7 @@
 
   <h2>OBJETIVO EXTRA DISTRIBUÍDO</h2>
   <table class="vq">
-    <tr><th></th><th>Valor</th><th>QUEM VAI ESPREMER</th><th>Realizado por família</th></tr>
+    <tr><th></th><th>Valor</th><th>QUEM VAI ESPREMER</th><th>Realizado Extra</th></tr>
     <tbody id="valorQuemBody"></tbody>
   </table>
   <p class="familia-fonte" id="familiaFonte"></p>
@@ -331,7 +323,7 @@
   function refreshTalvez(){
     const s = sumTalvezFeito();
     document.getElementById('talvezRealizado').textContent = fmtBRL(s);
-    document.getElementById('previstoRealizado').textContent = fmtBRL(s);
+    document.getElementById('realizadoTotalVal').textContent = fmtBRL(s + realizadosTotal());
   }
 
   const openFams = {};
@@ -372,16 +364,14 @@
     refreshTalvez();
 
     const realTot = realizadosTotal();
-    document.getElementById('realizadosTotal').textContent = fmtBRL(realTot);
     renderRealizados(data);
 
     const op = data.objetivo_periodo;
-    document.getElementById('realizadoTotalVal').textContent = fmtBRL(realTot);
-    document.getElementById('objetivoTotal').textContent = fmtBRL(op.objetivo);
-    document.getElementById('objetivoPeriodo').textContent = op.periodo;
-    document.getElementById('previstoReuniao').textContent = fmtBRL(data.talvez.total);
     document.getElementById('objetivoExtra').textContent = fmtBRL(op.objetivo_extra);
     document.getElementById('extraRealizado').textContent = fmtBRL(realTot);
+    document.getElementById('objetivoTotal').textContent = fmtBRL(op.objetivo);
+    document.getElementById('objetivoPeriodo').textContent = op.periodo;
+    document.getElementById('realizadoTotalVal').textContent = fmtBRL(sumTalvezFeito() + realTot);
 
     document.getElementById('goalNum').textContent = fmtBRL(op.objetivo);
     document.getElementById('periodoAte').textContent = op.periodo.replace(' - ', ' até ');
@@ -414,7 +404,7 @@
 
     const dt = new Date(data.atualizado_em);
     document.getElementById('updated').textContent = 'Atualizado ' + dt.toLocaleString('pt-BR');
-    document.getElementById('familiaFonte').textContent = 'Realizado por família: faturado no OMIE desde 22/09, pela data de faturamento' + (data.realizado_familia_ate ? (' (dados até ' + data.realizado_familia_ate + ')') : '');
+    document.getElementById('familiaFonte').textContent = data.realizado_familia_ate ? ('Realizado até ' + data.realizado_familia_ate) : '';
   }
 
   let lastGood = null;
