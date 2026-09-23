@@ -1,7 +1,7 @@
 {
-  "atualizado_em": "2026-09-22T13:15:00-03:00",
+  "atualizado_em": "2026-09-22T13:30:00-03:00",
   "talvez": {
-    "total": 299100.0,
+    "total": 259100.0,
     "itens": [
       {
         "nome": "Adesivos",
@@ -21,7 +21,7 @@
       },
       {
         "nome": "Plásticos",
-        "valor": 40000.0
+        "valor": 28000.0
       },
       {
         "nome": "Licitação",
@@ -39,8 +39,7 @@
       },
       {
         "nome": "Plástico",
-        "valor": 40000.0,
-        "data": "22/09"
+        "valor": 12000.0
       }
     ]
   },
@@ -94,7 +93,7 @@
     ]
   },
   "pipeline_atual": {
-    "total": 392817.12
+    "total": 352817.12
   },
   "novo_topo_funil": 300000.0,
   "acoes_por_area": [
