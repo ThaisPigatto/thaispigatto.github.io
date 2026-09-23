@@ -1,5 +1,5 @@
 {
-  "atualizado_em": "2026-09-22T13:40:00-03:00",
+  "atualizado_em": "2026-09-23T09:30:00-03:00",
   "talvez": {
     "total": 259100.0,
     "itens": [
@@ -185,5 +185,13 @@
     "objetivo": 625000.0,
     "na_mira": 348000.0,
     "realizado": 15443.42
-  }
+  },
+  "realizado_familia": {
+    "adesivos": 17146.29,
+    "especialidades": 1860.96,
+    "hub": 0.0,
+    "plasticos": 4905.76,
+    "papeis": 2484.64
+  },
+  "realizado_familia_ate": "23/09/2026"
 }
