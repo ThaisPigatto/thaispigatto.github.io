@@ -297,7 +297,7 @@
     const total = computeCertezaTotal();
     document.getElementById('certezaTotal').textContent = fmtBRL(total);
     document.getElementById('realizadoVal').textContent = fmtBRL(total);
-    document.querySelectorAll('.vq tbody tr').forEach(function(tr, idx){
+    document.querySelectorAll('#valorQuemBody tr').forEach(function(tr, idx){
       const d = lastGood.distribuicao_por_area[idx];
       if(!d) return;
       const box = tr.querySelector('.realizado-box b');
