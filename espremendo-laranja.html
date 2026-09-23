@@ -126,6 +126,28 @@
   .vq td.plasticos{ background:#2E86AB; }
   .vq td.papeis{ background:#8E5AA6; }
 
+  .col3{ display:flex; flex-direction:column; gap:20px; }
+  .big-total{ padding:6px 18px 4px; font-size:28px; font-weight:700; white-space:nowrap; }
+  .big-sub{ padding:0 18px 16px; font-size:13px; color:var(--ink-dim); font-weight:600; }
+  .fcard-foot{ display:flex; justify-content:space-between; padding:10px 18px 14px; border-top:2px solid var(--line); font-size:13.5px; font-weight:700; }
+  .fcard-foot .lbl{ color:var(--talvez); letter-spacing:0.06em; font-size:12px; }
+  .fam-row{ cursor:pointer; user-select:none; }
+  .fam-row .name{ color:var(--ink); font-weight:600; }
+  .fam-row .arrow{ display:inline-block; width:12px; color:var(--ink-dim); font-size:10px; transition:transform .15s; }
+  .fam-row.open .arrow{ transform:rotate(90deg); }
+  .fam-row.empty{ cursor:default; opacity:.55; }
+  .fam-list{ list-style:none; margin:0; padding:0 0 4px 20px !important; display:none; }
+  .fam-list.open{ display:block; }
+  .fam-list li{ font-size:12.5px; padding:4px 0 !important; border-top:1px dashed var(--line) !important; }
+  .split{ padding:4px 18px 14px; }
+  .split .blk{ padding:10px 0; border-top:1px solid var(--line); }
+  .split .blk:first-child{ border-top:none; }
+  .split .row{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:3px 0; }
+  .split .row .k{ color:var(--ink-dim); }
+  .split .row .v{ font-weight:700; white-space:nowrap; }
+  .split .row.sub .k{ padding-left:12px; }
+  .split .row.sub .v{ color:var(--certeza); }
+
   footer{ margin-top:36px; padding-top:12px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-dim); }
 
   @media (max-width:900px){
@@ -175,20 +197,34 @@
       <div class="fcard-top talvez"></div>
       <div class="fcard-head"><span class="fcard-label talvez">TALVEZ</span><span class="fcard-total" id="talvezTotal">—</span></div>
       <ul id="talvezItems"></ul>
+      <div class="fcard-foot"><span class="lbl">REALIZADO</span><span id="talvezRealizado">—</span></div>
     </div>
     <div class="fcard">
       <div class="fcard-top certeza"></div>
-      <div class="fcard-head"><span class="fcard-label certeza">CERTEZA</span><span class="fcard-total" id="certezaTotal">—</span></div>
-      <ul id="certezaItems"></ul>
+      <div class="fcard-head"><span class="fcard-label certeza">REALIZADOS</span><span class="fcard-total" id="realizadosTotal">—</span></div>
+      <ul id="realizadosFamilias"></ul>
     </div>
-    <div class="fcard">
-      <div class="fcard-top objetivo"></div>
-      <div class="fcard-head"><span class="fcard-label objetivo">OBJETIVO</span><span class="fcard-total" id="objetivoTotal">—</span></div>
-      <ul>
-        <li><span class="left"><span class="name">Na mira</span></span><span class="val"><span class="price" id="naMiraVal">—</span></span></li>
-        <li><span class="left"><span class="name">Realizado</span></span><span class="val"><span class="price" id="realizadoVal">—</span></span></li>
-      </ul>
-      <div class="objetivo-periodo" id="objetivoPeriodo"></div>
+    <div class="col3">
+      <div class="fcard">
+        <div class="fcard-top objetivo"></div>
+        <div class="fcard-head"><span class="fcard-label objetivo">REALIZADO TOTAL</span></div>
+        <div class="big-total" id="realizadoTotalVal">—</div>
+        <div class="big-sub">(OBJETIVO: <span id="objetivoTotal">—</span>)</div>
+        <div class="objetivo-periodo" id="objetivoPeriodo"></div>
+      </div>
+      <div class="fcard">
+        <div class="fcard-top objetivo"></div>
+        <div class="split">
+          <div class="blk">
+            <div class="row"><span class="k">Previsto na reunião</span><span class="v" id="previstoReuniao">—</span></div>
+            <div class="row sub"><span class="k">Realizado desse</span><span class="v" id="previstoRealizado">—</span></div>
+          </div>
+          <div class="blk">
+            <div class="row"><span class="k">Objetivo extra (até 30/09)</span><span class="v" id="objetivoExtra">—</span></div>
+            <div class="row sub"><span class="k">Realizado</span><span class="v" id="extraRealizado">—</span></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -209,6 +245,7 @@
     <tbody id="acoesBody"></tbody>
   </table>
 
+  <h2 style="margin-top:8px;">OBJETIVO EXTRA DISTRIBUÍDO</h2>
   <table class="vq">
     <tr><th></th><th>Valor</th><th>QUEM VAI ESPREMER</th><th>Realizado por família</th></tr>
     <tbody id="valorQuemBody"></tbody>
@@ -263,7 +300,7 @@
     box.className = 'chk' + (done ? ' done' : '');
     box.addEventListener('click', function(){
       toggleDone(section, idx, i.nome || '', li, box, i.feito);
-      if(section === 'certeza') refreshCertezaTotals();
+      if(section === 'talvez') refreshTalvez();
     });
     li.querySelector('.chk-slot').replaceWith(box);
     return li;
@@ -275,33 +312,56 @@
     itens.forEach(function(i, idx){ ul.appendChild(itemLi(section, idx, i, showName)); });
   }
 
-  function computeCertezaTotal(){
-    if(!lastGood || !lastGood.certeza) return 0;
-    let sum = 0;
-    lastGood.certeza.itens.forEach(function(i, idx){
-      if(isDone('certeza', idx, i.nome || '', i.feito)) sum += i.valor;
-    });
-    return sum;
-  }
+  const FAM_ORDER = [['adesivos','Adesivos'],['especialidades','Especialidades'],['hub','HUB'],['plasticos','Plasticos de Eng'],['papeis','Papeis']];
 
+  function sumTalvezFeito(){
+    if(!lastGood) return 0;
+    let s = 0;
+    lastGood.talvez.itens.forEach(function(i, idx){ if(isDone('talvez', idx, i.nome || '', i.feito)) s += i.valor; });
+    return s;
+  }
+  function realizadosTotal(){
+    if(!lastGood || !lastGood.realizados) return 0;
+    return lastGood.realizados.itens.reduce(function(a, i){ return a + i.valor; }, 0);
+  }
   function realizadoPorFamilia(classe){
-    if(!lastGood || !lastGood.certeza) return 0;
-    let sum = 0;
-    lastGood.certeza.itens.forEach(function(i, idx){
-      if(i.classe === classe && isDone('certeza', idx, i.nome || '', i.feito)) sum += i.valor;
-    });
-    return sum;
+    if(!lastGood || !lastGood.realizados) return 0;
+    return lastGood.realizados.itens.reduce(function(a, i){ return a + (i.classe === classe ? i.valor : 0); }, 0);
+  }
+  function refreshTalvez(){
+    const s = sumTalvezFeito();
+    document.getElementById('talvezRealizado').textContent = fmtBRL(s);
+    document.getElementById('previstoRealizado').textContent = fmtBRL(s);
   }
 
-  function refreshCertezaTotals(){
-    const total = computeCertezaTotal();
-    document.getElementById('certezaTotal').textContent = fmtBRL(total);
-    document.getElementById('realizadoVal').textContent = fmtBRL(total);
-    document.querySelectorAll('#valorQuemBody tr').forEach(function(tr, idx){
-      const d = lastGood.distribuicao_por_area[idx];
-      if(!d) return;
-      const box = tr.querySelector('.realizado-box b');
-      if(box) box.textContent = fmtBRL(realizadoPorFamilia(d.classe));
+  const openFams = {};
+  function renderRealizados(data){
+    const ul = document.getElementById('realizadosFamilias');
+    ul.innerHTML = '';
+    FAM_ORDER.forEach(function(f){
+      const cls = f[0], label = f[1];
+      const itens = data.realizados.itens.filter(function(i){ return i.classe === cls; });
+      const tot = itens.reduce(function(a, i){ return a + i.valor; }, 0);
+      const li = document.createElement('li');
+      li.className = 'fam-row' + (itens.length ? '' : ' empty') + (openFams[cls] ? ' open' : '');
+      li.innerHTML = '<span class="left"><span class="arrow">' + (itens.length ? '▶' : '') + '</span><span class="name">' + label + '</span></span>' +
+        '<span class="val"><span class="price">' + fmtBRL(tot) + '</span><span class="date">' + itens.length + ' pedido' + (itens.length === 1 ? '' : 's') + '</span></span>';
+      ul.appendChild(li);
+      const sub = document.createElement('ul');
+      sub.className = 'fam-list' + (openFams[cls] ? ' open' : '');
+      itens.forEach(function(i){
+        const x = document.createElement('li');
+        x.innerHTML = '<span class="left"><span class="name">' + i.nome + '</span></span><span class="val"><span class="price">' + fmtBRL(i.valor) + '</span><span class="date">' + (i.data || '') + '</span></span>';
+        sub.appendChild(x);
+      });
+      ul.appendChild(sub);
+      if(itens.length){
+        li.addEventListener('click', function(){
+          openFams[cls] = !openFams[cls];
+          li.classList.toggle('open', openFams[cls]);
+          sub.classList.toggle('open', openFams[cls]);
+        });
+      }
     });
   }
 
@@ -309,16 +369,22 @@
     lastGood = data;
     document.getElementById('talvezTotal').textContent = fmtBRL(data.talvez.total);
     fillList('talvezItems', 'talvez', data.talvez.itens, true);
+    refreshTalvez();
 
-    fillList('certezaItems', 'certeza', data.certeza.itens, true);
+    const realTot = realizadosTotal();
+    document.getElementById('realizadosTotal').textContent = fmtBRL(realTot);
+    renderRealizados(data);
 
-    document.getElementById('objetivoTotal').textContent = fmtBRL(data.objetivo_periodo.objetivo);
-    document.getElementById('naMiraVal').textContent = fmtBRL(data.talvez.total);
-    document.getElementById('objetivoPeriodo').textContent = data.objetivo_periodo.periodo;
-    refreshCertezaTotals();
+    const op = data.objetivo_periodo;
+    document.getElementById('realizadoTotalVal').textContent = fmtBRL(realTot);
+    document.getElementById('objetivoTotal').textContent = fmtBRL(op.objetivo);
+    document.getElementById('objetivoPeriodo').textContent = op.periodo;
+    document.getElementById('previstoReuniao').textContent = fmtBRL(data.talvez.total);
+    document.getElementById('objetivoExtra').textContent = fmtBRL(op.objetivo_extra);
+    document.getElementById('extraRealizado').textContent = fmtBRL(realTot);
 
-    document.getElementById('goalNum').textContent = fmtBRL(data.objetivo_periodo.objetivo);
-    document.getElementById('periodoAte').textContent = data.objetivo_periodo.periodo.replace(' - ', ' até ');
+    document.getElementById('goalNum').textContent = fmtBRL(op.objetivo);
+    document.getElementById('periodoAte').textContent = op.periodo.replace(' - ', ' até ');
 
     document.getElementById('acoesBody').innerHTML = [1,2,3].map(function(n){
       return '<tr><td>'+n+'</td>' + data.acoes_por_area.map(function(a){
@@ -332,9 +398,8 @@
       const done = isDone('area', idx, d.area);
       const tr = document.createElement('tr');
       tr.className = 'row' + (done ? ' done' : '');
-      const realizado = realizadoPorFamilia(d.classe);
       tr.innerHTML = '<td class="vq-chk"></td><td>'+fmtBRL(d.valor)+'</td><td class="'+d.classe+'">'+d.area+'</td>' +
-        '<td class="realizado"><span class="realizado-box">REALIZADO: <b>'+fmtBRL(realizado)+'</b></span></td>';
+        '<td class="realizado"><span class="realizado-box">REALIZADO: <b>'+fmtBRL(realizadoPorFamilia(d.classe))+'</b></span></td>';
       const box = document.createElement('span');
       box.className = 'chk' + (done ? ' done' : '');
       box.addEventListener('click', function(){
@@ -349,7 +414,7 @@
 
     const dt = new Date(data.atualizado_em);
     document.getElementById('updated').textContent = 'Atualizado ' + dt.toLocaleString('pt-BR');
-    document.getElementById('familiaFonte').textContent = 'Realizado por família: soma dos pedidos marcados (faturados no OMIE) desde 22/09' + (data.realizado_familia_ate ? (' (dados até ' + data.realizado_familia_ate + ')') : '');
+    document.getElementById('familiaFonte').textContent = 'Realizado por família: faturado no OMIE desde 22/09, pela data de faturamento' + (data.realizado_familia_ate ? (' (dados até ' + data.realizado_familia_ate + ')') : '');
   }
 
   let lastGood = null;
