@@ -121,6 +121,7 @@
     padding:8px 14px; font-size:13px; color:var(--ink-dim); white-space:nowrap;
   }
   .realizado-box b{ color:var(--ink); font-weight:700; }
+  .familia-fonte{ font-size:11px; color:var(--ink-dim); margin-top:6px; }
   .vq tr.done td:nth-child(2){ text-decoration:line-through; color:var(--ink-dim); }
   .vq tr.row td:first-child{ border-radius:8px 0 0 8px; background:var(--panel); }
   .vq tr.row td:last-child{ border-radius:0 8px 8px 0; color:#fff; }
@@ -217,6 +218,7 @@
     <tr><th></th><th>Valor</th><th>QUEM VAI ESPREMER</th><th>Realizado por família</th></tr>
     <tbody id="valorQuemBody"></tbody>
   </table>
+  <p class="familia-fonte" id="familiaFonte"></p>
   </div>
 
   </div>
@@ -293,24 +295,9 @@
       }).join('') + '</tr>';
     }).join('');
 
-    const FAMILY_STEMS = {
-      adesivos: 'adesiv',
-      especialidades: 'especialidad',
-      hub: 'hub',
-      plasticos: 'plastic',
-      papeis: 'pap'
-    };
-    function normalize(s){
-      return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
     function realizadoPorFamilia(classe){
-      const stem = FAMILY_STEMS[classe];
-      if(!stem || !data.certeza) return 0;
-      let sum = 0;
-      data.certeza.itens.forEach(function(i){
-        if(normalize(i.nome).startsWith(stem)) sum += i.valor;
-      });
-      return sum;
+      if(!data.realizado_familia) return 0;
+      return data.realizado_familia[classe] || 0;
     }
 
     const vqBody = document.getElementById('valorQuemBody');
@@ -336,6 +323,7 @@
 
     const dt = new Date(data.atualizado_em);
     document.getElementById('updated').textContent = 'Atualizado ' + dt.toLocaleString('pt-BR');
+    document.getElementById('familiaFonte').textContent = 'Realizado por família: faturado no OMIE desde 22/09' + (data.realizado_familia_ate ? (' (dados até ' + data.realizado_familia_ate + ')') : '');
   }
 
   let lastGood = null;
