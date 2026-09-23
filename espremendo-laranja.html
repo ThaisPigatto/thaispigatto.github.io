@@ -106,11 +106,6 @@
   .acoes td:first-child{ color:var(--ink-dim); font-weight:600; width:24px; }
   .acoes tr:nth-child(odd) td{ background:var(--panel); }
 
-  .revisar{ margin-top:26px; }
-  .revisar b{ display:block; font-size:14.5px; margin:0 0 6px; }
-  .revisar p{ margin:0 0 4px; font-size:13.5px; color:var(--ink-dim); }
-  .revisar .grupo{ margin-bottom:18px; }
-
   .vq{ border-collapse:separate; border-spacing:0 8px; width:100%; max-width:400px; }
   .vq th{ text-align:left; font-size:12px; letter-spacing:0.06em; color:var(--ink-dim); font-weight:600; padding:0 14px 4px; }
   .vq td{ padding:10px 14px; font-weight:600; font-size:14px; }
@@ -239,21 +234,25 @@
     return 'espremendo-check:' + section + ':' + idx + ':' + nome;
   }
 
-  function isDone(section, idx, nome){
-    try{ return localStorage.getItem(checkKey(section, idx, nome)) === '1'; }
-    catch(e){ return false; }
+  function isDone(section, idx, nome, defaultVal){
+    try{
+      const v = localStorage.getItem(checkKey(section, idx, nome));
+      if(v === '1') return true;
+      if(v === '0') return false;
+      return !!defaultVal;
+    } catch(e){ return !!defaultVal; }
   }
 
-  function toggleDone(section, idx, nome, li, box){
+  function toggleDone(section, idx, nome, li, box, defaultVal){
     const key = checkKey(section, idx, nome);
-    const nowDone = !isDone(section, idx, nome);
+    const nowDone = !isDone(section, idx, nome, defaultVal);
     try{ localStorage.setItem(key, nowDone ? '1' : '0'); } catch(e){}
     li.classList.toggle('done', nowDone);
     box.classList.toggle('done', nowDone);
   }
 
   function itemLi(section, idx, i, showName){
-    const done = isDone(section, idx, i.nome || '');
+    const done = isDone(section, idx, i.nome || '', i.feito);
     const li = document.createElement('li');
     if(done) li.classList.add('done');
     const nameHtml = showName ? '<span class="name">'+(i.nome||'')+'</span>' : '<span></span>';
@@ -262,7 +261,10 @@
       '<span class="val"><span class="price">' + fmtBRL(i.valor) + '</span>' + dateHtml + '</span>';
     const box = document.createElement('span');
     box.className = 'chk' + (done ? ' done' : '');
-    box.addEventListener('click', function(){ toggleDone(section, idx, i.nome || '', li, box); });
+    box.addEventListener('click', function(){
+      toggleDone(section, idx, i.nome || '', li, box, i.feito);
+      if(section === 'certeza') refreshCertezaTotals();
+    });
     li.querySelector('.chk-slot').replaceWith(box);
     return li;
   }
@@ -273,18 +275,47 @@
     itens.forEach(function(i, idx){ ul.appendChild(itemLi(section, idx, i, showName)); });
   }
 
+  function computeCertezaTotal(){
+    if(!lastGood || !lastGood.certeza) return 0;
+    let sum = 0;
+    lastGood.certeza.itens.forEach(function(i, idx){
+      if(isDone('certeza', idx, i.nome || '', i.feito)) sum += i.valor;
+    });
+    return sum;
+  }
+
+  function realizadoPorFamilia(classe){
+    if(!lastGood || !lastGood.certeza) return 0;
+    let sum = 0;
+    lastGood.certeza.itens.forEach(function(i, idx){
+      if(i.classe === classe && isDone('certeza', idx, i.nome || '', i.feito)) sum += i.valor;
+    });
+    return sum;
+  }
+
+  function refreshCertezaTotals(){
+    const total = computeCertezaTotal();
+    document.getElementById('certezaTotal').textContent = fmtBRL(total);
+    document.getElementById('realizadoVal').textContent = fmtBRL(total);
+    document.querySelectorAll('.vq tbody tr').forEach(function(tr, idx){
+      const d = lastGood.distribuicao_por_area[idx];
+      if(!d) return;
+      const box = tr.querySelector('.realizado-box b');
+      if(box) box.textContent = fmtBRL(realizadoPorFamilia(d.classe));
+    });
+  }
+
   function render(data){
     lastGood = data;
     document.getElementById('talvezTotal').textContent = fmtBRL(data.talvez.total);
     fillList('talvezItems', 'talvez', data.talvez.itens, true);
 
-    document.getElementById('certezaTotal').textContent = fmtBRL(data.certeza.total);
     fillList('certezaItems', 'certeza', data.certeza.itens, true);
 
     document.getElementById('objetivoTotal').textContent = fmtBRL(data.objetivo_periodo.objetivo);
     document.getElementById('naMiraVal').textContent = fmtBRL(data.talvez.total);
-    document.getElementById('realizadoVal').textContent = fmtBRL(data.certeza.total);
     document.getElementById('objetivoPeriodo').textContent = data.objetivo_periodo.periodo;
+    refreshCertezaTotals();
 
     document.getElementById('goalNum').textContent = fmtBRL(data.objetivo_periodo.objetivo);
     document.getElementById('periodoAte').textContent = data.objetivo_periodo.periodo.replace(' - ', ' até ');
@@ -294,11 +325,6 @@
         return '<td>'+(a.itens[n-1]||'')+'</td>';
       }).join('') + '</tr>';
     }).join('');
-
-    function realizadoPorFamilia(classe){
-      if(!data.realizado_familia) return 0;
-      return data.realizado_familia[classe] || 0;
-    }
 
     const vqBody = document.getElementById('valorQuemBody');
     vqBody.innerHTML = '';
@@ -323,7 +349,7 @@
 
     const dt = new Date(data.atualizado_em);
     document.getElementById('updated').textContent = 'Atualizado ' + dt.toLocaleString('pt-BR');
-    document.getElementById('familiaFonte').textContent = 'Realizado por família: faturado no OMIE desde 22/09' + (data.realizado_familia_ate ? (' (dados até ' + data.realizado_familia_ate + ')') : '');
+    document.getElementById('familiaFonte').textContent = 'Realizado por família: soma dos pedidos marcados (faturados no OMIE) desde 22/09' + (data.realizado_familia_ate ? (' (dados até ' + data.realizado_familia_ate + ')') : '');
   }
 
   let lastGood = null;
