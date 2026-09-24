@@ -237,7 +237,7 @@
       <th></th>
       <th class="adesivos">Adesivos</th>
       <th class="especialidades">Especialidades</th>
-      <th class="hub">HUB</th>
+      <th class="hub">HUB + LICITAÇÃO</th>
       <th class="plasticos">Plasticos de Eng</th>
       <th class="papeis">Papeis</th>
     </tr>
@@ -304,7 +304,7 @@
     itens.forEach(function(i, idx){ ul.appendChild(itemLi(section, idx, i, showName)); });
   }
 
-  const FAM_ORDER = [['adesivos','Adesivos'],['especialidades','Especialidades'],['hub','HUB'],['plasticos','Plasticos de Eng'],['papeis','Papeis']];
+  const FAM_ORDER = [['adesivos','Adesivos'],['especialidades','Especialidades'],['hub','HUB + LICITAÇÃO'],['plasticos','Plasticos de Eng'],['papeis','Papeis']];
 
   function sumTalvezFeito(){
     if(!lastGood) return 0;
@@ -343,7 +343,7 @@
       sub.className = 'fam-list' + (openFams[cls] ? ' open' : '');
       itens.forEach(function(i){
         const x = document.createElement('li');
-        x.innerHTML = '<span class="left"><span class="name">' + i.nome + '</span></span><span class="val"><span class="price">' + fmtBRL(i.valor) + '</span><span class="date">' + (i.data || '') + '</span></span>';
+        x.innerHTML = '<span class="left"><span class="name">' + label + '</span></span><span class="val"><span class="price">' + fmtBRL(i.valor) + '</span><span class="date">' + (i.data || '') + '</span></span>';
         sub.appendChild(x);
       });
       ul.appendChild(sub);
