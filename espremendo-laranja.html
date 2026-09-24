@@ -147,6 +147,10 @@
   .split .row{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:3px 0; }
   .split .row .k{ color:var(--ink-dim); }
   .split .row .v{ font-weight:700; white-space:nowrap; }
+  .split .row.mira{ margin-top:6px; }
+  .split .row.mira .k{ color:var(--orange-deep); font-weight:700; }
+  .split .row.mira .v{ color:var(--orange-deep); font-size:17px; }
+  .mira-sub{ font-size:11px; color:var(--ink-dim); text-align:right; }
 
   footer{ margin-top:36px; padding-top:12px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-dim); }
 
@@ -212,6 +216,8 @@
         <div class="big-sub" style="padding-bottom:10px;">(considerando talvez + extra)</div>
         <div class="split">
           <div class="row"><span class="k">OBJETIVO:</span><span class="v" id="objetivoTotal">—</span></div>
+          <div class="row mira"><span class="k">NA MIRA:</span><span class="v" id="naMiraVal">—</span></div>
+          <div class="mira-sub" id="naMiraSub"></div>
         </div>
         <div class="big-label">REALIZADO:</div>
         <div class="big-total" id="realizadoTotalVal">—</div>
@@ -370,6 +376,10 @@
     document.getElementById('objetivoExtra').textContent = fmtBRL(op.objetivo_extra);
     document.getElementById('extraRealizado').textContent = fmtBRL(realTot);
     document.getElementById('objetivoTotal').textContent = fmtBRL(op.objetivo);
+    const nm = data.na_mira || {itens:[]};
+    const nmTot = nm.itens.reduce(function(a, i){ return a + i.valor; }, 0);
+    document.getElementById('naMiraVal').textContent = fmtBRL(nmTot);
+    document.getElementById('naMiraSub').textContent = nm.itens.length + ' pedido' + (nm.itens.length === 1 ? '' : 's') + ' previsto' + (nm.itens.length === 1 ? '' : 's') + ' até 30/09, ainda não faturado' + (nm.itens.length === 1 ? '' : 's');
     document.getElementById('objetivoPeriodo').textContent = op.periodo;
     document.getElementById('realizadoTotalVal').textContent = fmtBRL(sumTalvezFeito() + realTot);
 
