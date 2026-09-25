@@ -112,6 +112,10 @@
   .vq{ border-collapse:separate; border-spacing:0 12px; width:100%; max-width:680px; }
   .vq th{ text-align:left; font-size:12px; letter-spacing:0.06em; color:var(--ink-dim); font-weight:600; padding:0 18px 2px; white-space:nowrap; }
   .vq th.th-quem{ text-align:center; }
+  .vq tr.vq-title th{ padding:0; }
+  .tt-anchor{ width:0; margin:0 auto; display:flex; justify-content:center; }
+  .tt-anchor h2{ white-space:nowrap; margin:0 0 4px; letter-spacing:0; color:var(--ink); }
+  .tt-sub{ font-weight:500; color:var(--ink-dim); font-size:15px; }
   .vq th.th-real{ padding-left:24px; }
   .vq td{ padding:12px 18px; font-weight:600; font-size:14px; white-space:nowrap; }
   .vq td.vq-chk{ padding-right:0; width:20px; }
@@ -235,8 +239,8 @@
 
   <div class="col-right">
 
-  <h2>OBJETIVO EXTRA DISTRIBUÍDO <span style="font-weight:500;color:var(--ink-dim);font-size:15px;">(Somente o Faturado)</span></h2>
   <table class="vq">
+    <tr class="vq-title"><th></th><th></th><th><div class="tt-anchor"><h2 id="tituloExtra">OBJETIVO EXTRA DISTRIBUÍDO <span class="tt-sub">(Somente o Faturado)</span></h2></div></th><th></th></tr>
     <tr><th></th><th>VALOR</th><th class="th-quem">QUEM VAI ESPREMER</th><th class="th-real">REALIZADO EXTRA</th></tr>
     <tbody id="valorQuemBody"></tbody>
   </table>
