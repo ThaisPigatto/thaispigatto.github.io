@@ -69,10 +69,11 @@
   .fcard ul{ list-style:none; margin:0; padding:0 18px 16px; }
   .fcard li{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:7px 0; border-top:1px solid var(--line); }
   .fcard li:first-child{ border-top:none; }
+  .fcard li.grp-start{ margin-top:14px; border-top:2px solid #D8D2C4; padding-top:11px; }
   .fcard .name{ color:var(--ink-dim); }
   .fcard li{ align-items:center; }
   .fcard li .left{ display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 auto; }
-  .fcard .name{ word-break:break-word; }
+  .fcard .name{ word-break:normal; overflow-wrap:normal; hyphens:none; }
   .fcard .val{ display:flex; flex-direction:column; align-items:flex-end; gap:1px; flex-shrink:0; }
   .fcard .price{ font-weight:600; font-size:13.5px; white-space:nowrap; }
   .fcard .date{ font-size:11px; color:var(--ink-dim); font-weight:500; white-space:nowrap; }
@@ -310,7 +311,11 @@
   function fillList(elId, section, itens, showName){
     const ul = document.getElementById(elId);
     ul.innerHTML = '';
-    itens.forEach(function(i, idx){ ul.appendChild(itemLi(section, idx, i, showName)); });
+    itens.forEach(function(i, idx){
+      const li = itemLi(section, idx, i, showName);
+      if(idx > 0 && i.grupo && itens[idx-1].grupo && i.grupo !== itens[idx-1].grupo) li.classList.add('grp-start');
+      ul.appendChild(li);
+    });
   }
 
   const FAM_ORDER = [['adesivos','Adesivos'],['especialidades','Especialidades'],['hub','HUB + LICITAÇÃO'],['plasticos','Plasticos de Eng'],['papeis','Papeis']];
