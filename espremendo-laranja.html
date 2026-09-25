@@ -152,6 +152,16 @@
   .fam-list{ list-style:none; margin:0; padding:0 0 4px 20px !important; display:none; }
   .fam-list.open{ display:block; }
   .fam-list li{ font-size:12.5px; padding:4px 0 !important; border-top:1px dashed var(--line) !important; }
+  #talvezItems .fam-row .name{ white-space:nowrap; font-size:12.5px; }
+  #talvezItems .fam-row{ gap:8px; flex-wrap:wrap; }
+  #talvezItems .fam-row .left{ flex:0 0 auto; }
+  #talvezItems .fam-row .val{ margin-left:auto; }
+  #talvezItems .fam-row .price{ font-size:12.5px; }
+  #talvezItems .fam-row .left{ gap:4px; }
+  #talvezItems .fam-row .arrow{ width:9px; font-size:9px; }
+  #talvezItems .fam-list{ padding-left:10px !important; }
+  .fam-list .name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  .fam-list .left{ min-width:0; }
   .split{ padding:4px 18px 14px; }
   .split .row{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:3px 0; }
   .split .row .k{ color:var(--ink-dim); }
@@ -314,14 +324,45 @@
     return li;
   }
 
+  const TALVEZ_RECOLHER = ['especialidades'];
+  const openTalvez = {};
   function fillList(elId, section, itens, showName){
     const ul = document.getElementById(elId);
     ul.innerHTML = '';
-    itens.forEach(function(i, idx){
+    let idx = 0;
+    while(idx < itens.length){
+      const i = itens[idx];
+      const prev = idx > 0 ? itens[idx-1] : null;
+      const newGrp = !!(prev && i.grupo && prev.grupo && i.grupo !== prev.grupo);
+      if(section === 'talvez' && i.grupo && TALVEZ_RECOLHER.indexOf(i.grupo) >= 0){
+        const g = i.grupo, start = idx;
+        while(idx < itens.length && itens[idx].grupo === g) idx++;
+        const grp = itens.slice(start, idx);
+        const tot = grp.reduce(function(a, x){ return a + x.valor; }, 0);
+        const head = document.createElement('li');
+        head.className = 'fam-row' + (newGrp ? ' grp-start' : '') + (openTalvez[g] ? ' open' : '');
+        head.innerHTML = '<span class="left"><span class="arrow">▶</span><span class="name">' + (i.nome || g) + '</span></span>' +
+          '<span class="val"><span class="price">' + fmtBRL(tot) + '</span><span class="date">' + grp.length + ' pedido' + (grp.length === 1 ? '' : 's') + '</span></span>';
+        const sub = document.createElement('ul');
+        sub.className = 'fam-list' + (openTalvez[g] ? ' open' : '');
+        grp.forEach(function(it, k){
+          const li2 = itemLi(section, start + k, it, showName);
+          const nm = li2.querySelector('.name'); if(nm && it.nome === i.nome) nm.textContent = 'Pedido ' + (k + 1);
+          sub.appendChild(li2);
+        });
+        head.addEventListener('click', function(){
+          openTalvez[g] = !openTalvez[g];
+          head.classList.toggle('open', openTalvez[g]);
+          sub.classList.toggle('open', openTalvez[g]);
+        });
+        ul.appendChild(head); ul.appendChild(sub);
+        continue;
+      }
       const li = itemLi(section, idx, i, showName);
-      if(idx > 0 && i.grupo && itens[idx-1].grupo && i.grupo !== itens[idx-1].grupo) li.classList.add('grp-start');
+      if(newGrp) li.classList.add('grp-start');
       ul.appendChild(li);
-    });
+      idx++;
+    }
   }
 
   const FAM_ORDER = [['adesivos','Adesivos'],['especialidades','Especialidades'],['hub','HUB + LICITAÇÃO'],['plasticos','Plasticos de Eng'],['papeis','Papeis']];
