@@ -64,7 +64,10 @@ HUB_META = 100000
 # remessa continuam fora pelas regras de CFOP abaixo.
 # "Papel Térmico" (Matriz, com T maiúsculo) é a mesma família "Papel térmico" do grupo Papéis
 # (Thais, 30/09/2026) — soma na mesma linha, não vira linha nova.
-FAMILIA_ALIAS = {"Silquim": "Linha TT", "SILQUIM": "Linha TT", "Papel Térmico": "Papel térmico"}
+# "MARBOCOTE" (Papéis, em maiúsculas) é a mesma família "Marbocote" do grupo Químicos, junto com
+# Chemlok e Bio-Chem (Thais, 30/09/2026) — soma na mesma linha, não vira linha nova.
+FAMILIA_ALIAS = {"Silquim": "Linha TT", "SILQUIM": "Linha TT", "Papel Térmico": "Papel térmico",
+                 "MARBOCOTE": "Marbocote"}
 
 # Credenciais da OMIE (vêm dos Secrets do GitHub — nunca ficam no código)
 EMPRESAS = {
