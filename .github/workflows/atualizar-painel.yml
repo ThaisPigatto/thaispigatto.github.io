@@ -1,21 +1,5 @@
 name: Atualizar Painel Comercial Pigatto
 on:
-  schedule:
-    # Minutos "quebrados" de propósito: o GitHub atrasa/descarta execuções agendadas
-    # em horário cheio (:00, :15, :30, :45) por excesso de fila. Ajuste de 29/09/2026.
-    - cron: '43 10 * * *'  # 07:43 SP
-    - cron: '17 11 * * *'  # 08:17 SP
-    - cron: '7 12 * * *'   # 09:07 SP
-    - cron: '7 13 * * *'   # 10:07 SP
-    - cron: '7 14 * * *'   # 11:07 SP
-    - cron: '7 17 * * *'   # 14:07 SP
-    - cron: '7 18 * * *'   # 15:07 SP
-    - cron: '7 19 * * *'   # 16:07 SP
-    - cron: '37 19 * * *'  # 16:37 SP
-    - cron: '7 20 * * *'   # 17:07 SP
-    - cron: '37 20 * * *'  # 17:37 SP
-    - cron: '7 21 * * *'   # 18:07 SP
-    - cron: '59 2 * * *'   # 23:59 SP (do dia anterior em UTC, roda todo dia)
   workflow_dispatch:
     inputs:
       reprocessar_mes:
