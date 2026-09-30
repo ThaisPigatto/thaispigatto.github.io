@@ -45,7 +45,10 @@ jobs:
           OMIE_PAPEIS_APP_KEY: ${{ secrets.OMIE_PAPEIS_APP_KEY }}
           OMIE_PAPEIS_APP_SECRET: ${{ secrets.OMIE_PAPEIS_APP_SECRET }}
           REPROCESSAR_MES: ${{ github.event.inputs.reprocessar_mes }}
-        run: python automacao/atualizar_painel.py
+        # tee: guarda a saída num arquivo pro aviso por e-mail abaixo; pipefail mantém o erro do script
+        run: |
+          set -o pipefail
+          python automacao/atualizar_painel.py 2>&1 | tee saida_robo.log
       - name: Publicar (commit + push) só se algo mudou
         run: |
           git config user.name "Painel Pigatto (robô)"
@@ -70,3 +73,42 @@ jobs:
               sleep 5
             done
           fi
+      - name: Avisar por e-mail que o painel NÃO foi atualizado
+        # Só roda quando alguma etapa anterior falhou (ex.: trava de soma por família fora dos
+        # grupos, erro da OMIE). Pedido da Thais, 30/09/2026. Não publica nada, só avisa.
+        if: failure()
+        env:
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          LINK_EXECUCAO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NUM_EXECUCAO: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import os, smtplib, datetime
+          from email.mime.text import MIMEText
+          from zoneinfo import ZoneInfo
+          DEST = ["thais.brito@pigattodistribuidora.com.br"]
+          USER = "thais.brito@pigattodistribuidora.com.br"
+          try:
+              linhas = open("saida_robo.log", encoding="utf-8", errors="replace").read().splitlines()
+          except FileNotFoundError:
+              linhas = ["(o script nem chegou a rodar — veja o link abaixo)"]
+          log = "\n".join(linhas[-40:])
+          trava = any("VALIDAÇÃO FALHOU" in l for l in linhas)
+          fora = [l.strip() for l in linhas if "família fora dos grupos" in l]
+          agora = datetime.datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M")
+          if trava:
+              assunto = "⚠️ Painel NÃO atualizado — venda em família fora dos grupos"
+              motivo = ("A trava de segurança bloqueou a publicação: a soma por vendedor não bateu "
+                        "com o total geral.\n\n" + ("\n".join(fora) if fora else "(família não identificada no log)"))
+          else:
+              assunto = "⚠️ Painel NÃO atualizado — erro na atualização"
+              motivo = "A atualização falhou antes de publicar (ex.: erro ou lentidão da OMIE)."
+          corpo = (f"Execução #{os.environ['NUM_EXECUCAO']} — {agora} (horário de Brasília)\n\n{motivo}\n\n"
+                   "O painel continua no ar com os números da última atualização que deu certo.\n\n"
+                   f"Detalhes: {os.environ['LINK_EXECUCAO']}\n\n--- últimas linhas do log ---\n{log}\n")
+          msg = MIMEText(corpo, "plain", "utf-8")
+          msg["Subject"], msg["From"], msg["To"] = assunto, USER, ", ".join(DEST)
+          with smtplib.SMTP("smtp.gmail.com", 587) as s:
+              s.starttls(); s.login(USER, os.environ["SMTP_APP_PASSWORD"]); s.sendmail(USER, DEST, msg.as_string())
+          print("Aviso enviado para", DEST)
+          PY
