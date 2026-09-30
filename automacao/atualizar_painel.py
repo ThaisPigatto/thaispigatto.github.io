@@ -54,6 +54,18 @@ GRUPOS = [
 ]
 HUB_META = 100000
 
+# Famílias da OMIE que o painel conta como OUTRA família (Thais, 30/09/2026): Silquim vai junto
+# com o Tiago/Wellington, dentro de Linha TT (grupo Adesivos), e NÃO aparece como linha própria.
+# Motivo de ficar aqui e não só na OMIE: o robô guarda a família de cada produto em
+# produto_familia_cache.json e não reconsulta produto já conhecido — então mesmo depois do
+# comprador trocar a família do produto na OMIE para Linha TT, o cache continuaria dizendo
+# Silquim. Com o apelido, qualquer produto Silquim (antigo ou novo) cai em Linha TT.
+# Só afeta o que já é contado: venda (5.102/6.102) e devolução de venda — amostra/comodato/
+# remessa continuam fora pelas regras de CFOP abaixo.
+# "Papel Térmico" (Matriz, com T maiúsculo) é a mesma família "Papel térmico" do grupo Papéis
+# (Thais, 30/09/2026) — soma na mesma linha, não vira linha nova.
+FAMILIA_ALIAS = {"Silquim": "Linha TT", "SILQUIM": "Linha TT", "Papel Térmico": "Papel térmico"}
+
 # Credenciais da OMIE (vêm dos Secrets do GitHub — nunca ficam no código)
 EMPRESAS = {
     "matriz": (os.environ["OMIE_MATRIZ_APP_KEY"], os.environ["OMIE_MATRIZ_APP_SECRET"]),
@@ -531,7 +543,8 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
         codfam = produto_familia.get(f"{empresa}|{cod_produto}")
         if codfam is None:
             return None
-        return fam_nome_cache.get(f"{empresa}|{codfam}")
+        nome = fam_nome_cache.get(f"{empresa}|{codfam}")
+        return FAMILIA_ALIAS.get(nome, nome)  # ver FAMILIA_ALIAS (30/09/2026)
 
     def nome_vendedor(empresa, cod_vend):
         if cod_vend is None:
@@ -1001,6 +1014,17 @@ def main():
 
     if abs(soma_vend - soma_fat_dev) > 0.5:
         print("!! VALIDAÇÃO FALHOU: soma por vendedor não bate com o total geral. Abortando sem publicar.")
+        # Diagnóstico (30/09/2026): lista vendas fora dos 4 grupos — causa mais comum da trava
+        # (família nova na OMIE que não está em GRUPOS nem em FAMILIA_ALIAS). Só informa.
+        familias_grupos = {f for g in GRUPOS for f in g["familias"]}
+        fora = {}
+        for r in real_rows:
+            if r.get("is_ml") or r.get("is_lic") or r["familia"] in familias_grupos:
+                continue
+            e = fora.setdefault(r["familia"] or "(sem família)", {"valor": 0.0, "notas": set()})
+            e["valor"] += r["total"]; e["notas"].add(f"{r['empresa']} NF {r['nota_fiscal']}")
+        for fam, e in sorted(fora.items(), key=lambda x: -abs(x[1]["valor"])):
+            print(f"   -> família fora dos grupos: {fam} | R$ {e['valor']:.2f} | {', '.join(sorted(e['notas']))}")
         sys.exit(1)
 
     with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
