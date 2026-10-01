@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -37,12 +38,12 @@ CACHE_PRODUTO_FAMILIA = os.path.join(BASE_DIR, "produto_familia_cache.json")
 # CONFIG — ajustar manualmente quando a meta do mês mudar (normalmente só
 # no começo de cada mês). O resto (dias úteis, datas) é calculado sozinho.
 # ----------------------------------------------------------------------------
-META_GERAL = 1475000  # só os 4 grupos (870+105+200+300) — HUB tem meta própria, separada (Thais, 02/09/2026)
+META_GERAL = 1400000  # só os 4 grupos (800+100+200+300) — metas out/2026 confirmadas pela Thais em 30/09/2026; — HUB tem meta própria, separada (Thais, 02/09/2026)
 GRUPOS = [
-    {"id": "adesivos", "cor": "#C0392B", "meta": 870000,
+    {"id": "adesivos", "cor": "#C0392B", "meta": 800000,
      "familias": ["Adesivos Estruturais", "Aplicadores e Acessórios", "Linha TT"],
      "cor_tint": "#f6e5e3", "cor_texto": "#FFFFFF", "row_bg": "#D7E7C6"},
-    {"id": "quimicos", "cor": "#1B6B3D", "meta": 105000,
+    {"id": "quimicos", "cor": "#1B6B3D", "meta": 100000,
      "familias": ["Chemlok", "Bio-Chem", "Marbocote"],
      "cor_tint": "#e1ebe5", "cor_texto": "#FFFFFF", "row_bg": "#FFFFFF"},
     {"id": "papeis", "cor": "#8E3A9E", "meta": 200000,
