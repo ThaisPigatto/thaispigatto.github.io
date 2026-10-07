@@ -713,9 +713,23 @@ const NOME_CANAL_ML = 'Pigatto HUB - Marketplace/Licitação';
 // ---- KPIs gerais ----
 const t = DATA.totais;
 document.getElementById('kpiMeta').textContent = fmtBRL(t.meta);
-document.getElementById('kpiReal').textContent = fmtBRL(t.faturado);
+// Card "Faturado" mostra o LÍQUIDO (faturado − devoluções), o mesmo número do fechamento do
+// financeiro e a mesma base do % e do "Falta" (05/10/2026). Antes mostrava o bruto e confundia.
+const fatLiquido = (t.faturado || 0) + (t.devolucoes || 0);
+document.getElementById('kpiReal').textContent = fmtBRL(fatLiquido);
 document.getElementById('kpiRealPct').textContent = fmtPct(t.realizado_pct) + ' da meta';
-document.getElementById('kpiRealFoot').textContent = t.notas_real + " notas fiscais";
+// Nº real de notas fiscais de venda (antes mostrava o nº de LINHAS de item, que é maior).
+const notasVenda = DATA.raw_real
+  ? new Set(DATA.raw_real.filter(r => r.operacao !== 'Devolução de Venda').map(r => r.empresa + '|' + r.nota_fiscal)).size
+  : t.notas_real;
+const footReal = document.getElementById('kpiRealFoot');
+footReal.textContent = notasVenda + ' notas fiscais';
+if (t.devolucoes){
+  footReal.appendChild(document.createElement('br'));
+  footReal.appendChild(document.createTextNode('bruto ' + fmtBRL(t.faturado)));
+  footReal.appendChild(document.createElement('br'));
+  footReal.appendChild(document.createTextNode('devoluções −' + fmtBRL(Math.abs(t.devolucoes))));
+}
 document.getElementById('kpiPrev').textContent = fmtBRL(t.previsto);
 document.getElementById('kpiPrevPct').textContent = fmtPct(t.previsto_pct) + ' da meta';
 document.getElementById('kpiPrevFoot').textContent = t.pedidos_prev + " orçamentos previstos";
