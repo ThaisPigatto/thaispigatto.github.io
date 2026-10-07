@@ -54,6 +54,38 @@ GRUPOS = [
 ]
 HUB_META = 100000
 
+# Operações que contam como FATURADO (o resto da linha realizada é devolução).
+# "Venda direta (NFS-e)" desde 05/10/2026 (Thais): venda direta sai como NFS-e de serviço
+# (comissão de representação), não como NF-e de mercadoria — conta na família do produto e,
+# por consequência, na meta geral. Financeiro passa a incluir as NFS-e no fechamento também.
+OPERACOES_FATURADO = {"Orçamento", "Venda direta (NFS-e)"}
+
+# Vendas diretas lançadas MANUALMENTE por mês (05/10/2026, Thais). Ficam aqui (e não só no
+# HTML congelado) pra sobreviver a qualquer reprocessamento do mês. A família vem da Thais —
+# a NFS-e na OMIE não tem família de produto (Projeto/Departamento vêm "N/D"). Quando a regra
+# automática de NFS-e for definida, isso aqui vira só exceção (nota emitida fora da OMIE).
+#   - Cristal e Cores: NFS-e 3 (OMIE, autorizada 29/09/2026). As NFS-e anteriores do mesmo
+#     cliente/valor (sem número e nº 2) foram canceladas — NÃO contam.
+#   - Marbocote: NFS-e 1 emitida FORA da OMIE (portal nacional, 22/09/2026). Na OMIE só existe
+#     a tentativa cancelada (nCodNF 8624865603) — por isso precisa ser manual.
+# "nCodigoCliente" serve pra calar o alerta de NFS-e cancelada sem reemissão desse cliente.
+VENDAS_DIRETAS_MANUAIS = {
+    "2026-09": [
+        {"familia": "Plásticos de Engenharia", "vendedor": "Lucas Felipe", "empresa": "matriz",
+         "nota_fiscal": "NFS-e 3", "data_fatura": "29/09/2026", "total": 5227.90,
+         "cliente": "CRISTAL e CORES CHAPAS ACRILICAS LTDA", "nCodigoCliente": 1748930735,
+         "nfse_numero": "3"},
+        {"familia": "Marbocote", "vendedor": "Lucas Felipe", "empresa": "matriz",
+         "nota_fiscal": "NFS-e 1 (fora da OMIE)", "data_fatura": "22/09/2026", "total": 684.60,
+         "cliente": "MARBOCOTE BRASIL DESMOLDANTES E PRODUTOS AUXILIARES LTDA",
+         "nCodigoCliente": 8332776816, "nfse_numero": "1"},
+    ],
+}
+
+# Linha que recebe venda da HUB (Mercado Livre/Licitação) de produto SEM família de grupo
+# (05/10/2026, Thais): conta na HUB (informativo) E aqui — e soma na meta geral 1 vez.
+NOME_LINHA_SEM_FAMILIA = "Licitação / Sem família"
+
 # Famílias da OMIE que o painel conta como OUTRA família (Thais, 30/09/2026): Silquim vai junto
 # com o Tiago/Wellington, dentro de Linha TT (grupo Adesivos), e NÃO aparece como linha própria.
 # Motivo de ficar aqui e não só na OMIE: o robô guarda a família de cada produto em
@@ -95,6 +127,13 @@ CFOP_REALIZADO = {"5.102", "6.102"}
 # jamais tinha sido contabilizada, em nenhum mês (achado: devolução ML de R$125,21 em
 # agosto, CFOP 2.202, que não aparecia em lugar nenhum do painel).
 CFOP_DEVOLUCAO_VENDA = {"1.202", "2.202", "3.202"}
+
+# Alertas que aparecem no topo do painel (05/10/2026). Zerado a cada montagem de mês.
+ALERTAS = []
+
+
+def fmt_brl(v):
+    return "R$ " + f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 TZ_SP = zoneinfo.ZoneInfo("America/Sao_Paulo")
 AGORA = datetime.datetime.now(TZ_SP)
@@ -387,6 +426,20 @@ def montar_linhas_previsao(pedidos_por_empresa):
 # 4) Realizado (faturado) — cruza NF com a última etapa conhecida do pedido
 # ----------------------------------------------------------------------------
 _ETAPA_VIVA_CACHE = {}
+_VEND_PEDIDO_CACHE = {}
+
+
+def vendedor_do_pedido(empresa, nIdPedido):
+    """Vendedor do PEDIDO (informacoes_adicionais.codVend). Usado quando a NF não tem título
+    financeiro — ex.: pedido com "não gerar financeiro" (pago no PIX). Antes de 05/10/2026 o
+    robô só olhava o título e essas vendas ficavam "N/D" (caso NF 00020039 Papéis, R$305, set/26:
+    o financeiro/OMIE mostram Maria Cristina, o painel mostrava N/D)."""
+    if not nIdPedido:
+        return None
+    key = (empresa, nIdPedido)
+    if key not in _VEND_PEDIDO_CACHE:
+        confirmar_etapa_ao_vivo(empresa, nIdPedido)  # mesma chamada ConsultarPedido, já cacheada
+    return _VEND_PEDIDO_CACHE.get(key)
 
 
 def confirmar_etapa_ao_vivo(empresa, nIdPedido):
@@ -415,7 +468,9 @@ def confirmar_etapa_ao_vivo(empresa, nIdPedido):
     etapa_viva = None
     try:
         r = call("produtos/pedido", "ConsultarPedido", {"codigo_pedido": nIdPedido}, app_key, app_secret)
-        etapa_viva = r.get("pedido_venda_produto", {}).get("cabecalho", {}).get("etapa")
+        pv = r.get("pedido_venda_produto", {})
+        etapa_viva = pv.get("cabecalho", {}).get("etapa")
+        _VEND_PEDIDO_CACHE[key] = pv.get("informacoes_adicionais", {}).get("codVend")
     except Exception:
         etapa_viva = None  # falha na checagem ao vivo: não bloqueia, cai no valor do histórico
     _ETAPA_VIVA_CACHE[key] = etapa_viva
@@ -454,6 +509,7 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
             cod_vend = None
             if nf.get("titulos"):
                 cod_vend = nf["titulos"][0].get("nCodVendedor")
+            vend_resolvido = False
             for item in nf["det"]:
                 cfop = item["prod"]["CFOP"]
                 if cfop not in CFOP_REALIZADO:
@@ -477,6 +533,9 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
                     if etapa_viva is not None and etapa_viva not in REALIZADO_ETAPAS[empresa]:
                         corrigidos_pelo_vivo += 1
                         continue
+                if cod_vend is None and not vend_resolvido:
+                    cod_vend = vendedor_do_pedido(empresa, nIdPedido)  # ver vendedor_do_pedido
+                    vend_resolvido = True
                 linhas.append({
                     "empresa": empresa, "nota": nf["ide"]["nNF"], "cfop": cfop,
                     "valor": item["prod"]["vProd"],
@@ -499,9 +558,22 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
                 cfop = item["prod"]["CFOP"]
                 if cfop not in CFOP_DEVOLUCAO_VENDA:
                     continue
+                # Valor da devolução = quantidade x valor unitário (05/10/2026). Nota de devolução
+                # emitida PELO CLIENTE pode vir com vProd "inflado": NF 000028456 (MAKO, 2.202,
+                # set/26) tinha 1 x R$230,00 mas vProd R$264,50 (cliente embutiu 15%). O relatório
+                # da OMIE/financeiro desconta R$230,00 (= valor da venda original NF 21396); o
+                # robô descontava R$264,50 e ficava R$34,50 diferente. Divergência vira alerta.
+                v_prod = abs(item["prod"].get("vProd") or 0)
+                q_com = item["prod"].get("qCom")
+                v_un = item["prod"].get("vUnCom")
+                valor_dev = round(abs(q_com * v_un), 2) if q_com and v_un else v_prod
+                if abs(valor_dev - v_prod) > 0.01:
+                    ALERTAS.append(f"Devolução {empresa} NF {nf['ide']['nNF']}: valor do produto na nota "
+                                   f"({fmt_brl(v_prod)}) diferente de qtd x unitário ({fmt_brl(valor_dev)}). "
+                                   f"Painel usou {fmt_brl(valor_dev)}, igual ao relatório da OMIE.")
                 linhas.append({
                     "empresa": empresa, "nota": nf["ide"]["nNF"], "cfop": cfop,
-                    "valor": -abs(item["prod"]["vProd"]),
+                    "valor": -valor_dev,
                     "cod_produto": item["nfProdInt"]["nCodProd"], "cod_vend": cod_vend,
                     "is_devolucao": True, "data_fatura": nf["ide"].get("dEmi", ""),
                 })
@@ -604,25 +676,107 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
 
 
 # ----------------------------------------------------------------------------
+# 6-B) Vendas diretas (NFS-e) — desde 05/10/2026
+# ----------------------------------------------------------------------------
+def linhas_vendas_diretas():
+    """Linhas manuais de VENDAS_DIRETAS_MANUAIS do mês sendo montado (usa MES/ANO globais,
+    então funciona no mês corrente e no reprocessamento de mês fechado)."""
+    mes_id = f"{ANO:04d}-{MES:02d}"
+    linhas = []
+    for v in VENDAS_DIRETAS_MANUAIS.get(mes_id, []):
+        linhas.append({
+            "familia": v["familia"], "vendedor": v["vendedor"], "is_ml": False, "is_lic": False,
+            "nota_fiscal": v["nota_fiscal"], "pedido": None, "situacao": "Autorizado",
+            "empresa": v["empresa"], "operacao": "Venda direta (NFS-e)", "cfop": "NFS-e 10.05",
+            "total": round(v["total"], 2), "data_previsao": "", "data_fatura": v["data_fatura"],
+        })
+    if linhas:
+        print(f"Vendas diretas manuais ({mes_id}): {len(linhas)} linha(s), "
+              f"R$ {sum(l['total'] for l in linhas):.2f}")
+    return linhas
+
+
+def checar_nfse():
+    """Alertas de NFS-e (05/10/2026). A venda direta sai como NFS-e e o robô ainda NÃO soma
+    NFS-e automaticamente (falta a regra de família, que a Thais vai definir). Pra nenhuma venda
+    sumir sem ninguém ver, o painel avisa:
+      1) NFS-e AUTORIZADA no mês que não está em VENDAS_DIRETAS_MANUAIS;
+      2) NFS-e CANCELADA de um cliente sem nenhuma NFS-e autorizada dele no mês e sem lançamento
+         manual — caso Marbocote (set/26): a nota foi emitida fora da OMIE e na OMIE ficou só
+         a tentativa cancelada. O robô NÃO enxerga nota que nunca passou pela OMIE."""
+    mes_id = f"{ANO:04d}-{MES:02d}"
+    manuais = VENDAS_DIRETAS_MANUAIS.get(mes_id, [])
+    clientes_manuais = {(v["empresa"], v.get("nCodigoCliente")) for v in manuais}
+    numeros_manuais = {(v["empresa"], str(v.get("nfse_numero"))) for v in manuais}
+    d_ini = f"01/{MES:02d}/{ANO}"
+    d_fim = HOJE.strftime("%d/%m/%Y")
+    for empresa, (app_key, app_secret) in EMPRESAS.items():
+        notas = []
+        try:
+            pagina = 1
+            while True:
+                r = call("servicos/nfse", "ListarNFSEs", {
+                    "nPagina": pagina, "nRegPorPagina": 50, "dEmiInicial": d_ini, "dEmiFinal": d_fim,
+                }, app_key, app_secret)
+                notas.extend(r.get("nfseEncontradas", []) or [])
+                if pagina >= (r.get("nTotPaginas") or 1):
+                    break
+                pagina += 1
+                time.sleep(1.0)
+        except Exception as e:
+            # A OMIE responde erro quando a empresa não tem nenhuma NFS-e no período.
+            if "não encontrad" in str(e).lower() or "nao encontrad" in str(e).lower():
+                continue
+            ALERTAS.append(f"Não consegui conferir as NFS-e da empresa {empresa} ({e}). Confira manualmente.")
+            continue
+        autorizados = set()
+        for n in notas:
+            cab = n.get("Cabecalho", {})
+            if cab.get("cStatusNFSe") == "F":
+                autorizados.add(cab.get("nCodigoCliente"))
+        for n in notas:
+            cab = n.get("Cabecalho", {})
+            status, cli = cab.get("cStatusNFSe"), cab.get("nCodigoCliente")
+            num = str(cab.get("nNumeroNFSe") or "s/nº")
+            valor = cab.get("nValorNFSe") or 0
+            nome = cab.get("cRazaoDestinatario", "")
+            if status == "F" and (empresa, num) not in numeros_manuais:
+                ALERTAS.append(f"NFS-e {num} ({nome}, {fmt_brl(valor)}) autorizada e AINDA NÃO somada no "
+                               f"painel — falta informar a família da venda direta.")
+            elif status == "C" and cli not in autorizados and (empresa, cli) not in clientes_manuais:
+                ALERTAS.append(f"NFS-e de {nome} ({fmt_brl(valor)}) CANCELADA na OMIE sem reemissão no mês. "
+                               f"Se a nota foi emitida fora da OMIE, lance na OMIE ou avise para lançar manual.")
+        time.sleep(1.0)
+
+
+# ----------------------------------------------------------------------------
 # 7) Monta o DATA final (mesma lógica de build_data5.py)
 # ----------------------------------------------------------------------------
+def familia_painel(r):
+    """Família usada no painel (05/10/2026). Venda da HUB (Mercado Livre/Licitação) de produto
+    sem família de grupo vai pra linha "Licitação / Sem família" — conta na HUB (informativo)
+    e nessa linha, e entra 1 vez na meta geral. Venda normal sem família de grupo continua com
+    a família original e trava a validação (família nova precisa ir pra GRUPOS/FAMILIA_ALIAS)."""
+    f = r["familia"]
+    familias_grupos = {x for g in GRUPOS for x in g["familias"]}
+    if f in familias_grupos:
+        return f
+    if r.get("is_ml") or r.get("is_lic"):
+        return NOME_LINHA_SEM_FAMILIA
+    return f
+
+
 def montar_data(real_rows, prev_rows):
     def agg_by_familia(rows, is_prev, incluir_hub=False):
-        """Agrega por família. incluir_hub=False (padrão) EXCLUI linhas de Mercado Livre/Licitação
-        — usado só para montar o Total Geral/Meta Geral da empresa, que nunca pode contar essa
-        venda de novo (ela já está no canal Pigatto HUB). incluir_hub=True INCLUI essas linhas —
-        usado para os totais de família/grupo exibidos na tabela "Resultados por Família" e na
-        "Corrida das Famílias" (pedido de Gabriel Pigatto, repassado por Thais em 18/09/2026: o
-        valor vendido por Mercado Livre/Licitação de uma família passa a contar no resultado/
-        prêmio daquela família — mas sem gerar comissão pessoal para o vendedor dono da família,
-        o que já é garantido em outro lugar: o campo "vendedor" de toda venda ML/Licitação é
-        sempre reescrito para "Jéssica" antes de chegar nas tabelas pessoais, então nunca aparece
-        como resultado pessoal da Rhamayana/Maria Cristina/etc — ver montar_real/montar_prev).
-        Regra original (Mercado Livre confirmada por Thais em 01/09/2026, estendida à Licitação
-        em 16/09/2026) ainda vale integralmente para o Total Geral — ver montar_data abaixo."""
+        """Agrega por família (chave = familia_painel). incluir_hub=True (usado sempre desde
+        05/10/2026) INCLUI as vendas de Mercado Livre/Licitação na família do produto (pedido de
+        Gabriel Pigatto, 18/09/2026): conta no resultado/prêmio da família, sem comissão pessoal
+        pro vendedor dono da família — o "vendedor" de toda venda ML/Licitação é reescrito para
+        "Jéssica" em montar_real/montar_prev. incluir_hub=False ficou só por compatibilidade:
+        NÃO usar pra montar o Total Geral (foi esse o erro corrigido em 05/10/2026)."""
         fam = {}
         for r in rows:
-            f = r["familia"]
+            f = familia_painel(r)
             if f is None:
                 continue
             if not incluir_hub and (r.get("is_ml") or r.get("is_lic")):
@@ -630,7 +784,7 @@ def montar_data(real_rows, prev_rows):
             e = fam.setdefault(f, {"faturado": 0.0, "previsto": 0.0, "devolucoes": 0.0, "aguardando": 0.0, "hoje": 0.0})
             val = r["total"]
             situ = r.get("situacao", "")
-            if r["operacao"] == "Orçamento":
+            if r["operacao"] in OPERACOES_FATURADO:
                 if is_prev:
                     e["previsto"] += val
                     if situ == "Aguardando faturamento":
@@ -646,22 +800,16 @@ def montar_data(real_rows, prev_rows):
                     e["devolucoes"] += val
         return fam
 
-    # fam_real/fam_prev (COM Mercado Livre/Licitação): alimentam os totais de FAMÍLIA e GRUPO
-    # exibidos na tabela e na Corrida das Famílias (ver comentário de agg_by_familia acima).
+    # fam_real/fam_prev (COM Mercado Livre/Licitação): alimentam família, grupo, Corrida das
+    # Famílias E o Total Geral (soma das famílias). Cada venda aparece 1 vez aqui.
     fam_real = agg_by_familia(real_rows, False, incluir_hub=True)
     fam_prev = agg_by_familia(prev_rows, True, incluir_hub=True)
-    # fam_real_geral/fam_prev_geral (SEM Mercado Livre/Licitação): usadas EXCLUSIVAMENTE para
-    # compor tot_fat/tot_prev/tot_dev (Total Geral/Meta Geral) mais abaixo — nunca usar fam_real/
-    # fam_prev (com HUB) pra isso, senão a venda de ML/Licitação seria contada duas vezes dentro
-    # do Total Geral (ela já entra no canal Pigatto HUB).
-    fam_real_geral = agg_by_familia(real_rows, False, incluir_hub=False)
-    fam_prev_geral = agg_by_familia(prev_rows, True, incluir_hub=False)
 
     all_familias = set(fam_real.keys()) | set(fam_prev.keys())
     for g in GRUPOS:
         for f in g["familias"]:
             all_familias.add(f)
-    all_familias.add("LICITAÇÕES")
+    all_familias.add(NOME_LINHA_SEM_FAMILIA)
 
     def fam_entry(fname, meta=None):
         r = fam_real.get(fname, {"faturado": 0.0, "previsto": 0.0, "devolucoes": 0.0, "aguardando": 0.0, "hoje": 0.0})
@@ -694,11 +842,7 @@ def montar_data(real_rows, prev_rows):
         return entry
 
     grupos_familia_out = []
-    # Soma paralela SEM Mercado Livre/Licitação, acumulada família por família dentro do mesmo
-    # loop abaixo — alimenta só o Total Geral/Meta Geral mais adiante (ver uso de tot_fat_geral/
-    # tot_prev_geral/tot_dev_geral logo após o bloco da HUB). fat_t/prev_t/dev_t abaixo já incluem
-    # ML/Licitação (fam_real/fam_prev com incluir_hub=True) e alimentam a exibição de família/
-    # grupo (linhas, faturado_total, etc.) — as duas somas nunca se misturam.
+    # tot_*_geral = soma dos grupos (que já incluem as vendas da HUB na família do produto).
     tot_fat_geral = tot_prev_geral = tot_dev_geral = 0.0
     for g in GRUPOS:
         linhas = []
@@ -709,9 +853,8 @@ def montar_data(real_rows, prev_rows):
             linhas.append({"familia": f, "faturado": round(r["faturado"], 2),
                             "previsto": round(p["previsto"], 2), "devolucoes": round(r["devolucoes"], 2)})
             fat_t += r["faturado"]; prev_t += p["previsto"]; dev_t += r["devolucoes"]
-            r_geral = fam_real_geral.get(f, {"faturado": 0.0, "devolucoes": 0.0})
-            p_geral = fam_prev_geral.get(f, {"previsto": 0.0})
-            tot_fat_geral += r_geral["faturado"]; tot_prev_geral += p_geral["previsto"]; tot_dev_geral += r_geral["devolucoes"]
+        # Meta geral = soma das famílias (05/10/2026 — ver bloco do TOTAL GERAL abaixo).
+        tot_fat_geral += fat_t; tot_prev_geral += prev_t; tot_dev_geral += dev_t
         prev_fat_t = fat_t + prev_t + dev_t
         meta = g["meta"]
         grupos_familia_out.append({
@@ -724,9 +867,8 @@ def montar_data(real_rows, prev_rows):
             "cor_tint": g["cor_tint"], "cor_texto": g["cor_texto"], "row_bg": g["row_bg"],
         })
 
-    # HUB (Marketplace/Licitação) — calculado ANTES do "TOTAL GERAL" porque, a partir de
-    # setembro/2026, a meta da HUB passou a contar dentro da Meta Geral (a pedido da Thais,
-    # 01/09/2026). Antes disso a HUB era só uma linha separada, fora do total.
+    # HUB (Marketplace/Licitação) — só INFORMATIVO, com meta própria (HUB_META). Nunca soma no
+    # Total Geral: as vendas dela já entram lá pela família do produto (regra de 05/10/2026).
     ml_real = [r for r in real_rows if r["is_ml"]]
     ml_prev = [r for r in prev_rows if r["is_ml"]]
     # Até 15/09/2026 a Licitação era identificada pelo nome da Família do produto (começando
@@ -735,26 +877,36 @@ def montar_data(real_rows, prev_rows):
     # critério do Mercado Livre, o campo Vendedor = "Licitação" (is_lic, ver montar_real/montar_prev).
     lic_real = [r for r in real_rows if r["is_lic"]]
     lic_prev = [r for r in prev_rows if r["is_lic"]]
-    hub_fat = sum(r["total"] for r in ml_real + lic_real if r["operacao"] == "Orçamento")
-    hub_dev = sum(r["total"] for r in ml_real + lic_real if r["operacao"] != "Orçamento")
+    hub_fat = sum(r["total"] for r in ml_real + lic_real if r["operacao"] in OPERACOES_FATURADO)
+    hub_dev = sum(r["total"] for r in ml_real + lic_real if r["operacao"] not in OPERACOES_FATURADO)
     hub_prev_v = sum(r["total"] for r in ml_prev + lic_prev)
     hub_prevfat = hub_fat + hub_dev + hub_prev_v
 
-    # HUB tem meta própria e NÃO entra no total geral da empresa (voltou pra regra original em
-    # 02/09/2026 — só durou 1 dia a versão que somava). hub_fat/hub_prev_v/hub_dev continuam
-    # calculados aqui só porque precisam existir antes, pro bloco "pigatto_hub" mais abaixo.
-    #
-    # IMPORTANTE (18/09/2026, pedido de Gabriel Pigatto): o Total Geral usa tot_fat_geral/
-    # tot_prev_geral/tot_dev_geral (acumulados no loop de grupos acima, SEM Mercado Livre/
-    # Licitação) — nunca soma g["faturado_total"]/g["previsto_total"]/g["devolucoes_total"] de
-    # grupos_familia_out, porque esses já incluem ML/Licitação (usados só pra exibição de
-    # família/grupo/Corrida das Famílias). Se o Total Geral somasse esses valores, a mesma venda
-    # de ML/Licitação seria contada duas vezes aqui dentro (ela já está, corretamente, dentro do
-    # canal Pigatto HUB, calculado separadamente hub_fat/hub_dev/hub_prev_v acima). Garante que o
-    # Total Geral continua batendo com o financeiro exatamente como batia antes dessa mudança.
-    tot_fat = round(tot_fat_geral, 2)
-    tot_prev = round(tot_prev_geral, 2)
-    tot_dev = round(tot_dev_geral, 2)
+    # REGRA DO TOTAL GERAL / META GERAL (corrigida em 05/10/2026, Thais/Gabriel):
+    #   Meta geral = soma das famílias dos grupos + linha "Licitação / Sem família".
+    #   Toda venda entra 1 vez: venda da HUB (Mercado Livre/Licitação) entra pela família do
+    #   produto (ou pela linha "Licitação / Sem família" se o produto não tiver família de grupo).
+    #   A HUB é só informativa: tem meta própria e NUNCA soma de novo no total.
+    # Erro corrigido: de 18/09 a 05/10/2026 o total era montado SEM as vendas da HUB, então a
+    # venda do Mercado Livre entrava 0 vezes no total (set/26: faltaram R$19.390,47 e o painel
+    # ficou diferente do financeiro). O resultado das famílias já estava certo.
+    sf_r = fam_real.get(NOME_LINHA_SEM_FAMILIA, {"faturado": 0.0, "devolucoes": 0.0})
+    sf_p = fam_prev.get(NOME_LINHA_SEM_FAMILIA, {"previsto": 0.0})
+    sf_fat, sf_dev, sf_prev = sf_r["faturado"], sf_r["devolucoes"], sf_p["previsto"]
+    if round(sf_fat, 2) or round(sf_dev, 2) or round(sf_prev, 2):
+        grupos_familia_out.append({
+            "id": "sem_familia", "cor": "#7F8C8D", "meta": None,
+            "linhas": [{"familia": NOME_LINHA_SEM_FAMILIA, "faturado": round(sf_fat, 2),
+                        "previsto": round(sf_prev, 2), "devolucoes": round(sf_dev, 2)}],
+            "faturado_total": round(sf_fat, 2), "previsto_total": round(sf_prev, 2),
+            "devolucoes_total": round(sf_dev, 2), "prev_fat_total": round(sf_fat + sf_prev + sf_dev, 2),
+            "realizado_pct": None, "prevfat_pct": None, "meta_diaria_necessaria": None,
+            "faturamento_atrasado": 0.0,
+            "cor_tint": "#eceeef", "cor_texto": "#FFFFFF", "row_bg": "#FFFFFF",
+        })
+    tot_fat = round(tot_fat_geral + sf_fat, 2)
+    tot_prev = round(tot_prev_geral + sf_prev, 2)
+    tot_dev = round(tot_dev_geral + sf_dev, 2)
     tot_prevfat = tot_fat + tot_prev + tot_dev
     grupos_familia_out.append({
         "id": "total_geral", "cor": "#122038", "meta": META_GERAL,
@@ -790,16 +942,11 @@ def montar_data(real_rows, prev_rows):
     covered = set()
     for g in GRUPOS:
         covered |= set(g["familias"])
-    leftover = all_familias - covered - {"LICITAÇÕES"}
-    for f in sorted(leftover):
-        familias_flat.append(fam_entry(f))
-    familias_flat.append({
-        "familia": "LICITAÇÃO", "faturado": 0.0, "devolucoes": 0.0, "previsto": 0.0, "prev_fat": 0.0,
-        "previsto_aguardando": 0.0, "previsto_hoje": 0.0, "meta": 0,
-        "dif_meta_real": 0.0, "realizado_pct": None, "dif_meta_prev": 0.0,
-        "previsto_pct": None, "prevfat_pct": None, "faltante_pct": None,
-        "esperado_pct": ESPERADO_PCT, "esperado_valor": 0.0, "meta_diaria_necessaria": 0.0,
-    })
+    leftover = all_familias - covered - {NOME_LINHA_SEM_FAMILIA}
+    for f in sorted(leftover, key=lambda x: (x is None, x or "")):
+        if f is not None:
+            familias_flat.append(fam_entry(f))
+    familias_flat.append(fam_entry(NOME_LINHA_SEM_FAMILIA))
 
     totais = {
         "meta": META_GERAL, "previsto": round(tot_prev, 2), "faturado": round(tot_fat, 2),
@@ -828,7 +975,7 @@ def montar_data(real_rows, prev_rows):
     }
 
     grupo_map = [{"meta": g["meta"], "familias": g["familias"]} for g in GRUPOS]
-    grupo_map.append({"meta": 0, "familias": ["LICITAÇÃO"]})
+    grupo_map.append({"meta": 0, "familias": [NOME_LINHA_SEM_FAMILIA]})
 
     def vend_agg(rows):
         v = {}
@@ -865,6 +1012,7 @@ def montar_data(real_rows, prev_rows):
         "grupo_map": grupo_map,
         "raw_real": [{c: r[c] for c in raw_cols} for r in real_rows],
         "raw_prev": [{c: r[c] for c in raw_cols} for r in prev_rows],
+        "alertas": list(dict.fromkeys(ALERTAS)),  # sem repetidos, na ordem em que surgiram
     }
 
 
@@ -907,6 +1055,7 @@ def recomputar_mes_fechado(ano, mes, meta_geral_hist, grupos_metas_hist, hub_met
             if g["id"] in grupos_metas_hist:
                 g["meta"] = grupos_metas_hist[g["id"]]
         HUB_META = hub_meta_hist
+        ALERTAS.clear()
 
         nf_dados = buscar_nf()
         etapas_matriz = buscar_etapas("matriz")
@@ -918,6 +1067,8 @@ def recomputar_mes_fechado(ano, mes, meta_geral_hist, grupos_metas_hist, hub_met
 
         produto_familia = atualizar_cache_familias(linhas_real, linhas_prev, produto_familia)
         real_rows, prev_rows = montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia)
+        real_rows += linhas_vendas_diretas()
+        checar_nfse()
         data = montar_data(real_rows, prev_rows)
         return data, produto_familia
     finally:
@@ -956,10 +1107,10 @@ def refazer_fechamento_do_mes(mes_id, caminho_arquivo, fam_nome_cache, vend_nome
 
     # Mesma checagem de consistência do main() — se não bater, mantém o snapshot antigo
     # em vez de publicar um recomputo quebrado.
-    hub_grp_novo = next((g for g in data_novo["grupos_familia"] if g["id"] == "pigatto_hub"), None)
-    hub_fat_dev = (hub_grp_novo["faturado_total"] + hub_grp_novo["devolucoes_total"]) if hub_grp_novo else 0.0
+    # Desde 05/10/2026 o Total Geral já contém tudo (HUB entra pela família) — então a soma por
+    # vendedor tem que bater com o total SEM somar a HUB de novo.
     soma_vend = round(sum(v["total"] for v in data_novo["vend_real"]), 2)
-    soma_fat_dev = round(data_novo["totais"]["faturado"] + data_novo["totais"]["devolucoes"] + hub_fat_dev, 2)
+    soma_fat_dev = round(data_novo["totais"]["faturado"] + data_novo["totais"]["devolucoes"], 2)
     if abs(soma_vend - soma_fat_dev) > 0.5:
         raise RuntimeError(f"validação falhou no recomputo de {mes_id} ({soma_vend} vs {soma_fat_dev})")
 
@@ -990,6 +1141,7 @@ def main():
             if os.path.exists(caminho):
                 atualizar_seletor_mes_no_arquivo(caminho, meses)
 
+    ALERTAS.clear()  # o recomputo de mês fechado acima tem os alertas dele
     nf_dados = buscar_nf()
     etapas_matriz = buscar_etapas("matriz")
     etapas_papeis = buscar_etapas("papeis")
@@ -1002,18 +1154,20 @@ def main():
     json.dump(produto_familia, open(CACHE_PRODUTO_FAMILIA, "w", encoding="utf-8"), ensure_ascii=False)
 
     real_rows, prev_rows = montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia)
+    real_rows += linhas_vendas_diretas()
+    checar_nfse()
 
     data = montar_data(real_rows, prev_rows)
 
-    # soma_vend (vend_real) inclui TODO mundo, inclusive a HUB/Jéssica. Desde 02/09/2026 a HUB
-    # tem meta própria e não entra em data["totais"] (total geral da empresa) — então o total
-    # "esperado" pra bater com soma_vend precisa somar de volta o faturado+devolução da HUB.
-    hub_grp = next((g for g in data["grupos_familia"] if g["id"] == "pigatto_hub"), None)
-    hub_fat_dev = (hub_grp["faturado_total"] + hub_grp["devolucoes_total"]) if hub_grp else 0.0
+    # soma_vend (vend_real) inclui TODO mundo, inclusive a HUB/Jéssica. Desde 05/10/2026 o Total
+    # Geral também inclui tudo (HUB entra pela família do produto, 1 vez) — então os dois têm que
+    # ser IGUAIS. Se não bater, alguma venda ficou fora de família (ver diagnóstico abaixo).
     soma_vend = round(sum(v["total"] for v in data["vend_real"]), 2)
-    soma_fat_dev = round(data["totais"]["faturado"] + data["totais"]["devolucoes"] + hub_fat_dev, 2)
+    soma_fat_dev = round(data["totais"]["faturado"] + data["totais"]["devolucoes"], 2)
     print(f"Total geral faturado: {data['totais']['faturado']} | previsto: {data['totais']['previsto']}")
-    print(f"Soma vend_real: {soma_vend} vs faturado+dev (+HUB): {soma_fat_dev}")
+    print(f"Soma vend_real: {soma_vend} vs faturado+dev: {soma_fat_dev}")
+    for a in data.get("alertas", []):
+        print(f"   ALERTA: {a}")
 
     if abs(soma_vend - soma_fat_dev) > 0.5:
         print("!! VALIDAÇÃO FALHOU: soma por vendedor não bate com o total geral. Abortando sem publicar.")
@@ -1022,7 +1176,7 @@ def main():
         familias_grupos = {f for g in GRUPOS for f in g["familias"]}
         fora = {}
         for r in real_rows:
-            if r.get("is_ml") or r.get("is_lic") or r["familia"] in familias_grupos:
+            if r.get("is_ml") or r.get("is_lic") or r["familia"] in familias_grupos:  # HUB vai p/ "Sem família"
                 continue
             e = fora.setdefault(r["familia"] or "(sem família)", {"valor": 0.0, "notas": set()})
             e["valor"] += r["total"]; e["notas"].add(f"{r['empresa']} NF {r['nota_fiscal']}")

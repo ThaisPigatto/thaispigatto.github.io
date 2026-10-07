@@ -694,6 +694,22 @@ const VENDOR_CANAL_ML = {
 };
 const NOME_CANAL_ML = 'Pigatto HUB - Marketplace/Licitação';
 
+// ---- Alertas do robô (05/10/2026): só aparecem quando existe algo a conferir ----
+(function(){
+  const alertas = DATA.alertas || [];
+  const kpis = document.querySelector('.kpis.secao-geral');
+  if (!alertas.length || !kpis) return;
+  const box = document.createElement('div');
+  box.className = 'alertas-robo';
+  box.style.cssText = 'background:var(--amber-bg);border:1px solid var(--amber);color:var(--ink);border-radius:10px;padding:10px 14px;margin:0 0 14px 0;font-size:13px;line-height:1.45;';
+  const titulo = document.createElement('div');
+  titulo.style.cssText = 'font-weight:700;color:var(--amber);margin-bottom:4px;';
+  titulo.textContent = '⚠️ Conferir (' + alertas.length + ')';
+  box.appendChild(titulo);
+  alertas.forEach(a => { const p = document.createElement('div'); p.textContent = '• ' + a; box.appendChild(p); });
+  kpis.parentNode.insertBefore(box, kpis);
+})();
+
 // ---- KPIs gerais ----
 const t = DATA.totais;
 document.getElementById('kpiMeta').textContent = fmtBRL(t.meta);
