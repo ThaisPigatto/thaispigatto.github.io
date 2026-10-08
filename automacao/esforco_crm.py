@@ -22,6 +22,7 @@ Uso:
 As metas e regras ficam em automacao/esforco_config.json (editável direto no GitHub).
 """
 import datetime
+import html as htmllib
 import json
 import os
 import random
@@ -55,6 +56,17 @@ GRUPO_FATURAMENTO_PARA_FAMILIA = {
     "plasticos": "plasticos",
     "pigatto_hub": "hub",
 }
+
+
+# Fases do funil do CRM (definições do próprio Omie da Pigatto). O robô lê as reais todo dia; esta lista é só reserva/amostra.
+FASES_PADRAO = [
+    {"n": 1, "nome": "01 Prospect", "descricao": "Oportunidade identificada e qualificada: o cliente precisa da solução e tem condições de adquirir. Faz-se o levantamento detalhado das necessidades e mapeia-se quem decide e influencia na empresa."},
+    {"n": 2, "nome": "02 Qualificação", "descricao": "Filtro para entender se o negócio realmente existe e deve seguir adiante no processo comercial."},
+    {"n": 3, "nome": "03 Apresentação", "descricao": "Apresentação personalizada da solução, focada no que interessa a cada pessoa da cadeia de decisão do cliente."},
+    {"n": 4, "nome": "04 Amostra/Cotação", "descricao": "Elabora-se e entrega-se ao cliente a proposta comercial e técnica (amostra/cotação)."},
+    {"n": 5, "nome": "05 Negociação", "descricao": "Fase final de decisão: negociação com o cliente para fechar o negócio. Podem existir várias versões da proposta."},
+    {"n": 6, "nome": "06 Conclusão", "descricao": "Registra-se a conquista ou a perda da oportunidade, indicando o motivo."},
+]
 
 
 # ----------------------------------------------------------------------------
@@ -158,15 +170,24 @@ def carregar_lookups(app_key, app_secret):
     tipos_tarefa = _mapa(lista("crm/tipostarefa", "ListarTiposTarefa"), "nIdTipoTarefa", ["cDescricao"])
     status = _mapa(lista("crm/status", "ListarStatus"), "nCodigo", ["cDescricao"])
     fases_raw = lista("crm/fases", "ListarFases")
-    fases = {}
+    fases, fases_info = {}, {}
     for f in fases_raw:
         cod = f.get("nCodigo", f.get("nCodFase"))
         nome = f.get("cDescrUsuario") or f.get("cDescrPadrao") or ""
         m = re.match(r"\s*(\d+)", nome)
         if cod is not None and m:
             fases[cod] = int(m.group(1))
+            fases_info[cod] = {"n": int(m.group(1)), "nome": nome.strip(),
+                               "descricao": htmllib.unescape(f.get("cObservacao") or "").strip()}
+    contas = {}
+    for c in lista("crm/contas", "ListarContas"):
+        ident = c.get("identificacao", {})
+        nome_conta = (ident.get("cNome") or ident.get("cNomeFantasia") or "").strip()
+        if ident.get("nCod") is not None and nome_conta:
+            contas[ident["nCod"]] = nome_conta
     return {"solucoes": solucoes, "tipos_cli": tipos_cli, "origens": origens, "usuarios": usuarios,
-            "tipos_tarefa": tipos_tarefa, "status": status, "fases": fases}
+            "tipos_tarefa": tipos_tarefa, "status": status, "fases": fases,
+            "fases_info": fases_info, "contas": contas}
 
 
 # ----------------------------------------------------------------------------
@@ -358,6 +379,10 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
                 "nome": re.sub(r"\s*-\s*[^-]*$", "", ident.get("cDesOp", "")).strip() or ident.get("cDesOp", ""),
                 "ticket_ok": (o.get("ticket", {}).get("nTicket") or 0) > 0,
                 "sem_origem": not ident.get("nCodOrigem"),
+                "num": ident.get("cNumOp", ""),
+                "emp": "Matriz" if emp == "matriz" else "Pápeis",
+                "cliente": lk.get("contas", {}).get(ident.get("nCodConta"), ""),
+                "fase_nome": lk.get("fases_info", {}).get(fs.get("nCodFase"), {}).get("nome", ""),
             }
         # --- tarefas
         for t in dados["tarefas"]:
@@ -396,10 +421,6 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
     paradas = ativas = sem_origem = ativas_sem_ticket = 0
     limite_parada = (hoje - datetime.timedelta(days=cfg.get("dias_oportunidade_parada", 14))).isoformat()
     fases_cfg = cfg.get("projetos", {})
-    mapa_fase = {}
-    for fase_proj, fases_crm in fases_cfg.get("fases", {}).items():
-        for fc in fases_crm:
-            mapa_fase[fc] = int(fase_proj)
     for (emp, cod), info in opp_info.items():
         if info["fam"] is None or info["fam"] == "hub":
             continue
@@ -411,8 +432,9 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
                 paradas += 1
             if not info["ticket_ok"]:
                 ativas_sem_ticket += 1
-            if info["fam"] == fases_cfg.get("familia") and info["fase"] in mapa_fase:
-                projetos.append({"nome": info["nome"], "fase": mapa_fase[info["fase"]], "vend": info["vend"]})
+            if info["fam"] == fases_cfg.get("familia") and info["fase"]:
+                projetos.append({"nome": info["nome"], "cliente": info["cliente"], "fase": info["fase"],
+                                 "faseNome": info["fase_nome"], "vend": info["vend"], "nOp": info["num"], "emp": info["emp"]})
         if info["sem_origem"]:
             sem_origem += 1
         if criada and criada >= inicio or info["status"] != "ativa":
@@ -444,6 +466,15 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
         "tiposIgnorados": dict(tipos_ignorados),
     }
 
+    fases_crm = []
+    for emp_pref in ("matriz", "papeis"):
+        info_f = empresas.get(emp_pref, {}).get("lookups", {}).get("fases_info", {})
+        if info_f:
+            fases_crm = sorted(info_f.values(), key=lambda x: x["n"])
+            break
+    if not fases_crm:
+        fases_crm = FASES_PADRAO
+
     return {
         "meta": {"geradoEm": agora_iso or datetime.datetime.now(TZ_SP).isoformat(timespec="seconds"),
                  "hoje": hoje_iso, "amostra": False, "fonte": "CRM Omie (Matriz + Pápeis)", "versao": 1},
@@ -459,6 +490,7 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
         "vendas": vendas,
         "qualidade": qualidade,
         "projetos": projetos,
+        "fasesCrm": fases_crm,
         "recentes": ult,
         "alertasExtra": [],
     }
@@ -537,10 +569,13 @@ def gerar_amostra(cfg, vendas, hoje):
         opps.append({"f": fi, "v": vendedores.index(nome), "t": tipo, "o": rnd.choices(origens, weights=[3, 2, 4, 2, 1])[0],
                      "s": status, "c": criada.isoformat(),
                      "x": (criada + datetime.timedelta(days=rnd.randrange(3, 40))).isoformat() if status != "ativa" else None, "k": k})
-    projetos = [{"nome": n, "fase": f, "vend": v} for n, f, v in [
-        ("Colagem passadeira — Cliente A", 2, "Wellington Azevedo"), ("Linha de montagem — Cliente B", 1, "Tiago Fruet"),
-        ("Fixação painéis — Cliente C", 3, "Wellington Azevedo"), ("Vedação estrutural — Cliente D", 1, "Tiago Fruet"),
-        ("Colagem componentes — Cliente E", 2, "Tiago Fruet")]]
+    projetos = [{"nome": n, "cliente": c, "fase": f, "faseNome": FASES_PADRAO[f - 1]["nome"], "vend": v, "nOp": o, "emp": "Matriz"}
+                for n, c, f, v, o in [
+        ("Colagem passadeira", "Indústria Exemplo A Ltda", 4, "Tiago Fruet", "2026/00024"),
+        ("Linha de montagem", "Metalúrgica Exemplo B S.A.", 2, "Tiago Fruet", "2026/00031"),
+        ("Fixação de painéis", "Fábrica Exemplo C Ltda", 5, "Wellington Azevedo", "2026/00040"),
+        ("Vedação estrutural", "Exemplo D Comércio", 1, "Tiago Fruet", "2026/00044"),
+        ("Colagem de componentes", "Exemplo E Indústria", 3, "Wellington Azevedo", "2026/00052")]]
     return {
         "meta": {"geradoEm": datetime.datetime.now(TZ_SP).isoformat(timespec="seconds"), "hoje": hoje.isoformat(),
                  "amostra": True, "fonte": "DADOS DE EXEMPLO (gerados pelo robô em modo --amostra)", "versao": 1},
@@ -555,6 +590,7 @@ def gerar_amostra(cfg, vendas, hoje):
                       "ativasParadas": 31, "diasParada": 14, "oportunidadesSemOrigem": 9, "ativasSemTicket": 38,
                       "solucoesSemFamilia": {"TEXYEAR": 4}, "tiposIgnorados": {"Nota": 120, "Tarefa Futura": 35}},
         "projetos": projetos,
+        "fasesCrm": FASES_PADRAO,
         "recentes": [{"h": "10:24", "t": "Rhamayana registrou WhatsApp (Papel Térmico + Etiquetas)", "f": "papeis"},
                      {"h": "10:12", "t": "Maria registrou visita (Plásticos de Engenharia)", "f": "plasticos"},
                      {"h": "09:58", "t": "Tiago registrou ligação (Químicos - Adesivo Estrutural)", "f": "adesivos"},
