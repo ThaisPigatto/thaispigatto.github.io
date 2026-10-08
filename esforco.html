@@ -35,7 +35,7 @@
 
   /* ---------- cabeçalhos ---------- */
   .topbar{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:18px;}
-  .topbar h1{font:700 24px 'Space Grotesk',sans-serif;color:var(--navy);margin:0 0 3px;}
+  .topbar h1{font:700 32px 'Space Grotesk',sans-serif;color:var(--navy);margin:0 0 3px;}
   .topbar .sub{font-size:12.5px;color:var(--muted);}
   .status{text-align:right;font-size:11.5px;color:var(--muted);line-height:1.6;}
   .status .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good);margin-right:5px;}
@@ -63,7 +63,7 @@
 
   /* ---------- painéis e tabelas ---------- */
   .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:22px;}
-  .panel h2{font:700 15.5px 'Space Grotesk',sans-serif;color:var(--navy);margin:0 0 4px;}
+  .panel h2{font:700 21px 'Space Grotesk',sans-serif;color:var(--navy);margin:0 0 6px;}
   .panel .desc{font-size:12px;color:var(--muted);margin-bottom:14px;}
   table.tb{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;}
   .tb th{background:var(--navy);color:#fff;font-size:11px;font-weight:700;padding:13px 10px;text-align:center;letter-spacing:.3px;}
@@ -73,7 +73,7 @@
   .tb tr:last-child td{border-bottom:none;}
   .tb .gend{border-right:2px solid #C9D2D8;}
   .tb th.gend{border-right:2px solid #0A2238;}
-  .tb td.fam{font-weight:600;color:var(--navy);text-align:left;white-space:nowrap;}
+  .tb td.fam{font-weight:800;color:var(--navy);text-align:left;white-space:nowrap;}
   .tb td.fam i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;}
   .tb td.real{font-weight:700;color:var(--ink);}
   .tb td.na{color:#9AA7B1;}
@@ -84,24 +84,48 @@
   .race{display:flex;flex-direction:column;gap:38px;padding-top:26px;}
   .race-row{display:flex;align-items:center;gap:12px;}
   .race-pos{font:700 11px 'Space Grotesk',sans-serif;width:18px;color:var(--muted);}
-  .race-nome{font-size:11.5px;font-weight:600;width:190px;flex-shrink:0;}
+  .race-nome{font-size:12.5px;font-weight:800;width:210px;flex-shrink:0;color:var(--navy);}
   .race-track{flex:1;height:16px;border-radius:8px;position:relative;}
   .race-fill{height:100%;border-radius:8px;}
   .race-truck{position:absolute;bottom:13px;height:22px;transform:translateX(-85%);filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
   .race-pct{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10.5px;font-weight:700;}
 
-  /* ---------- projetos (estrelas) ---------- */
-  .proj-head,.proj-row{display:grid;grid-template-columns:1.6fr repeat(3,90px) 150px;align-items:center;gap:6px;}
-  .proj-head{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding-bottom:8px;border-bottom:1px solid var(--line);text-align:center;}
-  .proj-head span:first-child{text-align:left;}
-  .proj-row{padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
-  .proj-row:last-child{border-bottom:none;}
-  .proj-step{display:flex;justify-content:center;position:relative;}
-  .proj-step:not(:nth-child(2))::before{content:"";position:absolute;left:-50%;right:50%;top:50%;height:3px;background:#D5DBE0;transform:translateY(-50%);}
-  .proj-step.on:not(:nth-child(2))::before{background:var(--gold);}
-  .proj-step svg{position:relative;z-index:1;}
-  .proj-resp{font-size:11.5px;color:var(--muted);text-align:center;}
-  .proj-resumo{font-size:11.5px;color:var(--muted);margin-top:10px;}
+  /* ---------- projetos ---------- */
+  .pj-top{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;}
+  .pj-card{border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:6px;background:#FAFCFE;}
+  .pj-tit{font:700 18px 'Space Grotesk',sans-serif;color:var(--navy);margin-bottom:6px;}
+  .pj-meta{display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:22px;}
+  .pj-meta b{color:var(--ink);}
+  .stepper{display:flex;margin:4px 0;}
+  .stp{flex:1;text-align:center;position:relative;}
+  .stp:not(:first-child)::before{content:"";position:absolute;top:17px;left:-50%;right:50%;height:4px;background:#D5DBE0;border-radius:2px;}
+  .stp.done:not(:first-child)::before,.stp.cur:not(:first-child)::before{background:var(--good);}
+  .stp .dot{position:relative;z-index:1;width:34px;height:34px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;background:#E7E9EC;color:#8B98A3;font:700 13px 'Inter',sans-serif;box-shadow:0 0 0 3px #fff;}
+  .stp.done .dot{background:var(--good);color:#fff;}
+  .stp.cur .dot{background:var(--good);color:#fff;width:42px;height:42px;margin-top:-4px;font-size:15px;box-shadow:0 0 0 3px #fff,0 0 0 7px rgba(30,158,90,.25);}
+  .stp .lb{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.3;padding:0 4px;}
+  .stp.cur .lb{color:var(--ink);font-weight:700;}
+  .stp.done .lb{color:var(--ink);}
+  .pj-fase{margin-top:18px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--good);border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.6;}
+  .pj-fase b{color:var(--navy);}
+  .pj-tab{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .pj-tab th{text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;padding:8px 10px;border-bottom:2px solid var(--line);}
+  .pj-tab td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  .pj-tab td.pn{font-weight:700;color:var(--navy);}
+  .pj-tab tr.clk{cursor:pointer;} .pj-tab tr.clk:hover td{background:#F4FAF6;}
+  .pj-bar{display:flex;align-items:center;gap:10px;min-width:230px;}
+  .pj-bar .trk{flex:1;height:10px;background:#E3EEF5;border-radius:6px;overflow:hidden;}
+  .pj-bar .trk i{display:block;height:100%;background:var(--good);border-radius:6px;}
+  .pj-bar span{font-size:11.5px;color:var(--muted);white-space:nowrap;}
+  .pj-resumo{font-size:11.5px;color:var(--muted);margin-top:10px;}
+  .pj-resumo a{color:var(--navy);font-weight:700;text-decoration:underline;}
+  .pj-leg{margin-top:22px;border-top:1px solid var(--line);padding-top:16px;}
+  .pj-leg h3{font:700 14px 'Space Grotesk',sans-serif;color:var(--navy);margin:0 0 12px;}
+  .pj-leg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;}
+  .pj-leg-item{display:flex;gap:10px;font-size:12px;line-height:1.55;}
+  .pj-leg-item .n{flex:0 0 28px;height:28px;border-radius:50%;background:#E4F7EC;color:var(--good);font:700 12px 'Inter',sans-serif;display:flex;align-items:center;justify-content:center;}
+  .pj-leg-item b{display:block;color:var(--navy);font-size:12.5px;}
+  .pj-leg-item .t{color:var(--muted);}
 
   /* ---------- feed ---------- */
   .row2{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;}
@@ -170,7 +194,6 @@
       </div>
       <div class="status" id="tvStatus"></div>
     </div>
-    <div id="tvAmostra"></div>
 
     <div class="ctrls">
       <div class="seg" id="tvModo"><button data-m="mes" class="on">Mês</button><button data-m="semana">Semana</button></div>
@@ -182,14 +205,12 @@
 
     <div class="panel">
       <h2>Desempenho por Família</h2>
-      <div class="desc" id="tvDesc"></div>
       <div class="tb-wrap"><table class="tb" id="tvTabela"></table></div>
       <div class="tb-wrap" style="margin-top:18px"><table class="tb" id="tvHub"></table></div>
     </div>
 
     <div class="panel">
       <h2>Corrida das Famílias</h2>
-      <div class="desc">Progresso de cada família na meta de esforço do período (cada meta conta até 100%).</div>
       <div class="race" id="tvRace"></div>
     </div>
 
@@ -222,7 +243,6 @@
       </div>
       <div class="status" id="anStatus"></div>
     </div>
-    <div id="anAmostra"></div>
 
     <div class="alertas">
       <h2>Alerta de Dono</h2>
@@ -326,8 +346,10 @@
 
 </main>
 
-<script src="esforco_data.js"></script>
-<script src="esforco_menu.js"></script>
+<script>
+/* carrega dados e menu sempre na versão mais nova (evita o navegador mostrar um arquivo antigo guardado) */
+(function(){var v=Date.now();['esforco_data.js','esforco_menu.js'].forEach(function(f){document.write('<script src="'+f+'?v='+v+'"><\/script>');});})();
+</script>
 <script>
 (function(){
 "use strict";
@@ -472,7 +494,6 @@ function stampStatus(){
   var h='<div><span class="dot"></span>'+(D.meta.amostra?'Dados de exemplo':'Sincronizado com o CRM Omie')+'</div><div>Atualizado em '+txt+'</div>';
   $('#tvStatus').innerHTML=h; $('#anStatus').innerHTML=h;
   $('#sideFoot').innerHTML='Fonte: CRM Omie<br>Atualização diária<br>Dados até '+dm(LAST)+'/'+LAST.slice(0,4);
-  if(D.meta.amostra){ var a='<div class="amostra"><b>DADOS DE EXEMPLO.</b> Os números abaixo são fictícios, só para validar o visual. Eles são substituídos pelos dados reais do CRM na primeira execução do robô.</div>'; $('#tvAmostra').innerHTML=a; $('#anAmostra').innerHTML=a; }
 }
 
 /* ============================ ABA 1 — TV ============================ */
@@ -500,7 +521,6 @@ function renderTV(){
   var sm=todos.reduce(function(a,x){return a+x.sm;},0), sr=todos.reduce(function(a,x){return a+Math.min(x.sr,x.sm);},0);
   var total=bizDays(R.from,R.to), dec=bizDays(R.from,R.upTo), esp=total?dec/total:0;
   $('#tvPace').innerHTML=R.nome+' · dia útil <b>'+dec+'</b> de <b>'+total+'</b> · esperado até hoje <b>'+P(esp,0)+'</b>';
-  $('#tvDesc').textContent='Metas por semana convertidas para o período ('+R.nome+'): meta semanal × dias úteis ÷ 5. “Realizado” conta o que está registrado no CRM até '+dm(R.upTo)+'.';
   // KPIs
   var k='<div class="kpi-geral"><div class="kpi-nome">Esforço geral</div><div class="kpi-pct">'+P(tot,1)+'</div><div class="kpi-sub">'+N(sr)+' de '+N(sm)+' ações da meta</div><div class="kpi-bar"><i style="width:'+Math.min(100,tot*100)+'%"></i></div></div>';
   todos.forEach(function(x){ k+='<div class="kpi-fam" style="background:'+x.f.cor+'"><div class="kpi-nome">'+esc(x.f.nome)+'</div><div class="kpi-pct">'+P(x.prog,1)+'</div><div class="kpi-sub">'+N(x.sr)+' realizadas · meta '+N(x.sm)+'</div><div class="kpi-bar"><i style="width:'+Math.min(100,x.prog*100)+'%"></i></div></div>'; });
@@ -512,7 +532,7 @@ function renderTV(){
   C.fams.forEach(function(x){ var c=x.f.cor, b1=hexA(c,.07), b2=hexA(c,.17);
     h+='<tr><td class="fam" style="background:'+b1+'"><i style="background:'+c+'"></i>'+esc(x.f.nome)+'</td><td class="gend" style="background:'+b1+'">'+P(x.prog,1)+'</td>';
     x.itens.forEach(function(it,i){ var g=i<3?' gend':'';
-      if(!it) h+='<td colspan="2" class="na'+g+'" style="background:'+b1+'">— sem meta —</td>';
+      if(!it) h+='<td colspan="2" class="na'+g+'" style="background:'+b1+'">-</td>';
       else h+='<td style="background:'+b1+'">'+N(it.meta)+'</td><td class="real'+g+'" style="background:'+b2+'">'+N(it.real)+'</td>'; });
     h+='</tr>'; });
   $('#tvTabela').innerHTML=h+'</tbody>';
@@ -531,15 +551,45 @@ function renderTV(){
   renderProj(); renderFeed(); renderTvChart(C);
 }
 
-function star(on,cur){ var fill=on?'#F2B84B':'#E7E9EC', st=on?'#C98A1B':'#B7BCC2', s=cur?30:24;
-  return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9.5 16.5,14.5 18.5,22 12,18 5.5,22 7.5,14.5 2,9.5 9,9" fill="'+fill+'" stroke="'+st+'" stroke-width="1.2" stroke-linejoin="round"/></svg>'; }
+var FASES_PADRAO=[
+ {n:1,nome:'01 Prospect',descricao:'Oportunidade identificada e qualificada: o cliente precisa da solução e tem condições de adquirir. Faz-se o levantamento detalhado das necessidades e mapeia-se quem decide e influencia na empresa.'},
+ {n:2,nome:'02 Qualificação',descricao:'Filtro para entender se o negócio realmente existe e deve seguir adiante no processo comercial.'},
+ {n:3,nome:'03 Apresentação',descricao:'Apresentação personalizada da solução, focada no que interessa a cada pessoa da cadeia de decisão do cliente.'},
+ {n:4,nome:'04 Amostra/Cotação',descricao:'Elabora-se e entrega-se ao cliente a proposta comercial e técnica (amostra/cotação).'},
+ {n:5,nome:'05 Negociação',descricao:'Fase final de decisão: negociação com o cliente para fechar o negócio. Podem existir várias versões da proposta.'},
+ {n:6,nome:'06 Conclusão',descricao:'Registra-se a conquista ou a perda da oportunidade, indicando o motivo.'}];
+var PROJ={sel:'all',todos:false};
+function nomeCurto(n){ return String(n||'').replace(/^\s*\d+\s*/,''); }
+function primeiroNome(v){ return String(v||'').split(' ')[0]; }
 function renderProj(){
-  var p=D.projetos||[]; if(!p.length){ $('#tvProj').innerHTML='<div class="vazio">Nenhum projeto ativo no momento.</div>'; return; }
-  var h='<div class="proj-head"><span>Projeto</span><span>Fase 1</span><span>Fase 2</span><span>Fase 3</span><span>Responsável</span></div>', cont=[0,0,0];
-  p.slice().sort(function(a,b){return b.fase-a.fase;}).forEach(function(x){ cont[x.fase-1]++;
-    h+='<div class="proj-row"><span>'+esc(x.nome)+'</span>'+[1,2,3].map(function(n){return '<span class="proj-step'+(x.fase>=n?' on':'')+'">'+star(x.fase>=n,x.fase===n)+'</span>';}).join('')+'<span class="proj-resp">'+esc(x.vend||'')+'</span></div>'; });
-  h+='<div class="proj-resumo">'+p.length+' projetos ativos · Fase 1: '+cont[0]+' · Fase 2: '+cont[1]+' · Fase 3: '+cont[2]+'</div>';
-  $('#tvProj').innerHTML=h; }
+  var box=$('#tvProj'), P0=D.projetos||[];
+  if(!P0.length){ box.innerHTML='<div class="vazio">Nenhum projeto ativo no momento.</div>'; return; }
+  if(P0[0].faseNome===undefined){ box.innerHTML='<div class="vazio">Os detalhes dos projetos aparecem na próxima atualização do robô.</div>'; return; }
+  var F=((D.fasesCrm&&D.fasesCrm.length)?D.fasesCrm:FASES_PADRAO).slice().sort(function(a,b){return a.n-b.n;}), N=F.length;
+  var proj=P0.slice().sort(function(a,b){return String(a.nome).localeCompare(String(b.nome),'pt-BR');});
+  var opt='<option value="all">Todos os projetos ('+proj.length+')</option>'+proj.map(function(p,i){return '<option value="'+i+'">'+esc(p.nome)+(p.cliente?' — '+esc(p.cliente):'')+' ('+esc(primeiroNome(p.vend))+')</option>';}).join('');
+  var leg='<div class="pj-leg"><h3>O que significa cada fase (definições do CRM)</h3><div class="pj-leg-grid">'+F.map(function(f){return '<div class="pj-leg-item"><div class="n">'+f.n+'</div><div><b>'+esc(f.nome)+'</b><span class="t">'+esc(f.descricao||'')+'</span></div></div>';}).join('')+'</div></div>';
+  box.innerHTML='<div class="pj-top"><label class="ctrl">Escolha o projeto<select id="projSel" style="min-width:420px;max-width:100%">'+opt+'</select></label></div><div id="projDet"></div>'+leg;
+  var sel=$('#projSel'); if(PROJ.sel!=='all'&&proj[+PROJ.sel]) sel.value=PROJ.sel; else PROJ.sel='all';
+  sel.addEventListener('change',function(){ PROJ.sel=sel.value; det(); });
+  function det(){
+    var el=$('#projDet');
+    if(PROJ.sel!=='all'){
+      var p=proj[+PROJ.sel], fa=F.filter(function(f){return f.n===p.fase;})[0];
+      var st=F.map(function(f){ var c=f.n<p.fase?'done':(f.n===p.fase?'cur':''); return '<div class="stp '+c+'"><div class="dot">'+(f.n<p.fase?'✓':f.n)+'</div><div class="lb">'+esc(nomeCurto(f.nome))+'</div></div>'; }).join('');
+      el.innerHTML='<div class="pj-card"><div class="pj-tit">'+esc(p.nome)+'</div><div class="pj-meta"><span><b>Cliente:</b> '+esc(p.cliente||'não informado')+'</span><span><b>Responsável:</b> '+esc(p.vend||'—')+'</span><span><b>Oportunidade:</b> '+esc(p.nOp||'—')+(p.emp?' ('+esc(p.emp)+')':'')+'</span></div><div class="stepper">'+st+'</div>'+
+        '<div class="pj-fase"><b>Fase atual: '+esc(p.faseNome||(fa&&fa.nome)||('Fase '+p.fase))+'.</b> '+esc((fa&&fa.descricao)||'')+'</div></div>';
+      return; }
+    var ord=proj.map(function(x,i){return {p:x,i:i};}).sort(function(a,b){return b.p.fase-a.p.fase||String(a.p.nome).localeCompare(String(b.p.nome),'pt-BR');});
+    var h='<table class="pj-tab"><tr><th>Projeto</th><th>Cliente</th><th>Responsável</th><th>Progresso</th></tr>';
+    ord.forEach(function(o,k){ if(!PROJ.todos&&k>=10) return; var p=o.p;
+      h+='<tr class="clk" data-i="'+o.i+'"><td class="pn">'+esc(p.nome)+'</td><td>'+esc(p.cliente||'—')+'</td><td>'+esc(primeiroNome(p.vend))+'</td><td><div class="pj-bar"><div class="trk"><i style="width:'+Math.min(100,p.fase/N*100)+'%"></i></div><span>Fase '+p.fase+' de '+N+' · '+esc(nomeCurto(p.faseNome))+'</span></div></td></tr>'; });
+    h+='</table><div class="pj-resumo">'+proj.length+' projetos ativos · clique em um projeto para ver o detalhe'+(proj.length>10?' · <a href="#" id="pjTodos">'+(PROJ.todos?'Mostrar menos':'Ver todos ('+proj.length+')')+'</a>':'')+'</div>';
+    el.innerHTML=h;
+    $$('#projDet tr.clk').forEach(function(tr){ tr.addEventListener('click',function(){ PROJ.sel=tr.getAttribute('data-i'); sel.value=PROJ.sel; det(); }); });
+    var t=$('#pjTodos'); if(t) t.addEventListener('click',function(e){ e.preventDefault(); PROJ.todos=!PROJ.todos; det(); });
+  }
+  det(); }
 function renderFeed(){
   var fc={}; FAM.concat([D.hub]).forEach(function(f){fc[f.id]=f.cor;});
   $('#tvFeed').innerHTML=(D.recentes||[]).slice(0,8).map(function(r){return '<div class="feed-item"><span class="feed-dot" style="background:'+(fc[r.f]||'#999')+'"></span><span>'+esc(r.t)+'</span><span class="feed-h">'+esc(r.h)+'</span></div>';}).join('')||'<div class="vazio">Sem registros recentes.</div>'; }
@@ -621,6 +671,9 @@ function calcAlertas(){
   // família sem oportunidade nova
   FAM.forEach(function(f,fi){ var ds=(D.oportunidades||[]).filter(function(o){return o.f===fi&&o.c;}).map(function(o){return o.c;}).sort(); if(!ds.length) return;
     var dias=Math.round((parse(HOJE)-parse(ds[ds.length-1]))/864e5); if(dias>=10) out.push({n:'aviso',t:f.nome+': nenhuma oportunidade nova registrada há '+dias+' dias.'}); });
+  var ops=D.oportunidades||[];
+  if(ops.length>=30){ var nvp=ops.filter(function(o){return o.t==='novo';}).length/ops.length;
+    if(nvp>.85) out.push({n:'aviso',t:P(nvp,0)+' das oportunidades estão marcadas como “Cliente Novo” no CRM — provavelmente o campo Tipo está errado (cliente antigo marcado como novo). Até corrigir, os números de “novo x carteira” não são confiáveis.'}); }
   var q=D.qualidade||{};
   if(q.tarefasTotal&&q.tarefasSemOportunidade/q.tarefasTotal>.15) out.push({n:'aviso',t:P(q.tarefasSemOportunidade/q.tarefasTotal,0)+' das tarefas não estão ligadas a nenhuma oportunidade — não dá para saber família nem cliente novo x carteira.'});
   if(q.oportunidadesAtivas&&q.ativasParadas/q.oportunidadesAtivas>.25) out.push({n:'aviso',t:N(q.ativasParadas)+' de '+N(q.oportunidadesAtivas)+' oportunidades ativas estão sem nenhuma tarefa há mais de '+q.diasParada+' dias.'});
@@ -771,6 +824,7 @@ function renderQuali(){
    ['Tarefas sem oportunidade',P(q.tarefasTotal?q.tarefasSemOportunidade/q.tarefasTotal:null,0),N(q.tarefasSemOportunidade)+' de '+N(q.tarefasTotal)+' — sem isso não há família nem novo x carteira'],
    ['Oportunidades ativas paradas',P(q.oportunidadesAtivas?q.ativasParadas/q.oportunidadesAtivas:null,0),N(q.ativasParadas)+' de '+N(q.oportunidadesAtivas)+' sem tarefa há '+q.diasParada+'+ dias'],
    ['Oportunidades sem origem',N(q.oportunidadesSemOrigem),'impede analisar Google Ads x outros'],
+   ['Oportunidades marcadas “Cliente Novo”',P((D.oportunidades||[]).length?(D.oportunidades||[]).filter(function(o){return o.t==='novo';}).length/(D.oportunidades||[]).length:null,0),'se for quase tudo, o campo Tipo não está sendo usado direito'],
    ['Ativas sem ticket preenchido',N(q.ativasSemTicket),'o ticket de referência vem de Vendas, mas o campo ajuda no funil']];
   $('#qCards').innerHTML=cards.map(function(c){return '<div class="card"><div class="l">'+c[0]+'</div><div class="v">'+c[1]+'</div><div class="d">'+c[2]+'</div></div>';}).join('');
   var sf=q.solucoesSemFamilia||{}, ti=q.tiposIgnorados||{}, h='';
