@@ -1,7 +1,8 @@
 name: Atualizar Esforço Comercial (CRM)
 on:
   schedule:
-    - cron: '30 9 * * *'   # todo dia às 06:30 (horário de Brasília)
+    # de segunda a sábado, a cada 2 horas das 06:30 às 18:30 (horário de Brasília). Várias tentativas por dia porque o GitHub às vezes atrasa ou pula um horário.
+    - cron: '30 9,11,13,15,17,19,21 * * 1-6'
   workflow_dispatch:       # também dá pra rodar na mão: aba Actions > Atualizar Esforço Comercial > Run workflow
 permissions:
   contents: write
