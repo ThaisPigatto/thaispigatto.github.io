@@ -1,39 +1,149 @@
 {
-  "_leia_me": "Configuração do robô do Painel de Esforço Comercial. Metas são POR SEMANA; o painel calcula o mês sozinho (meta semanal x dias úteis do mês / 5). null = a família não tem essa meta.",
+  "_leia_me": "Configuração do robô do Painel de Esforço Comercial. As metas são POR SEMANA e começam a valer em out/2026 (meses anteriores aparecem só com o realizado). Para mudar as metas a partir de um mês, acrescente uma linha nova em 'metas_por_mes' (ex.: \"2026-11\": {...}); ela vale daquele mês em diante, até aparecer outra. null = a família não tem essa meta.",
   "inicio_dados": "2026-08-01",
-  "feriados": ["2026-09-07", "2026-10-12", "2026-11-02", "2026-11-15", "2026-11-20", "2026-12-25"],
+  "feriados": [
+    "2026-09-07",
+    "2026-10-12",
+    "2026-11-02",
+    "2026-11-15",
+    "2026-11-20",
+    "2026-12-25"
+  ],
   "_feriados_obs": "Mesma lista do painel de faturamento (atualizar_painel.py). Incluir novos feriados aqui quando confirmados.",
   "familias": [
-    {"id": "adesivos", "nome": "Químicos - Adesivo Estrutural", "cor": "#D64545",
-     "solucoes": ["Parker Lord", "Aplicadores", "Aplicadores e Acessórios", "Linha TT", "Adesivos Estruturais", "Silquim"],
-     "metas": {"carteira": 100, "novos": 2, "visita": 11, "ligacao": null}},
-    {"id": "especialidades", "nome": "Especialidades", "cor": "#16A085",
-     "solucoes": ["Bio-Chem", "Marbocote", "Chemlok", "Parker Lord - Chemlok"],
-     "metas": {"carteira": 50, "novos": 10, "visita": 8, "ligacao": 20}},
-    {"id": "plasticos", "nome": "Plásticos de Engenharia", "cor": "#2E75B6",
-     "solucoes": ["Plásticos de Engenharia"],
-     "metas": {"carteira": 75, "novos": 50, "visita": 8, "ligacao": 25}},
-    {"id": "papeis", "nome": "Papel Térmico + Etiquetas", "cor": "#8E44AD",
-     "solucoes": ["Papel Térmico", "Etiqueta", "Etiquetas", "Ribbon"],
-     "metas": {"carteira": 100, "novos": 25, "visita": null, "ligacao": 75}}
+    {
+      "id": "adesivos",
+      "nome": "Químicos - Adesivo Estrutural",
+      "cor": "#D64545",
+      "solucoes": [
+        "Parker Lord",
+        "Aplicadores",
+        "Aplicadores e Acessórios",
+        "Linha TT",
+        "Adesivos Estruturais",
+        "Silquim"
+      ],
+      "metas_por_mes": {
+        "2026-10": {
+          "carteira": 100,
+          "novos": 2,
+          "visita": 11,
+          "ligacao": null
+        }
+      }
+    },
+    {
+      "id": "especialidades",
+      "nome": "Especialidades",
+      "cor": "#16A085",
+      "solucoes": [
+        "Bio-Chem",
+        "Marbocote",
+        "Chemlok",
+        "Parker Lord - Chemlok"
+      ],
+      "metas_por_mes": {
+        "2026-10": {
+          "carteira": 50,
+          "novos": 10,
+          "visita": 8,
+          "ligacao": 20
+        }
+      }
+    },
+    {
+      "id": "plasticos",
+      "nome": "Plásticos de Engenharia",
+      "cor": "#2E75B6",
+      "solucoes": [
+        "Plásticos de Engenharia"
+      ],
+      "metas_por_mes": {
+        "2026-10": {
+          "carteira": 75,
+          "novos": 50,
+          "visita": 8,
+          "ligacao": 25
+        }
+      }
+    },
+    {
+      "id": "papeis",
+      "nome": "Papel Térmico + Etiquetas",
+      "cor": "#8E44AD",
+      "solucoes": [
+        "Papel Térmico",
+        "Etiqueta",
+        "Etiquetas",
+        "Ribbon"
+      ],
+      "metas_por_mes": {
+        "2026-10": {
+          "carteira": 100,
+          "novos": 25,
+          "visita": null,
+          "ligacao": 75
+        }
+      }
+    }
   ],
   "hub": {
-    "id": "hub", "nome": "Hub + Licitação", "cor": "#E8A733",
-    "solucoes": ["Hub", "Marketplace", "Licitação"],
-    "metas": {"anuncio": 3, "licitacao": 2},
+    "id": "hub",
+    "nome": "Hub + Licitação",
+    "cor": "#E8A733",
+    "solucoes": [
+      "Hub",
+      "Marketplace",
+      "Licitação"
+    ],
     "regras_texto": {
-      "anuncio": ["anuncio", "anúncio", "mercado livre", "marketplace"],
-      "licitacao": ["licitacao", "licitação", "pregao", "pregão"]
+      "anuncio": [
+        "anuncio",
+        "anúncio",
+        "mercado livre",
+        "marketplace"
+      ],
+      "licitacao": [
+        "licitacao",
+        "licitação",
+        "pregao",
+        "pregão"
+      ]
     },
-    "_obs": "A CONFIRMAR: onde anúncios/licitações são registrados no CRM. Hoje o robô conta tarefas cuja descrição contém essas palavras OU que pertencem a soluções do Hub."
+    "_obs": "A CONFIRMAR: onde anúncios/licitações são registrados no CRM. Hoje o robô conta tarefas cuja descrição contém essas palavras OU que pertencem a soluções do Hub.",
+    "metas_por_mes": {
+      "2026-10": {
+        "anuncio": 3,
+        "licitacao": 2
+      }
+    }
   },
   "cliente_reciclado_conta_como": "novo",
   "ligacao_conta_em_contato_se_familia_sem_meta_de_ligacao": true,
   "vendedor_alias": {},
   "projetos": {
     "familia": "adesivos",
-    "fases": {"1": [1, 2, 3], "2": [4], "3": [5, 6]},
+    "fases": {
+      "1": [
+        1,
+        2,
+        3
+      ],
+      "2": [
+        4
+      ],
+      "3": [
+        5,
+        6
+      ]
+    },
     "_obs": "A CONFIRMAR: a que fases do CRM correspondem Fase 1/2/3 do 'Progresso de projetos'."
   },
-  "dias_oportunidade_parada": 14
+  "dias_oportunidade_parada": 14,
+  "alerta_preenchimento": {
+    "min_nfs_semana": 3,
+    "acoes_por_nf_minimo": 1.0,
+    "ritmo_minimo": 0.6,
+    "_obs": "Aviso 'PREENCHIMENTO DO CRM ESTÁ BAIXO' no canto do painel. Fica BAIXO se (a) o ritmo da semana estiver abaixo de ritmo_minimo do esperado, ou (b) uma família faturou pelo menos min_nfs_semana notas na semana e registrou menos de acoes_por_nf_minimo ações de CRM por nota."
+  }
 }

@@ -1,0 +1,84 @@
+name: Atualizar Esforço Comercial (CRM)
+on:
+  schedule:
+    # de segunda a sábado, a cada 2 horas das 06:30 às 18:30 (horário de Brasília). Várias tentativas por dia porque o GitHub às vezes atrasa ou pula um horário.
+    - cron: '30 9,11,13,15,17,19,21 * * 1-6'
+  workflow_dispatch:       # também dá pra rodar na mão: aba Actions > Atualizar Esforço Comercial > Run workflow
+permissions:
+  contents: write
+concurrency:
+  group: esforco-crm
+  cancel-in-progress: false
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Rodar robô (lê CRM do Omie, regrava esforco_data.js)
+        env:
+          OMIE_MATRIZ_APP_KEY: ${{ secrets.OMIE_MATRIZ_APP_KEY }}
+          OMIE_MATRIZ_APP_SECRET: ${{ secrets.OMIE_MATRIZ_APP_SECRET }}
+          OMIE_PAPEIS_APP_KEY: ${{ secrets.OMIE_PAPEIS_APP_KEY }}
+          OMIE_PAPEIS_APP_SECRET: ${{ secrets.OMIE_PAPEIS_APP_SECRET }}
+        run: |
+          set -o pipefail
+          python automacao/esforco_crm.py 2>&1 | tee saida_esforco.log
+      - name: Publicar (commit + push) só se algo mudou
+        run: |
+          git config user.name "Painel Pigatto (robô)"
+          git config user.email "actions@github.com"
+          git add esforco_data.js
+          if git diff --cached --quiet; then
+            echo "Nada mudou desde a última atualização."
+          else
+            git commit -m "Atualização automática do esforço comercial — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            for i in 1 2 3 4 5; do
+              if git push; then
+                echo "Publicado com sucesso."
+                break
+              fi
+              echo "Push rejeitado — tentativa $i, atualizando e tentando de novo..."
+              git pull --rebase origin main
+              if [ "$i" -eq 5 ]; then
+                echo "Falhou após 5 tentativas."
+                exit 1
+              fi
+              sleep 5
+            done
+          fi
+      - name: Avisar por e-mail que o painel de esforço NÃO foi atualizado
+        # mesmo aviso do painel de faturamento; só roda se alguma etapa acima falhou
+        if: failure()
+        env:
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          LINK_EXECUCAO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NUM_EXECUCAO: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import os, smtplib, datetime
+          from email.mime.text import MIMEText
+          from zoneinfo import ZoneInfo
+          DEST = ["thais.brito@pigattodistribuidora.com.br"]
+          USER = "thais.brito@pigattodistribuidora.com.br"
+          try:
+              linhas = open("saida_esforco.log", encoding="utf-8", errors="replace").read().splitlines()
+          except FileNotFoundError:
+              linhas = ["(o script nem chegou a rodar — veja o link abaixo)"]
+          log = "\n".join(linhas[-40:])
+          agora = datetime.datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M")
+          corpo = (f"Execução #{os.environ['NUM_EXECUCAO']} — {agora} (horário de Brasília)\n\n"
+                   "O painel de Esforço Comercial NÃO foi atualizado (erro do Omie ou nos dados).\n"
+                   "Ele continua no ar com os números da última atualização que deu certo.\n\n"
+                   f"Detalhes: {os.environ['LINK_EXECUCAO']}\n\n--- últimas linhas do log ---\n{log}\n")
+          msg = MIMEText(corpo, "plain", "utf-8")
+          msg["Subject"], msg["From"], msg["To"] = "⚠️ Esforço Comercial NÃO atualizado — erro na atualização", USER, ", ".join(DEST)
+          with smtplib.SMTP("smtp.gmail.com", 587) as s:
+              s.starttls(); s.login(USER, os.environ["SMTP_APP_PASSWORD"]); s.sendmail(USER, DEST, msg.as_string())
+          print("Aviso enviado para", DEST)
+          PY
