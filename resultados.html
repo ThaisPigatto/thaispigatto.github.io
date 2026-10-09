@@ -352,21 +352,29 @@ function parse(wb, arquivo){
 let REMOTO = {}, LOCAL = {}, ERROS = [], FONTE = '';
 const S = { periodo:null, fam:'geral', view:'sem' };
 
+let PASTA_USADA = CONFIG.pasta;
 async function listar(){
-  const base = `${CONFIG.pasta}/`;
-  try {
-    const r = await fetch(`https://api.github.com/repos/${CONFIG.repo}/contents/${CONFIG.pasta}?ref=${CONFIG.branch}`, {cache:'no-store'});
-    if (!r.ok) throw new Error(r.status);
-    const j = await r.json();
-    FONTE = 'GitHub';
-    return j.filter(f => f.type === 'file' && /\.xlsx$/i.test(f.name) && !f.name.startsWith('~$'))
-            .map(f => ({ nome:f.name, url:f.download_url || base + f.name }));
-  } catch (e) {
-    const r = await fetch(base + 'indice.json', {cache:'no-store'});
-    if (!r.ok) throw new Error('não foi possível listar a pasta de dados');
-    FONTE = 'indice.json';
-    return (await r.json()).map(n => ({ nome:n, url: base + n }));
+  // procura primeiro na pasta "dados"; se ela não existir, procura na raiz do repositório (arquivos no padrão nome-AAAA-T#.xlsx)
+  for (const pasta of [CONFIG.pasta, '']) {
+    const base = pasta ? `${pasta}/` : '';
+    const padrao = pasta ? /\.xlsx$/i : /-\d{4}-T[1-4]\.xlsx$/i;
+    try {
+      const r = await fetch(`https://api.github.com/repos/${CONFIG.repo}/contents${pasta ? '/' + pasta : ''}?ref=${CONFIG.branch}`, {cache:'no-store'});
+      if (r.ok) {
+        const lista = (await r.json()).filter(f => f.type === 'file' && padrao.test(f.name) && !f.name.startsWith('~$'))
+                                      .map(f => ({ nome:f.name, url:f.download_url || base + f.name }));
+        if (lista.length) { FONTE = 'GitHub'; PASTA_USADA = pasta || 'raiz'; return lista; }
+      }
+    } catch (e) { /* tenta o índice */ }
+    try {
+      const r = await fetch(base + 'indice.json', {cache:'no-store'});
+      if (r.ok) {
+        const nomes = await r.json();
+        if (nomes.length) { FONTE = 'indice.json'; PASTA_USADA = pasta || 'raiz'; return nomes.map(n => ({ nome:n, url: base + n })); }
+      }
+    } catch (e) { /* próxima pasta */ }
   }
+  throw new Error('não foi possível listar a pasta de dados');
 }
 async function ler(buf, nome){ return parse(XLSX.read(buf, {type:'array'}), nome); }
 function guardar(db, rec, origem){
@@ -383,7 +391,7 @@ async function carregar(){
       catch (e) { ERROS.push({ tipo:'err', txt:`${a.nome}: ${e.message}` }); return null; }
     }));
     res.filter(Boolean).sort((a,b) => a.arquivo.localeCompare(b.arquivo)).forEach(r => guardar(REMOTO, r, 'Pasta dados'));
-    $('fonte').textContent = `${res.filter(Boolean).length} planilha(s) lida(s) da pasta “${CONFIG.pasta}”.`;
+    $('fonte').textContent = `${res.filter(Boolean).length} planilha(s) lida(s) da pasta “${PASTA_USADA}”.`;
   } catch (e) {
     $('fonte').textContent = 'Não foi possível ler a pasta de dados: ' + e.message;
   }
