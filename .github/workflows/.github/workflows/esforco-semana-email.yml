@@ -1,0 +1,79 @@
+name: Enviar Diagnóstico da Semana (CRM) por E-mail
+on:
+  schedule:
+    - cron: '7 9 * * 6'          # todo sábado às 06:07 (horário de Brasília)
+  workflow_dispatch:
+    inputs:
+      destino:
+        description: 'Para quem enviar? "teste" = comercial@ (use antes do envio real)  |  "gabriel" = envio real'
+        type: choice
+        options:
+          - teste
+          - gabriel
+        default: teste
+permissions:
+  contents: write
+concurrency:
+  group: esforco-semana-email
+  cancel-in-progress: false
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Atualizar os dados do CRM antes de enviar (mesmo robô do painel)
+        continue-on-error: true      # se o Omie falhar, ainda envia o link com os dados da última atualização
+        env:
+          OMIE_MATRIZ_APP_KEY: ${{ secrets.OMIE_MATRIZ_APP_KEY }}
+          OMIE_MATRIZ_APP_SECRET: ${{ secrets.OMIE_MATRIZ_APP_SECRET }}
+          OMIE_PAPEIS_APP_KEY: ${{ secrets.OMIE_PAPEIS_APP_KEY }}
+          OMIE_PAPEIS_APP_SECRET: ${{ secrets.OMIE_PAPEIS_APP_SECRET }}
+        run: |
+          set -o pipefail
+          python automacao/esforco_crm.py 2>&1 | tee saida_esforco.log
+      - name: Publicar os dados atualizados (commit + push)
+        continue-on-error: true
+        run: |
+          git config user.name "Painel Pigatto (robô)"
+          git config user.email "actions@github.com"
+          git add esforco_data.js
+          if git diff --cached --quiet; then
+            echo "Nada mudou."
+          else
+            git commit -m "Atualização do esforço comercial para o e-mail semanal — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            for i in 1 2 3 4 5; do
+              if git push; then echo "Publicado."; break; fi
+              git pull --rebase origin main
+              [ "$i" -eq 5 ] && echo "Não consegui publicar após 5 tentativas." && exit 1
+              sleep 5
+            done
+          fi
+      - name: Aguardar o GitHub Pages publicar os dados novos
+        run: sleep 90
+      - name: Enviar o e-mail
+        env:
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          DESTINO: ${{ github.event.inputs.destino || 'gabriel' }}
+          AGENDADO: ${{ github.event_name == 'schedule' && '--agendado' || '' }}
+        run: python automacao/enviar_resultado_semana.py --destino "$DESTINO" $AGENDADO
+      - name: Avisar a Thais se o envio falhou
+        if: failure()
+        env:
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          LINK_EXECUCAO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          import os, smtplib
+          from email.mime.text import MIMEText
+          USER = "thais.brito@pigattodistribuidora.com.br"
+          msg = MIMEText("O e-mail semanal do Diagnóstico da Semana (CRM) NÃO foi enviado.\n\nDetalhes: " + os.environ["LINK_EXECUCAO"], "plain", "utf-8")
+          msg["Subject"], msg["From"], msg["To"] = "⚠️ E-mail semanal do CRM NÃO enviado", USER, USER
+          with smtplib.SMTP("smtp.gmail.com", 587) as s:
+              s.starttls(); s.login(USER, os.environ["SMTP_APP_PASSWORD"]); s.sendmail(USER, [USER], msg.as_string())
+          PY
