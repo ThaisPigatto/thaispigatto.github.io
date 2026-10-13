@@ -301,6 +301,7 @@
   }
   .pedidos-btn.faturado{background:var(--dark-green);}
   .pedidos-btn.previsto{background:#8A6D00;}
+  .pedidos-btn.pdf{background:#6B1E28;text-decoration:none;display:inline-block;}
   .pedidos-btn:hover{filter:brightness(1.08);}
 
   .pedidos-overlay{
@@ -448,6 +449,7 @@
     <div class="pedidos-btns">
       <button type="button" class="pedidos-btn faturado" id="btnAbrirFaturado">📄 Abrir Faturados (Realizado)</button>
       <button type="button" class="pedidos-btn previsto" id="btnAbrirPrevisto">📄 Abrir Previstos</button>
+      <a class="pedidos-btn pdf" id="btnBaixarPdf" href="#" style="display:none;">⬇️ Baixar PDF de resultados</a>
     </div>
   </div>
 
@@ -708,6 +710,25 @@ const NOME_CANAL_ML = 'Pigatto HUB - Marketplace/Licitação';
   box.appendChild(titulo);
   alertas.forEach(a => { const p = document.createElement('div'); p.textContent = '• ' + a; box.appendChild(p); });
   kpis.parentNode.insertBefore(box, kpis);
+})();
+
+// Botão "Baixar PDF de resultados" (pedido da Thais, 13/10/2026): só aparece em mês FECHADO e
+// só se o PDF já existir. O PDF é gerado pelo robô (automacao/gerar_pdf_resultados.py) em
+// pdf/<mês>.pdf sempre que o fechamento do mês muda (virada, refazer fechamento, reprocessar_mes).
+(function botaoPdfResultados(){
+  const btn = document.getElementById('btnBaixarPdf');
+  if (!btn) return;
+  const m = MESES_DISPONIVEIS.find(x => x.id === MES_ATUAL);
+  if (!m || m.arquivo === 'index.html') return; // mês corrente: sem PDF até fechar
+  const [ano, mes] = MES_ATUAL.split('-');
+  const NOMES = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+  const url = 'pdf/' + MES_ATUAL + '.pdf';
+  fetch(url, { method: 'HEAD', cache: 'no-store' }).then(r => {
+    if (!r.ok) return;
+    btn.href = url;
+    btn.setAttribute('download', 'RESULTADOS - ' + NOMES[parseInt(mes, 10) - 1] + ' - ' + ano + '.pdf');
+    btn.style.display = '';
+  }).catch(() => {});
 })();
 
 // ---- KPIs gerais ----
