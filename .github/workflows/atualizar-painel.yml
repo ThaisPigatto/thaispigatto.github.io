@@ -33,12 +33,22 @@ jobs:
         run: |
           set -o pipefail
           python automacao/atualizar_painel.py 2>&1 | tee saida_robo.log
+      - name: Gerar PDF de resultados dos meses fechados
+        # Pedido da Thais, 13/10/2026. Só regera o PDF de um mês FECHADO quando os dados dele
+        # mudaram (virada, refazer fechamento, reprocessar_mes) — compara com pdf/<mês>.carimbo.
+        # Se esta etapa falhar, o painel continua sendo publicado normalmente (continue-on-error).
+        id: pdf
+        continue-on-error: true
+        run: |
+          pip install --quiet reportlab==4.4.10
+          python automacao/gerar_pdf_resultados.py
       - name: Publicar (commit + push) só se algo mudou
         run: |
           git config user.name "Painel Pigatto (robô)"
           git config user.email "actions@github.com"
           git add index.html meses.json automacao/produto_familia_cache.json
           git add -- *.html
+          git add -A pdf 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Nada mudou desde a última atualização."
           else
