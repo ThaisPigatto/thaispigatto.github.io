@@ -257,7 +257,7 @@ const FAMILIAS = [
   { id:'adesivos',  nome:'Adesivos Estruturais',    cor:'#FFC9C9', forte:'#D24C4C' },
   { id:'hub',       nome:'Pigatto Hub + Licitação', cor:'#FFF176', forte:'#A88A00' },
   { id:'papel',     nome:'Papel Térmico + Etiquetas', cor:'#F0CAED', forte:'#A0559A' },
-  { id:'quimicos',  nome:'Químicos (Chemlok + Bio-Chem + Marbocote)', curto:'Químicos', cor:'#C9F2CE', forte:'#2F8F4A' }
+  { id:'quimicos',  nome:'Especialidades (Chemlok + Bio-Chem + Marbocote)', curto:'Especialidades', cor:'#C9F2CE', forte:'#2F8F4A' }
 ];
 /* ================================================== */
 
@@ -299,7 +299,7 @@ function familiaDe(txt){
   if (t.includes('ades')) return 'adesivos';
   if (t.includes('hub') || t.includes('licita')) return 'hub';
   if (t.includes('papel') || t.includes('etiqueta')) return 'papel';
-  if (t.includes('quim') || t.includes('chemlok')) return 'quimicos';
+  if (t.includes('especial') || t.includes('quim') || t.includes('chemlok')) return 'quimicos';
   return null;
 }
 function tabela(r, primeiraColuna){

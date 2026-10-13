@@ -504,16 +504,16 @@ function montarMenu(){
       var fs=filhosDe(m); if(!fs.length) return;
       var temAtual=fs.some(function(f){return f.id===ATUAL;});
       if(temAtual) ABERTOS[m.id]=1;
-      var gb=document.createElement('button'); gb.className='grp'+(ABERTOS[m.id]?' aberto':''); gb.innerHTML='<span></span><i>▾</i>'; gb.firstChild.textContent=m.nome;
+      var gb=document.createElement('button'); gb.className='grp'+(ABERTOS[m.id]?' aberto':''); gb.innerHTML='<span></span><i>▾</i>'; gb.firstChild.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':'');
       var box=document.createElement('div'); box.className='sub'; box.style.display=ABERTOS[m.id]?'block':'none';
       gb.addEventListener('click',function(){
         var abrindo=box.style.display==='none'; box.style.display=abrindo?'block':'none'; gb.classList.toggle('aberto',abrindo); ABERTOS[m.id]=abrindo?1:0;
         if(abrindo&&!fs.some(function(f){return f.id===ATUAL;})) abrir(fs[0]); });
       nav.appendChild(gb); nav.appendChild(box);
-      fs.forEach(function(f){ var b=document.createElement('button'); b.textContent=f.nome; b.setAttribute('data-view',f.id); if(f.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(f);}); box.appendChild(b); });
+      fs.forEach(function(f){ var b=document.createElement('button'); b.textContent=f.nome+(f.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',f.id); if(f.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(f);}); box.appendChild(b); });
     } else if(m.tipo==='painel'||temSrc(m)){
       if(m.oculto&&!unlocked) return;     // seção só por link (aparece no menu depois que a senha for digitada)
-      var b=document.createElement('button'); b.textContent=m.nome; b.setAttribute('data-view',m.id); if(m.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b);
+      var b=document.createElement('button'); b.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',m.id); if(m.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b);
     }
   });
 }
@@ -532,7 +532,16 @@ montarMenu();
 MENU_CFG.forEach(function(m){ if(m.tipo==='grupo'&&m.filhosDeMeses){
   fetch(m.filhosDeMeses,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(l){
     if(l&&l.length){ MESES_CACHE[m.id]=l; montarMenu(); abrirPorHash(); } }).catch(function(){}); } });
-window.addEventListener('hashchange',abrirPorHash);
+window.addEventListener('hashchange',function(){ abrirPorHash(); garantirLiberado(); });
+/* sem senha digitada, a tela nunca fica numa área restrita: vai para a primeira área aberta do menu (hoje: NÚMEROS PARA O TÁTICO) */
+function garantirLiberado(){
+  if(unlocked) return;
+  var paginas=todasPaginas(), atual=paginas.filter(function(p){return p.id===ATUAL;})[0];
+  if(atual&&!atual.restrito) return;
+  var livre=paginas.filter(function(p){return !p.restrito&&!p.oculto;})[0];
+  if(livre){ abrir(livre); montarMenu(); }
+  else { $$('.view').forEach(function(x){x.classList.remove('active');}); }
+}
 
 function stampStatus(){
   var g=D.meta.geradoEm?new Date(D.meta.geradoEm):null;
@@ -1046,6 +1055,7 @@ function renderSemana(){
 /* ============================ início ============================ */
 stampStatus(); renderTV();
 abrirPorHash();   // abre o link direto (ex.: #semana/2026-10-05) assim que tudo carregou
+garantirLiberado();
 // TV da sala comercial: recarrega sozinha a cada 15 min (só se estiver na aba Geral) para pegar a atualização diária
 setInterval(function(){ if(ATUAL==='tv') window.location.reload(); }, 15*60*1000);
 })();
