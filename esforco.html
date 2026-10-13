@@ -66,8 +66,9 @@
   .seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
   .seg button{border:none;background:none;font:600 12.5px 'Inter',sans-serif;color:var(--muted);padding:8px 16px;cursor:pointer;}
   .seg button.on{background:var(--navy);color:#fff;}
-  .ctrls.sticky{position:sticky;top:0;z-index:30;background:rgba(243,248,252,.96);backdrop-filter:blur(6px);padding:12px 0;margin:0 0 10px;box-shadow:none;transition:box-shadow .15s;}
-  .ctrls.sticky.solto{box-shadow:0 8px 16px -12px rgba(1,42,74,.45);}
+  .ctrls.sticky{position:sticky;top:0;z-index:30;background:#F3F8FC;padding:12px 32px;margin:0 -32px 14px;box-shadow:none;transition:box-shadow .15s;}
+  body.menu-oculto .ctrls.sticky{margin-left:-68px;padding-left:68px;}
+  .ctrls.sticky.solto{box-shadow:0 8px 14px -10px rgba(1,42,74,.35);border-bottom:1px solid var(--line);}
   .pace{font-size:12.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;}
   .pace b{color:var(--navy);}
 
@@ -93,6 +94,13 @@
   .tb tr:last-child td{border-bottom:none;}
   .tb .gend{border-right:2px solid #C9D2D8;}
   .tb th.gend{border-right:2px solid #0A2238;}
+  .tb td.prog{padding:8px 14px;}
+  .tb th.prog{min-width:230px;}
+  .pg{display:flex;align-items:center;gap:10px;padding-top:14px;}
+  .pg-trk{position:relative;flex:1;height:12px;border-radius:7px;min-width:130px;}
+  .pg-fill{height:100%;border-radius:7px;}
+  .pg-truck{position:absolute;bottom:9px;height:21px;width:auto;transform:translateX(-85%);filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
+  .pg-pct{font-weight:800;font-size:12.5px;min-width:48px;text-align:right;color:var(--ink);}
   .tb td.fam{font-weight:800;color:var(--navy);text-align:left;white-space:nowrap;}
   .tb td.fam i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;}
   .tb td.real{font-weight:700;color:var(--ink);}
@@ -232,10 +240,6 @@
       <div class="tb-wrap" style="margin-top:18px"><table class="tb" id="tvHub"></table></div>
     </div>
 
-    <div class="panel">
-      <h2>Corrida das Famílias</h2>
-      <div class="race" id="tvRace"></div>
-    </div>
 
     <div class="panel">
       <h2>Progresso de Projetos — Químicos - Adesivo Estrutural</h2>
@@ -483,7 +487,7 @@ function abrir(p){
   if(p.restrito&&!unlocked){
     var s=window.prompt('Essa área é restrita. Digite a senha:');
     if(s!==SENHA){ if(s!==null) window.alert('Senha incorreta.'); return; }
-    unlocked=true; try{sessionStorage.setItem('esf_ok','1');}catch(e){}
+    unlocked=true; try{sessionStorage.setItem('esf_ok','1');}catch(e){} montarMenu();
   }
   ATUAL=p.id;
   if(p.tipo!=='painel'){ criarView(p); if(!carregadas[p.id]){ $('#view-'+p.id+' iframe').src=p.src; carregadas[p.id]=1; } }  // só carrega depois da senha
@@ -508,6 +512,7 @@ function montarMenu(){
       nav.appendChild(gb); nav.appendChild(box);
       fs.forEach(function(f){ var b=document.createElement('button'); b.textContent=f.nome; b.setAttribute('data-view',f.id); if(f.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(f);}); box.appendChild(b); });
     } else if(m.tipo==='painel'||temSrc(m)){
+      if(m.oculto&&!unlocked) return;     // seção só por link (aparece no menu depois que a senha for digitada)
       var b=document.createElement('button'); b.textContent=m.nome; b.setAttribute('data-view',m.id); if(m.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b);
     }
   });
@@ -560,6 +565,10 @@ function metasDe(ent,mes){
   var ks=Object.keys(mpm).sort().filter(function(k){return k<=mes;});
   return ks.length?mpm[ks[ks.length-1]]:null; }
 function PP(x){ return x==null?'-':P(x,1); }
+function barraProg(x){ // barra de progresso + caminhãozinho (a "corrida" compactada dentro da tabela)
+  if(x.prog==null) return '-';
+  var p=Math.min(100,x.prog*100), c=x.f.cor, pos=Math.max(p,12);
+  return '<div class="pg"><div class="pg-trk" style="background:'+hexA(c,.2)+'"><div class="pg-fill" style="width:'+p+'%;background:'+c+'"></div><img class="pg-truck" style="left:'+pos+'%" src="'+TRUCK+'" alt=""></div><span class="pg-pct">'+P(x.prog,1)+'</span></div>'; }
 function mesNome(id){ return MESES_LONGO[+id.slice(5,7)-1].toLowerCase()+'/'+id.slice(0,4); }
 function resumir(x){
   var ok=x.itens.filter(function(i){return i&&i.meta!=null;}), all=x.itens.filter(Boolean);
@@ -604,30 +613,25 @@ function renderTV(){
         : '<div class="kpi-pct">'+P(x.prog,1)+'</div><div class="kpi-sub">'+N(x.srMeta)+' realizadas · meta '+N(x.sm)+'</div><div class="kpi-bar"><i style="width:'+Math.min(100,x.prog*100)+'%"></i></div>')+'</div>'; });
   $('#tvKpis').innerHTML=k;
   // tabela de famílias
-  var h='<thead><tr><th class="l" rowspan="2">Família</th><th rowspan="2" class="gend">Progresso</th>';
+  var h='<thead><tr><th class="l" rowspan="2">Família</th><th rowspan="2" class="gend prog">Progresso</th>';
   METRICAS.forEach(function(m,i){ h+='<th colspan="2"'+(i<3?' class="gend"':'')+'>'+m.nome+'</th>'; });
   h+='</tr><tr class="sub">'; METRICAS.forEach(function(m,i){ h+='<th>META</th><th'+(i<3?' class="gend"':'')+'>REALIZADO</th>'; }); h+='</tr></thead><tbody>';
   fams.forEach(function(x){ var c=x.f.cor, b1=hexA(c,.07), b2=hexA(c,.17);
-    h+='<tr><td class="fam" style="background:'+b1+'"><i style="background:'+c+'"></i>'+esc(x.f.nome)+'</td><td class="gend" style="background:'+b1+'">'+PP(x.prog)+'</td>';
+    h+='<tr><td class="fam" style="background:'+b1+'"><i style="background:'+c+'"></i>'+esc(x.f.nome)+'</td><td class="gend prog" style="background:'+b1+'">'+barraProg(x)+'</td>';
     x.itens.forEach(function(it,i){ var g=i<3?' gend':'';
       if(!it) h+='<td colspan="2" class="na'+g+'" style="background:'+b1+'">-</td>';
       else h+='<td style="background:'+b1+'">'+(it.meta==null?'-':N(it.meta))+'</td><td class="real'+g+'" style="background:'+b2+'">'+N(it.real)+'</td>'; });
     h+='</tr>'; });
   $('#tvTabela').innerHTML=h+'</tbody>';
   // hub
-  var hh='<thead><tr><th class="l" rowspan="2">Família</th><th rowspan="2" class="gend">Progresso</th><th colspan="2" class="gend">Anúncio de produto</th><th colspan="2">Licitações participadas</th></tr><tr class="sub"><th>META</th><th class="gend">REALIZADO</th><th>META</th><th>REALIZADO</th></tr></thead><tbody>';
+  var hh='<thead><tr><th class="l" rowspan="2">Família</th><th rowspan="2" class="gend prog">Progresso</th><th colspan="2" class="gend">Anúncio de produto</th><th colspan="2">Licitações participadas</th></tr><tr class="sub"><th>META</th><th class="gend">REALIZADO</th><th>META</th><th>REALIZADO</th></tr></thead><tbody>';
   var hc=D.hub.cor, hb1=hexA(hc,.09), hb2=hexA(hc,.2);
   function hcel(it,gend){ return it?'<td style="background:'+hb1+'">'+(it.meta==null?'-':N(it.meta))+'</td><td class="real'+(gend?' gend':'')+'" style="background:'+hb2+'">'+N(it.real)+'</td>':'<td colspan="2" class="na'+(gend?' gend':'')+'" style="background:'+hb1+'">-</td>'; }
-  hh+='<tr><td class="fam" style="background:'+hb1+'"><i style="background:'+hc+'"></i>'+esc(D.hub.nome)+'</td><td class="gend" style="background:'+hb1+'">'+PP(C.hub.prog)+'</td>'+hcel(C.hub.itens[0],true)+hcel(C.hub.itens[1],false)+'</tr>';
+  hh+='<tr><td class="fam" style="background:'+hb1+'"><i style="background:'+hc+'"></i>'+esc(D.hub.nome)+'</td><td class="gend prog" style="background:'+hb1+'">'+barraProg(C.hub)+'</td>'+hcel(C.hub.itens[0],true)+hcel(C.hub.itens[1],false)+'</tr>';
   $('#tvHub').innerHTML=hh+'</tbody>';
   $('#tvTabela').parentNode.style.display=fams.length?'':'none';
   $('#tvHub').parentNode.style.display=incHub?'':'none';
   $('#tvProj').closest('.panel').style.display=(sel==='all'||sel==='adesivos')?'':'none';
-  // corrida (só nos períodos com meta)
-  var ord=comMeta.slice().sort(function(a,b){return b.prog-a.prog;}), rc='';
-  ord.forEach(function(x,i){ var p=Math.min(100,x.prog*100);
-    rc+='<div class="race-row"><span class="race-pos">'+(i+1)+'º</span><span class="race-nome">'+esc(x.f.nome)+'</span><div class="race-track" style="background:'+hexA(x.f.cor,.16)+'"><div class="race-fill" style="width:'+p+'%;background:'+x.f.cor+'"></div><img class="race-truck" style="left:'+p+'%" src="'+TRUCK+'" alt=""><span class="race-pct">'+P(x.prog,1)+'</span></div></div>'; });
-  $('#tvRace').innerHTML=rc||'<div class="vazio">Sem metas neste período — a corrida aparece nos meses com meta (a partir de '+mesNome(META_INICIO)+').</div>';
   renderProj(); renderFeed(); renderTvChart(C);
 }
 
@@ -1041,6 +1045,7 @@ function renderSemana(){
 
 /* ============================ início ============================ */
 stampStatus(); renderTV();
+abrirPorHash();   // abre o link direto (ex.: #semana/2026-10-05) assim que tudo carregou
 // TV da sala comercial: recarrega sozinha a cada 15 min (só se estiver na aba Geral) para pegar a atualização diária
 setInterval(function(){ if(ATUAL==='tv') window.location.reload(); }, 15*60*1000);
 })();

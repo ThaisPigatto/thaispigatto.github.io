@@ -8,7 +8,8 @@
 window.ESFORCO_MENU = [
   {id:'tv',      nome:'Esforço Comercial - Geral',            tipo:'painel'},
   {id:'analise', nome:'Comercial - Performance CRM completa', tipo:'painel', restrito:true},
-  {id:'semana',  nome:'Resultado da Semana - CRM',            tipo:'painel', restrito:true},
+  // Resultado da Semana: abre SEM senha pelo link do e-mail do Gabriel; não aparece no menu para quem não digitou a senha (oculto:true)
+  {id:'semana',  nome:'Resultado da Semana - CRM',            tipo:'painel', restrito:false, oculto:true},
 
   {id:'vendas', nome:'RELATÓRIO DE VENDAS', tipo:'grupo', filhosDeMeses:'meses.json', filhos:[
     {id:'vendas-atual',   nome:'Mês atual',      src:'index.html'},
