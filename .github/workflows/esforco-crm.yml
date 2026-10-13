@@ -1,9 +1,13 @@
 name: Atualizar Esforço Comercial (CRM)
 on:
   schedule:
-    # de segunda a sábado, a cada 2 horas das 06:30 às 18:30 (horário de Brasília). Várias tentativas por dia porque o GitHub às vezes atrasa ou pula um horário.
-    - cron: '30 9,11,13,15,17,19,21 * * 1-6'
-  workflow_dispatch:       # também dá pra rodar na mão: aba Actions > Atualizar Esforço Comercial > Run workflow
+    # Todos os dias (segunda a domingo), às 06:05 e às 14:05 (horário de Brasília).
+    # As linhas seguintes são TENTATIVAS EXTRAS (30 e 60 min depois): o GitHub às vezes atrasa ou pula um horário.
+    # Se o painel já foi atualizado há pouco, a tentativa extra se encerra sozinha em segundos.
+    - cron: '5 9,17 * * *'      # 06:05 e 14:05
+    - cron: '35 9,17 * * *'     # 06:35 e 14:35 (reserva)
+    - cron: '5 10,18 * * *'     # 07:05 e 15:05 (reserva)
+  workflow_dispatch:            # também dá pra rodar na mão: aba Actions > Atualizar Esforço Comercial > Run workflow
 permissions:
   contents: write
 concurrency:
@@ -20,7 +24,27 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Já atualizou há pouco? (evita rodar duas vezes no mesmo horário)
+        id: fresco
+        env:
+          EVENTO: ${{ github.event_name }}
+        run: |
+          python - <<'PY'
+          import os, re, datetime
+          pular = False
+          if os.environ.get("EVENTO") == "schedule":
+              try:
+                  txt = open("esforco_data.js", encoding="utf-8").read(2000)
+                  ger = datetime.datetime.fromisoformat(re.search(r'"geradoEm":"([^"]+)"', txt).group(1))
+                  idade = (datetime.datetime.now(datetime.timezone.utc) - ger).total_seconds() / 60
+                  pular = idade < 150
+                  print(f"Última atualização há {idade:.0f} min -> {'pula esta tentativa' if pular else 'atualiza agora'}")
+              except Exception as e:
+                  print("Não consegui ler a data da última atualização, vou atualizar:", e)
+          open(os.environ["GITHUB_OUTPUT"], "a").write("pular=%s\n" % ("true" if pular else "false"))
+          PY
       - name: Rodar robô (lê CRM do Omie, regrava esforco_data.js)
+        if: steps.fresco.outputs.pular != 'true'
         env:
           OMIE_MATRIZ_APP_KEY: ${{ secrets.OMIE_MATRIZ_APP_KEY }}
           OMIE_MATRIZ_APP_SECRET: ${{ secrets.OMIE_MATRIZ_APP_SECRET }}
@@ -30,6 +54,7 @@ jobs:
           set -o pipefail
           python automacao/esforco_crm.py 2>&1 | tee saida_esforco.log
       - name: Publicar (commit + push) só se algo mudou
+        if: steps.fresco.outputs.pular != 'true'
         run: |
           git config user.name "Painel Pigatto (robô)"
           git config user.email "actions@github.com"
