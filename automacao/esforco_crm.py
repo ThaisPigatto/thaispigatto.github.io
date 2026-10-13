@@ -96,6 +96,46 @@ def carregar_config():
         return json.load(f)
 
 
+
+# ----------------------------------------------------------------------------
+# metas por mês (cada mês pode ter metas novas; vale a última definida até aquele mês)
+# ----------------------------------------------------------------------------
+def metas_por_mes_de(ent):
+    m = ent.get("metas_por_mes")
+    if m:
+        return {k: m[k] for k in sorted(m)}
+    if ent.get("metas"):                      # formato antigo do config: uma meta só, valendo desde out/2026
+        return {"2026-10": ent["metas"]}
+    return {}
+
+
+def metas_vigentes(mpm, mes):
+    chaves = [k for k in sorted(mpm) if k <= mes]
+    if chaves:
+        return mpm[chaves[-1]]
+    return mpm[sorted(mpm)[0]] if mpm else {}
+
+
+def alerta_preenchimento(cfg):
+    a = cfg.get("alerta_preenchimento", {})
+    return {"minNfsSemana": a.get("min_nfs_semana", 3), "acoesPorNf": a.get("acoes_por_nf_minimo", 1.0),
+            "ritmoMin": a.get("ritmo_minimo", 0.6)}
+
+
+def exportar_familias(cfg, hoje):
+    mes = hoje.strftime("%Y-%m")
+    fams = []
+    for f in cfg["familias"]:
+        mpm = metas_por_mes_de(f)
+        fams.append({"id": f["id"], "nome": f["nome"], "cor": f["cor"], "metas": metas_vigentes(mpm, mes), "metasPorMes": mpm,
+                     "responsaveis": f.get("responsaveis", [])})
+    h = cfg["hub"]
+    hpm = metas_por_mes_de(h)
+    hub = {"id": h["id"], "nome": h["nome"], "cor": h["cor"], "metas": metas_vigentes(hpm, mes), "metasPorMes": hpm,
+           "responsaveis": h.get("responsaveis", [])}
+    primeiros = [sorted(x["metasPorMes"])[0] for x in fams + [hub] if x["metasPorMes"]]
+    return fams, hub, (min(primeiros) if primeiros else "2026-10")
+
 # ----------------------------------------------------------------------------
 # API do Omie
 # ----------------------------------------------------------------------------
@@ -291,6 +331,7 @@ def extrair_vendas(repo_dir):
     with open(caminho, encoding="utf-8") as f:
         meses = json.load(f)
     saida = []
+    por_dia = defaultdict(set)
     for m in meses:
         arq = os.path.join(repo_dir, m.get("arquivo", ""))
         if not os.path.exists(arq):
@@ -314,6 +355,9 @@ def extrair_vendas(repo_dir):
                     continue
                 valor[grupo] += r["total"]
                 notas[grupo].add((r.get("empresa"), r.get("nota_fiscal")))
+                dia = data_br_para_iso(r.get("data_fatura", "") or "")
+                if dia:                          # notas faturadas por dia e família (usado no aviso "venda sem CRM")
+                    por_dia[(dia, grupo)].add((r.get("empresa"), r.get("nota_fiscal")))
             por_fam = {}
             for fid in valor:
                 n = len(notas[fid])
@@ -321,8 +365,9 @@ def extrair_vendas(repo_dir):
             saida.append({"id": m["id"], "label": m.get("label", m["id"]), "porFamilia": por_fam})
         except Exception as e:  # um arquivo ruim não derruba o robô inteiro
             print(f"AVISO vendas: não consegui ler {m.get('arquivo')}: {e}")
+    diario = [[d, fam, len(n)] for (d, fam), n in sorted(por_dia.items())]
     return {"fonte": "Painel de faturamento (NF-e autorizadas, Matriz + Pápeis) — ticket médio por nota fiscal",
-            "meses": saida}
+            "meses": saida, "diario": diario}
 
 
 # ----------------------------------------------------------------------------
@@ -335,6 +380,7 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
     """
     fam_ids = [f["id"] for f in cfg["familias"]]
     fam_idx = {fid: i for i, fid in enumerate(fam_ids)}
+    FAMS_OUT, HUB_OUT, METAS_DESDE = exportar_familias(cfg, hoje)
     inicio = cfg.get("inicio_dados", "2026-01-01")
     hoje_iso = hoje.isoformat()
 
@@ -479,10 +525,12 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
         "meta": {"geradoEm": agora_iso or datetime.datetime.now(TZ_SP).isoformat(timespec="seconds"),
                  "hoje": hoje_iso, "amostra": False, "fonte": "CRM Omie (Matriz + Pápeis)", "versao": 1},
         "config": {"feriados": cfg["feriados"], "inicio": inicio,
-                   "ligacaoContaComoContato": cfg.get("ligacao_conta_em_contato_se_familia_sem_meta_de_ligacao", True)},
+                   "ligacaoContaComoContato": cfg.get("ligacao_conta_em_contato_se_familia_sem_meta_de_ligacao", True),
+                   "metasDesde": METAS_DESDE,
+                   "alertaPreenchimento": alerta_preenchimento(cfg)},
         "canais": CANAIS, "tipos": TIPOS,
-        "familias": [{"id": f["id"], "nome": f["nome"], "cor": f["cor"], "metas": f["metas"]} for f in cfg["familias"]],
-        "hub": {"id": cfg["hub"]["id"], "nome": cfg["hub"]["nome"], "cor": cfg["hub"]["cor"], "metas": cfg["hub"]["metas"]},
+        "familias": FAMS_OUT,
+        "hub": HUB_OUT,
         "vendedores": vendedores,
         "atividades": atividades,
         "hubRegistros": hub_regs,
@@ -501,6 +549,7 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
 # ----------------------------------------------------------------------------
 def gerar_amostra(cfg, vendas, hoje):
     rnd = random.Random(2026)
+    FAMS_OUT, HUB_OUT, METAS_DESDE = exportar_familias(cfg, hoje)
     fam_ids = [f["id"] for f in cfg["familias"]]
     time_por_fam = {  # vendedor(es) de cada família (exemplo)
         "adesivos": ["Wellington Azevedo", "Tiago Fruet"],
@@ -517,7 +566,7 @@ def gerar_amostra(cfg, vendas, hoje):
     for di, d in enumerate(dias):
         tendencia = 0.55 + 0.35 * di / max(1, len(dias) - 1)           # equipe vai melhorando ao longo do tempo
         for fi, fam in enumerate(cfg["familias"]):
-            m = fam["metas"]
+            m = FAMS_OUT[fam_ids.index(fam["id"])]["metas"]
             time_ = time_por_fam[fam["id"]]
             for nome in time_:
                 vi = vendedores.index(nome)
@@ -580,10 +629,12 @@ def gerar_amostra(cfg, vendas, hoje):
         "meta": {"geradoEm": datetime.datetime.now(TZ_SP).isoformat(timespec="seconds"), "hoje": hoje.isoformat(),
                  "amostra": True, "fonte": "DADOS DE EXEMPLO (gerados pelo robô em modo --amostra)", "versao": 1},
         "config": {"feriados": cfg["feriados"], "inicio": cfg["inicio_dados"],
-                   "ligacaoContaComoContato": cfg.get("ligacao_conta_em_contato_se_familia_sem_meta_de_ligacao", True)},
+                   "ligacaoContaComoContato": cfg.get("ligacao_conta_em_contato_se_familia_sem_meta_de_ligacao", True),
+                   "metasDesde": METAS_DESDE,
+                   "alertaPreenchimento": alerta_preenchimento(cfg)},
         "canais": CANAIS, "tipos": TIPOS,
-        "familias": [{"id": f["id"], "nome": f["nome"], "cor": f["cor"], "metas": f["metas"]} for f in cfg["familias"]],
-        "hub": {"id": cfg["hub"]["id"], "nome": cfg["hub"]["nome"], "cor": cfg["hub"]["cor"], "metas": cfg["hub"]["metas"]},
+        "familias": FAMS_OUT,
+        "hub": HUB_OUT,
         "vendedores": vendedores, "atividades": atividades, "hubRegistros": hub, "oportunidades": opps,
         "vendas": vendas,
         "qualidade": {"tarefasTotal": sum(a[5] for a in atividades), "tarefasSemOportunidade": 690, "oportunidadesAtivas": 112,

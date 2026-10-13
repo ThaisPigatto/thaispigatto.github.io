@@ -30,7 +30,11 @@
           "visita": 11,
           "ligacao": null
         }
-      }
+      },
+      "responsaveis": [
+        "Wellington Azevedo",
+        "Tiago Fruet"
+      ]
     },
     {
       "id": "especialidades",
@@ -49,7 +53,12 @@
           "visita": 8,
           "ligacao": 20
         }
-      }
+      },
+      "responsaveis": [
+        "Wellington Azevedo",
+        "Tiago Fruet",
+        "Marcelo Ribeiro"
+      ]
     },
     {
       "id": "plasticos",
@@ -65,7 +74,10 @@
           "visita": 8,
           "ligacao": 25
         }
-      }
+      },
+      "responsaveis": [
+        "Maria Cristina"
+      ]
     },
     {
       "id": "papeis",
@@ -84,7 +96,10 @@
           "visita": null,
           "ligacao": 75
         }
-      }
+      },
+      "responsaveis": [
+        "Rhamayana Ramos"
+      ]
     }
   ],
   "hub": {
@@ -116,7 +131,10 @@
         "anuncio": 3,
         "licitacao": 2
       }
-    }
+    },
+    "responsaveis": [
+      "Jéssica Sant'Anna"
+    ]
   },
   "cliente_reciclado_conta_como": "novo",
   "ligacao_conta_em_contato_se_familia_sem_meta_de_ligacao": true,
@@ -145,5 +163,6 @@
     "acoes_por_nf_minimo": 1.0,
     "ritmo_minimo": 0.6,
     "_obs": "Aviso 'PREENCHIMENTO DO CRM ESTÁ BAIXO' no canto do painel. Fica BAIXO se (a) o ritmo da semana estiver abaixo de ritmo_minimo do esperado, ou (b) uma família faturou pelo menos min_nfs_semana notas na semana e registrou menos de acoes_por_nf_minimo ações de CRM por nota."
-  }
+  },
+  "_responsaveis_obs": "Quem responde por cada família (mesma divisão do painel de faturamento). A 'meta por vendedor' no Resultado da Semana = meta da família dividida igualmente entre os responsáveis. Ajuste aqui se mudar."
 }
