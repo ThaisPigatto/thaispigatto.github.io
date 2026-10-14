@@ -427,6 +427,7 @@ def montar_linhas_previsao(pedidos_por_empresa):
 # ----------------------------------------------------------------------------
 _ETAPA_VIVA_CACHE = {}
 _VEND_PEDIDO_CACHE = {}
+_NUM_PEDIDO_CACHE = {}   # (empresa, nIdPedido) -> número do pedido no Vendas (14/10/2026, aviso "nota sem CRM")
 
 
 def vendedor_do_pedido(empresa, nIdPedido):
@@ -471,6 +472,7 @@ def confirmar_etapa_ao_vivo(empresa, nIdPedido):
         pv = r.get("pedido_venda_produto", {})
         etapa_viva = pv.get("cabecalho", {}).get("etapa")
         _VEND_PEDIDO_CACHE[key] = pv.get("informacoes_adicionais", {}).get("codVend")
+        _NUM_PEDIDO_CACHE[key] = pv.get("cabecalho", {}).get("numero_pedido")
     except Exception:
         etapa_viva = None  # falha na checagem ao vivo: não bloqueia, cai no valor do histórico
     _ETAPA_VIVA_CACHE[key] = etapa_viva
@@ -536,11 +538,15 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
                 if cod_vend is None and not vend_resolvido:
                     cod_vend = vendedor_do_pedido(empresa, nIdPedido)  # ver vendedor_do_pedido
                     vend_resolvido = True
+                dest = nf.get("nfDestInt") or {}
                 linhas.append({
                     "empresa": empresa, "nota": nf["ide"]["nNF"], "cfop": cfop,
                     "valor": item["prod"]["vProd"],
                     "cod_produto": item["nfProdInt"]["nCodProd"], "cod_vend": cod_vend,
                     "is_devolucao": False, "data_fatura": nf["ide"].get("dEmi", ""),
+                    # cliente e pedido (14/10/2026): usados no aviso "nota faturada sem registro no CRM"
+                    "cliente": dest.get("cRazao", ""), "cnpj": dest.get("cnpj_cpf", ""),
+                    "num_pedido": _NUM_PEDIDO_CACHE.get(key),
                 })
 
         # Devoluções de venda (nota de ENTRADA — cliente devolvendo mercadoria). Não passa
@@ -576,6 +582,8 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
                     "valor": -valor_dev,
                     "cod_produto": item["nfProdInt"]["nCodProd"], "cod_vend": cod_vend,
                     "is_devolucao": True, "data_fatura": nf["ide"].get("dEmi", ""),
+                    "cliente": (nf.get("nfDestInt") or {}).get("cRazao", ""),
+                    "cnpj": (nf.get("nfDestInt") or {}).get("cnpj_cpf", ""),
                 })
                 devolucoes_achadas += 1
         if devolucoes_achadas:
@@ -644,7 +652,8 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
         return {
             "familia": nome_familia(l["empresa"], l["cod_produto"]),
             "vendedor": "Jéssica" if is_hub else vend, "is_ml": is_ml, "is_lic": is_lic,
-            "nota_fiscal": l["nota"], "pedido": None, "situacao": "Autorizado",
+            "nota_fiscal": l["nota"], "pedido": l.get("num_pedido"), "situacao": "Autorizado",
+            "cliente": l.get("cliente", ""), "cnpj": l.get("cnpj", ""),
             "empresa": l["empresa"],
             "operacao": "Devolução de Venda" if l.get("is_devolucao") else "Orçamento",
             "cfop": l["cfop"], "total": l["valor"],
@@ -998,7 +1007,7 @@ def montar_data(real_rows, prev_rows):
         return [{"Vendedor": k[0], "Família de Produto": k[1], "Total de Mercadoria": round(v, 2)} for k, v in vf.items()]
 
     raw_cols = ["familia", "vendedor", "nota_fiscal", "pedido", "situacao", "empresa", "operacao", "cfop", "total",
-                "data_previsao", "data_fatura"]
+                "data_previsao", "data_fatura", "cliente", "cnpj"]
 
     return {
         "totais": totais,
@@ -1010,8 +1019,8 @@ def montar_data(real_rows, prev_rows):
         "meta_info": meta_info,
         "grupos_familia": grupos_familia_out,
         "grupo_map": grupo_map,
-        "raw_real": [{c: r[c] for c in raw_cols} for r in real_rows],
-        "raw_prev": [{c: r[c] for c in raw_cols} for r in prev_rows],
+        "raw_real": [{c: r.get(c) for c in raw_cols} for r in real_rows],
+        "raw_prev": [{c: r.get(c) for c in raw_cols} for r in prev_rows],
         "alertas": list(dict.fromkeys(ALERTAS)),  # sem repetidos, na ordem em que surgiram
     }
 

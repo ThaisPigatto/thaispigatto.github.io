@@ -164,5 +164,10 @@
     "ritmo_minimo": 0.6,
     "_obs": "Aviso 'PREENCHIMENTO DO CRM ESTÁ BAIXO' no canto do painel. Fica BAIXO se (a) o ritmo da semana estiver abaixo de ritmo_minimo do esperado, ou (b) uma família faturou pelo menos min_nfs_semana notas na semana e registrou menos de acoes_por_nf_minimo ações de CRM por nota."
   },
-  "_responsaveis_obs": "Quem responde por cada família (mesma divisão do painel de faturamento). A 'meta por vendedor' no Resultado da Semana = meta da família dividida igualmente entre os responsáveis. Ajuste aqui se mudar."
+  "_responsaveis_obs": "Quem responde por cada família (mesma divisão do painel de faturamento). A 'meta por vendedor' no Resultado da Semana = meta da família dividida igualmente entre os responsáveis. Ajuste aqui se mudar.",
+  "nf_sem_crm": {
+    "_obs": "Aviso 'nota faturada sem registro no CRM' (portal do vendedor). Uma nota conta como registrada quando o mesmo cliente (CNPJ/CPF ou nome) tem oportunidade no CRM com movimento a partir de N dias antes da venda.",
+    "desde": "2026-10-01",
+    "dias_antes_da_venda": 60
+  }
 }

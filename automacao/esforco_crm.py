@@ -219,15 +219,17 @@ def carregar_lookups(app_key, app_secret):
             fases[cod] = int(m.group(1))
             fases_info[cod] = {"n": int(m.group(1)), "nome": nome.strip(),
                                "descricao": htmllib.unescape(f.get("cObservacao") or "").strip()}
-    contas = {}
+    contas, contas_doc = {}, {}
     for c in lista("crm/contas", "ListarContas"):
         ident = c.get("identificacao", {})
         nome_conta = (ident.get("cNome") or ident.get("cNomeFantasia") or "").strip()
         if ident.get("nCod") is not None and nome_conta:
             contas[ident["nCod"]] = nome_conta
+        if ident.get("nCod") is not None:
+            contas_doc[ident["nCod"]] = re.sub(r"\D", "", ident.get("cDoc") or "")   # CNPJ/CPF só com números
     return {"solucoes": solucoes, "tipos_cli": tipos_cli, "origens": origens, "usuarios": usuarios,
             "tipos_tarefa": tipos_tarefa, "status": status, "fases": fases,
-            "fases_info": fases_info, "contas": contas}
+            "fases_info": fases_info, "contas": contas, "contas_doc": contas_doc}
 
 
 # ----------------------------------------------------------------------------
@@ -332,6 +334,7 @@ def extrair_vendas(repo_dir):
         meses = json.load(f)
     saida = []
     por_dia = defaultdict(set)
+    notas_cli = {}   # (empresa, nota) -> dados da nota (cliente, CNPJ, pedido...) — aviso "nota faturada sem CRM"
     for m in meses:
         arq = os.path.join(repo_dir, m.get("arquivo", ""))
         if not os.path.exists(arq):
@@ -358,6 +361,14 @@ def extrair_vendas(repo_dir):
                 dia = data_br_para_iso(r.get("data_fatura", "") or "")
                 if dia:                          # notas faturadas por dia e família (usado no aviso "venda sem CRM")
                     por_dia[(dia, grupo)].add((r.get("empresa"), r.get("nota_fiscal")))
+                if dia and ("cliente" in r or "cnpj" in r):
+                    ch = (r.get("empresa"), r.get("nota_fiscal"))
+                    n = notas_cli.setdefault(ch, {"e": r.get("empresa"), "nf": r.get("nota_fiscal"), "ped": r.get("pedido"),
+                                                  "cli": r.get("cliente") or "", "doc": r.get("cnpj") or "", "d": dia,
+                                                  "v": 0.0, "vend": r.get("vendedor") or "", "fams": []})
+                    n["v"] = round(n["v"] + r["total"], 2)
+                    if grupo not in n["fams"]:
+                        n["fams"].append(grupo)
             por_fam = {}
             for fid in valor:
                 n = len(notas[fid])
@@ -367,12 +378,54 @@ def extrair_vendas(repo_dir):
             print(f"AVISO vendas: não consegui ler {m.get('arquivo')}: {e}")
     diario = [[d, fam, len(n)] for (d, fam), n in sorted(por_dia.items())]
     return {"fonte": "Painel de faturamento (NF-e autorizadas, Matriz + Pápeis) — ticket médio por nota fiscal",
-            "meses": saida, "diario": diario}
+            "meses": saida, "diario": diario, "_notas": list(notas_cli.values())}
 
 
 # ----------------------------------------------------------------------------
 # montagem dos dados (função pura: recebe o que veio do Omie, devolve o dicionário do painel)
 # ----------------------------------------------------------------------------
+def _nome_cli(s):
+    return re.sub(r"[^a-z0-9]", "", norm(s or ""))
+
+
+def notas_sem_crm(vendas, opp_info, ultima_tarefa, cfg):
+    """Notas faturadas (painel de vendas) cujo cliente NÃO tem registro no CRM (14/10/2026, pedido da Thais).
+    Uma nota conta como registrada quando o mesmo cliente (CNPJ/CPF, ou nome se o CNPJ não estiver no CRM)
+    tem oportunidade no CRM (Matriz ou Pápeis) com movimento — criação, conclusão ou tarefa — a partir de
+    N dias antes da venda (config "nf_sem_crm"). Quando o vendedor registra, a nota some na próxima atualização."""
+    notas = vendas.pop("_notas", None)
+    regra = cfg.get("nf_sem_crm", {})
+    desde = regra.get("desde", "2026-10-01")
+    dias = int(regra.get("dias_antes_da_venda", 60))
+    info = {"desde": desde, "diasAntes": dias, "analisadas": 0, "disponivel": bool(notas)}
+    if not notas:
+        return [], info
+    por_doc, por_nome = {}, {}
+    for chave, o in opp_info.items():
+        datas = [d for d in (o.get("criada"), o.get("concluida"), ultima_tarefa.get(chave)) if d]
+        if not datas:
+            continue
+        ult = max(datas)
+        if o.get("doc"):
+            por_doc[o["doc"]] = max(ult, por_doc.get(o["doc"], ""))
+        nm = _nome_cli(o.get("cliente"))
+        if nm:
+            por_nome[nm] = max(ult, por_nome.get(nm, ""))
+    faltando = []
+    for n in notas:
+        if n["d"] < desde or n["v"] <= 0:
+            continue
+        info["analisadas"] += 1
+        limite = (datetime.date.fromisoformat(n["d"]) - datetime.timedelta(days=dias)).isoformat()
+        doc = re.sub(r"\D", "", n.get("doc") or "")
+        ok = (doc and por_doc.get(doc, "") >= limite) or por_nome.get(_nome_cli(n.get("cli")), "") >= limite
+        if not ok:
+            faltando.append(n)
+    faltando.sort(key=lambda n: (n["d"], n["nf"] or ""), reverse=True)
+    print(f"Notas sem registro no CRM: {len(faltando)} de {info['analisadas']} analisadas (desde {desde})")
+    return faltando, info
+
+
 def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
     """
     empresas = { 'matriz': {'lookups': {...}, 'oportunidades': [...], 'tarefas': [...]}, 'papeis': {...} }
@@ -428,6 +481,7 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
                 "num": ident.get("cNumOp", ""),
                 "emp": "Matriz" if emp == "matriz" else "Pápeis",
                 "cliente": lk.get("contas", {}).get(ident.get("nCodConta"), ""),
+                "doc": lk.get("contas_doc", {}).get(ident.get("nCodConta"), ""),
                 "fase_nome": lk.get("fases_info", {}).get(fs.get("nCodFase"), {}).get("nome", ""),
             }
         # --- tarefas
@@ -496,9 +550,11 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
                    "visita": "visita", "reuniao": "reunião", "cotacao": "cotação"}
     nome_fam = {f["id"]: f["nome"] for f in cfg["familias"]}
     ult = []
-    for d_iso, hora, vend, canal, fid in recentes[:8]:
+    for d_iso, hora, vend, canal, fid in recentes[:80]:
         quando = hora if d_iso == hoje_iso else datetime.date.fromisoformat(d_iso).strftime("%d/%m")
         ult.append({"h": quando, "t": f"{vend.split()[0]} registrou {nomes_canal[canal]} ({nome_fam[fid]})", "f": fid})
+
+    nf_sem_crm, nf_info = notas_sem_crm(vendas, opp_info, ultima_tarefa, cfg)
 
     qualidade = {
         "tarefasTotal": q["tarefas_total"],
@@ -541,6 +597,8 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
         "fasesCrm": fases_crm,
         "recentes": ult,
         "alertasExtra": [],
+        "nfSemCrm": nf_sem_crm,
+        "nfSemCrmInfo": nf_info,
     }
 
 
@@ -669,6 +727,7 @@ def main():
     hoje = datetime.datetime.now(TZ_SP).date()
     vendas = extrair_vendas(REPO_DIR)
     if "--amostra" in sys.argv:
+        vendas.pop("_notas", None)
         gravar_js(gerar_amostra(cfg, vendas, hoje))
         return
 
