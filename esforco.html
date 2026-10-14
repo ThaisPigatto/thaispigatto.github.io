@@ -590,7 +590,7 @@ function tvCalc(){
   var R=tvRange(), mesRef=(TV.modo==='semana'?HOJE:R.from).slice(0,7), semMeta=true;
   function item(k,nome,realFn,mt){
     if(mt==null) return {k:k,nome:nome,meta:null,real:realFn()};   // mês sem meta: mostra só o realizado
-    var sem=mt[k]; if(sem==null) return null;                      // família sem essa meta
+    var sem=mt[k]; if(sem==null) return {k:k,nome:nome,meta:null,real:realFn(),semMetaFam:true};   // família sem essa meta: mostra '-' na meta e o realizado, com a cor da linha
     return {k:k,nome:nome,meta:metaPer(sem,R.from,R.to),real:realFn()}; }
   var fams=FAM.map(function(f,fi){
     var mt=metasDe(f,mesRef); if(mt) semMeta=false;
@@ -606,7 +606,7 @@ function renderTV(){
   C.incHub=incHub; C.fams=fams;
   var total=bizDays(R.from,R.to), dec=bizDays(R.from,R.upTo), esp=total?dec/total:0;
   $('#tvPace').innerHTML=C.semMeta
-    ? R.nome+' · <b>sem meta neste período</b> (as metas valem a partir de '+mesNome(META_INICIO)+') · só o realizado'
+    ? R.nome+' · <b>sem meta neste período</b>: antes de '+mesNome(META_INICIO)+' nenhuma família tinha meta (nem semanal, nem mensal) · só o realizado'
     : R.nome+' · dia útil <b>'+dec+'</b> de <b>'+total+'</b> · esperado até hoje <b>'+P(esp,0)+'</b>';
   var comMeta=todos.filter(function(x){return x.prog!=null;});
   var tot=comMeta.length?progresso([].concat.apply([],comMeta.map(function(x){return x.itens.filter(function(i){return i&&i.meta!=null;}).map(function(i){return {meta:i.meta,real:i.real};});}))):null;
@@ -695,7 +695,7 @@ function renderTvChart(C){
   C.fams.concat(C.incHub?[C.hub]:[]).forEach(function(x){totMeta+=x.sm;});
   var total=bizDays(R.from,R.to), n=0;
   for(var d=parse(R.from); iso(d)<=R.to; d=addDays(d,1)){ if(!isBiz(d)) continue; n++; var ds=iso(d); labels.push(dm(ds));
-    if(ds<=R.upTo){ var dia=0; C.fams.forEach(function(x){ x.itens.forEach(function(it){ if(it) dia+=realiz(x.fi,it.k,ds,ds); }); }); if(C.incHub) dia+=hubSoma('anuncio',ds,ds)+hubSoma('licitacao',ds,ds); acc+=dia; real.push(acc); } else real.push(null);
+    if(ds<=R.upTo){ var dia=0; C.fams.forEach(function(x){ x.itens.forEach(function(it){ if(it&&(C.semMeta||it.meta!=null)) dia+=realiz(x.fi,it.k,ds,ds); }); }); if(C.incHub) dia+=hubSoma('anuncio',ds,ds)+hubSoma('licitacao',ds,ds); acc+=dia; real.push(acc); } else real.push(null);
     esp.push(totMeta*n/total); }
   var ds1=[{label:'Realizado (acumulado)',data:real,borderColor:'#0B6FB8',backgroundColor:'rgba(11,111,184,.10)',fill:true,tension:.3,pointRadius:2,spanGaps:false}];
   if(totMeta>0&&!C.semMeta) ds1.push({label:'Ritmo esperado',data:esp,borderColor:'#9AA7B1',borderDash:[6,4],pointRadius:0,tension:0});
@@ -1031,7 +1031,7 @@ function renderSemana(){
   var t={baixo:'PREENCHIMENTO DO CRM ESTÁ BAIXO ⚠️',bom:'PREENCHIMENTO DO CRM ESTÁ BOM ✅',neutro:'PREENCHIMENTO DO CRM: sem dados suficientes'}[pre.nivel];
   $('#smResumo').innerHTML='<div style="margin-bottom:16px"><div class="sm-chip '+pre.nivel+'">'+t+pre.motivos.map(function(m){return '<small>'+esc(m)+'</small>';}).join('')+'</div></div>'+
     '<div class="cards">'+[
-      ['Esforço vs meta da semana',PP(tot),tot==null?'sem meta neste período':'ações registradas ÷ meta (cada meta até 100%)'],
+      ['Esforço vs meta da semana',PP(tot),tot==null?'sem meta neste período (antes de '+mesNome(META_INICIO)+' nenhuma família tinha meta)':'ações registradas ÷ meta (cada meta até 100%)'],
       ['Ações registradas no CRM',N(cur.total),delta(cur.total,prev.total)],
       ['Dias úteis com registro',Object.keys(diasReg).length+' de '+du,'dias com pelo menos 1 ação'],
       ['Oportunidades novas',N(criadas),N(ganh)+' ganhas na semana'],
