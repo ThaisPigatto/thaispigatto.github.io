@@ -40,6 +40,12 @@ window.ESFORCO_MENU = [
     {id:'tatico-papeis',         nome:'Papéis + Etiquetas',      src:'numeros-tatico.html?f=papeis'}
   ]},
 
+  // PAINEL COMERCIAL - VISÃO CSC: resultado geral de vendas do mês (sem família), aberto SEM senha
+  {id:'csc', nome:'Painel Comercial - Visão CSC', tipo:'pagina', src:'painel-csc.html', restrito:false},
+
   // CHAMADOS/SUPORTE: abre SEM a senha 0201 — cada pessoa da equipe entra com o próprio usuário e senha (criada no 1º acesso)
-  {id:'chamados', nome:'CHAMADOS/SUPORTE', tipo:'pagina', src:'chamados.html', restrito:false}
+  {id:'chamados', nome:'CHAMADOS/SUPORTE', tipo:'pagina', src:'chamados.html', restrito:false},
+
+  // PROJETOS CLAUDE: aberto para todos; cadastrar/editar pede o usuário e senha do CHAMADOS/SUPORTE. destaque:true = fundo laranja no menu
+  {id:'projetos', nome:'PROJETOS CLAUDE', tipo:'pagina', src:'projetos-claude.html', restrito:false, destaque:true}
 ];

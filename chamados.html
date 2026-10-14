@@ -119,7 +119,6 @@ thead th{background:var(--navy);color:#fff;font-family:var(--display);font-size:
     <nav class="nav" role="tablist">
       <button role="tab" data-tab="abertos" aria-selected="true">Em aberto</button>
       <button role="tab" data-tab="finalizados" aria-selected="false">Finalizados</button>
-      <button role="tab" data-tab="vendas" aria-selected="false">Vendas (geral)</button>
       <button role="tab" data-tab="equipe" aria-selected="false" class="hidden" id="tabEquipe">Equipe</button>
     </nav>
     <div id="pChamados">
@@ -128,7 +127,6 @@ thead th{background:var(--navy);color:#fff;font-family:var(--display);font-size:
         <input id="fBusca" placeholder="Buscar vendedor, protocolo ou texto"><span class="foot" id="atualizado"></span></div>
       <div class="lista" id="lista"></div>
     </div>
-    <div id="pVendas" class="hidden"></div>
     <div id="pEquipe" class="hidden"></div>
   </section>
 </div>
@@ -203,8 +201,8 @@ async function carregar(){
 }
 function abrirAba(t){
   TAB = t; document.querySelectorAll('.nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
-  $('pChamados').classList.toggle('hidden', !['abertos','finalizados'].includes(t)); $('pVendas').classList.toggle('hidden', t !== 'vendas'); $('pEquipe').classList.toggle('hidden', t !== 'equipe');
-  if (t === 'vendas') vendas(); else if (t === 'equipe') equipe(); else render();
+  $('pChamados').classList.toggle('hidden', !['abertos','finalizados'].includes(t)); $('pEquipe').classList.toggle('hidden', t !== 'equipe');
+  if (t === 'equipe') equipe(); else render();
 }
 document.querySelectorAll('.nav button').forEach(b => b.onclick = () => abrirAba(b.dataset.tab));
 ['fPara','fUrg'].forEach(id => $(id).onchange = render); $('fBusca').oninput = render;
@@ -279,25 +277,6 @@ function equipe(){
   document.querySelectorAll('[data-reset]').forEach(b => b.onclick = async () => {
     const p = quem(b.dataset.reset); if (!confirm(`Apagar a senha de ${p.nome}? No próximo acesso, ${p.nome.split(' ')[0]} cria uma nova.`)) return;
     const j = await api({ acao:'resetar-senha', user:USER, senha:SENHA, alvo:p.id }); alert(j.ok ? 'Senha apagada.' : 'Não foi possível.'); });
-}
-
-/* ---------- vendas (geral) ---------- */
-function extrairDATA(html){ const m = html.match(/const DATA\s*=\s*\{/); if (!m) return null;
-  let i = m.index + m[0].length - 1, prof = 0, txt = false, e = false;
-  for (let j = i; j < html.length; j++){ const c = html[j]; if (txt){ if (e) e = false; else if (c === '\\') e = true; else if (c === '"') txt = false; }
-    else if (c === '"') txt = true; else if (c === '{') prof++; else if (c === '}' && --prof === 0) return JSON.parse(html.slice(i, j+1)); } return null; }
-async function vendas(){
-  const el = $('pVendas'); el.innerHTML = '<div class="card">Carregando…</div>';
-  let VD; try { VD = extrairDATA(await (await fetch('index.html?v=' + Date.now(), {cache:'no-store'})).text()); } catch(e){}
-  if (!VD){ el.innerHTML = '<div class="card">Não foi possível carregar o relatório de vendas agora.</div>'; return; }
-  const t = VD.totais, mi = VD.meta_info || {}, liq = (t.faturado||0) + (t.devolucoes||0);
-  const trilho = (p, bg) => { const w = Math.min(100, Math.max(0, p*100)); return `<div class="trk"><div class="bg" style="background:${bg}"></div><div class="fill" style="width:${w}%"></div><span class="pc" style="left:calc(${w}% + 12px)">${pct(p)}</span></div>`; };
-  el.innerHTML = `<div class="card"><h2>Resultado geral de vendas</h2><p class="sub">${esc(mi.inicio_mes||'')} a ${esc(mi.fim_mes||'')} · atualizado em ${esc(mi.atualizado_em||'')} · dia útil ${t.dias_uteis_decorridos} de ${t.dias_uteis_total}</p>
-    <div class="vk"><div class="kpi"><div class="lb">Meta do mês</div><div class="vl">${brl(t.meta)}</div></div>
-      <div class="kpi"><div class="lb">Faturado</div><div class="vl" style="color:#14532D">${brl(liq)}</div><div class="foot">${pct(t.realizado_pct)} da meta</div></div>
-      <div class="kpi"><div class="lb">Previsto (a faturar)</div><div class="vl" style="color:#8A6D00">${brl(t.previsto)}</div><div class="foot">${pct(t.previsto_pct)} da meta</div></div>
-      <div class="kpi"><div class="lb">Falta para a meta</div><div class="vl" style="color:#B42318">${brl(t.dif_meta_prev)}</div><div class="foot">${pct(t.faltante_pct)} restante</div></div></div>
-    <div style="max-width:760px;margin:10px auto 0">${trilho(t.realizado_pct, '#DDE2E7')}<div class="lbl">FATURADO</div>${trilho(t.prevfat_pct, '#FFF4C7')}<div class="lbl">PREVISTO + FATURADO · esperado até hoje ${pct(t.esperado_pct)}</div></div></div>`;
 }
 
 /* ---------- início ---------- */

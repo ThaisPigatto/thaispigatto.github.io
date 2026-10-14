@@ -23,6 +23,8 @@
   .logo img{width:100%;max-width:170px;height:auto;display:block;}
   .nav button{width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.72);font:500 13.5px 'Inter',sans-serif;padding:9px 12px;border-radius:10px;margin-bottom:4px;cursor:pointer;line-height:1.35;}
   .nav button.active{background:rgba(255,255,255,.14);color:#fff;}
+  .nav button.destaque{background:#F7941D;color:#fff;font-weight:800;letter-spacing:.4px;margin-top:8px;box-shadow:0 4px 12px rgba(247,148,29,.35);}
+  .nav button.destaque:hover,.nav button.destaque.active{background:#E07F0A;color:#fff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.7);}
   .nav button:hover{background:rgba(255,255,255,.08);}
   .nav button.grp{display:flex;justify-content:space-between;align-items:center;font-weight:700;letter-spacing:.2px;}
   .nav button.grp i{font-style:normal;font-size:11px;opacity:.7;transition:transform .15s;}
@@ -513,7 +515,7 @@ function montarMenu(){
       fs.forEach(function(f){ var b=document.createElement('button'); b.textContent=f.nome+(f.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',f.id); if(f.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(f);}); box.appendChild(b); });
     } else if(m.tipo==='painel'||temSrc(m)){
       if(m.oculto&&!unlocked) return;     // seção só por link (aparece no menu depois que a senha for digitada)
-      var b=document.createElement('button'); b.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',m.id); if(m.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b);
+      var b=document.createElement('button'); b.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',m.id); if(m.id===ATUAL) b.className='active'; if(m.destaque) b.classList.add('destaque'); b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b);
     }
   });
 }
