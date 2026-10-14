@@ -1,13 +1,19 @@
 name: Atualizar Esforço Comercial (CRM)
+# Horários desejados (Brasília): 06h, 10h, 14h e 17h, todos os dias.
+# O agendamento do GitHub (schedule) costuma atrasar horas ou pular horários. Por isso há 3 gatilhos:
+#   1) logo depois de cada execução do robô de faturamento (que roda toda hora, de forma confiável);
+#   2) o agendamento do GitHub, como reserva;
+#   3) manual: aba Actions > Atualizar Esforço Comercial (CRM) > Run workflow.
+# Em todos os casos o robô só atualiza se já passou um horário (06/10/14/17h) desde a última atualização;
+# se não for a hora, a execução termina sozinha em segundos, sem mexer em nada.
 on:
+  workflow_run:
+    workflows: ["Atualizar Painel Comercial Pigatto"]
+    types: [completed]
   schedule:
-    # Todos os dias (segunda a domingo), às 06:05 e às 14:05 (horário de Brasília).
-    # As linhas seguintes são TENTATIVAS EXTRAS (30 e 60 min depois): o GitHub às vezes atrasa ou pula um horário.
-    # Se o painel já foi atualizado há pouco, a tentativa extra se encerra sozinha em segundos.
-    - cron: '5 9,17 * * *'      # 06:05 e 14:05
-    - cron: '35 9,17 * * *'     # 06:35 e 14:35 (reserva)
-    - cron: '5 10,18 * * *'     # 07:05 e 15:05 (reserva)
-  workflow_dispatch:            # também dá pra rodar na mão: aba Actions > Atualizar Esforço Comercial > Run workflow
+    - cron: '12 9,13,17,20 * * *'   # 06:12, 10:12, 14:12, 17:12 (Brasília) - reserva
+    - cron: '42 9,13,17,20 * * *'   # 06:42, 10:42, 14:42, 17:42 (Brasília) - reserva
+  workflow_dispatch:
 permissions:
   contents: write
 concurrency:
@@ -15,36 +21,46 @@ concurrency:
   cancel-in-progress: false
 jobs:
   atualizar:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
     steps:
       - name: Checkout do repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Já atualizou há pouco? (evita rodar duas vezes no mesmo horário)
-        id: fresco
+      - name: Está na hora de atualizar? (06h, 10h, 14h e 17h de Brasília)
+        id: hora
         env:
           EVENTO: ${{ github.event_name }}
         run: |
           python - <<'PY'
           import os, re, datetime
-          pular = False
-          if os.environ.get("EVENTO") == "schedule":
+          from zoneinfo import ZoneInfo
+          SP = ZoneInfo("America/Sao_Paulo")
+          HORARIOS = [6, 10, 14, 17]
+          agora = datetime.datetime.now(SP)
+          # último horário-alvo que já passou (hoje ou ontem)
+          alvos = [agora.replace(hour=h, minute=0, second=0, microsecond=0) - datetime.timedelta(days=d)
+                   for d in (0, 1) for h in HORARIOS]
+          ultimo_alvo = max(a for a in alvos if a <= agora)
+          rodar = True
+          if os.environ.get("EVENTO") != "workflow_dispatch":
               try:
-                  txt = open("esforco_data.js", encoding="utf-8").read(2000)
+                  txt = open("esforco_data.js", encoding="utf-8").read(3000)
                   ger = datetime.datetime.fromisoformat(re.search(r'"geradoEm":"([^"]+)"', txt).group(1))
-                  idade = (datetime.datetime.now(datetime.timezone.utc) - ger).total_seconds() / 60
-                  pular = idade < 150
-                  print(f"Última atualização há {idade:.0f} min -> {'pula esta tentativa' if pular else 'atualiza agora'}")
+                  if ger.tzinfo is None:
+                      ger = ger.replace(tzinfo=datetime.timezone.utc)
+                  rodar = ger < ultimo_alvo
+                  print(f"Última atualização: {ger.astimezone(SP):%d/%m %H:%M} · horário-alvo mais recente: {ultimo_alvo:%d/%m %H:%M}")
               except Exception as e:
                   print("Não consegui ler a data da última atualização, vou atualizar:", e)
-          open(os.environ["GITHUB_OUTPUT"], "a").write("pular=%s\n" % ("true" if pular else "false"))
+          print("-> ATUALIZA AGORA" if rodar else "-> já está em dia, nada a fazer")
+          open(os.environ["GITHUB_OUTPUT"], "a").write("rodar=%s\n" % ("true" if rodar else "false"))
           PY
-      - name: Rodar robô (lê CRM do Omie, regrava esforco_data.js)
-        if: steps.fresco.outputs.pular != 'true'
+      - name: Rodar robô (lê CRM do Omie, regrava esforco_data.js) com até 3 tentativas
+        if: steps.hora.outputs.rodar == 'true'
         env:
           OMIE_MATRIZ_APP_KEY: ${{ secrets.OMIE_MATRIZ_APP_KEY }}
           OMIE_MATRIZ_APP_SECRET: ${{ secrets.OMIE_MATRIZ_APP_SECRET }}
@@ -52,9 +68,17 @@ jobs:
           OMIE_PAPEIS_APP_SECRET: ${{ secrets.OMIE_PAPEIS_APP_SECRET }}
         run: |
           set -o pipefail
-          python automacao/esforco_crm.py 2>&1 | tee saida_esforco.log
+          for i in 1 2 3; do
+            if python automacao/esforco_crm.py 2>&1 | tee saida_esforco.log; then
+              echo "Robô concluído na tentativa $i."
+              exit 0
+            fi
+            echo "Tentativa $i falhou (Omie ocupado ou instável)."
+            if [ "$i" -lt 3 ]; then echo "Esperando 2 minutos para tentar de novo..."; sleep 120; fi
+          done
+          exit 1
       - name: Publicar (commit + push) só se algo mudou
-        if: steps.fresco.outputs.pular != 'true'
+        if: steps.hora.outputs.rodar == 'true'
         run: |
           git config user.name "Painel Pigatto (robô)"
           git config user.email "actions@github.com"
