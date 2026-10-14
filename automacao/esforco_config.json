@@ -134,7 +134,9 @@
     },
     "responsaveis": [
       "Jéssica Sant'Anna"
-    ]
+    ],
+    "anuncios_url": "https://script.google.com/macros/s/AKfycbxAfTiOwt-qhyn3vjy-uhFkd7LiC-Jxb05xseGaq3PuLKBEZ310GwUx4G559MFHZg_Lug/exec",
+    "_obs_anuncios": "Anúncios contam pelos links registrados na página anuncios-hub.html (planilha do Tático, aba \"anuncios\"). Licitações continuam pelo CRM. Vendas de Mercado Livre não entram no aviso de nota sem CRM."
   },
   "cliente_reciclado_conta_como": "novo",
   "ligacao_conta_em_contato_se_familia_sem_meta_de_ligacao": true,

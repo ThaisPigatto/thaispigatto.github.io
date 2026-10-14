@@ -361,7 +361,10 @@ def extrair_vendas(repo_dir):
                 dia = data_br_para_iso(r.get("data_fatura", "") or "")
                 if dia:                          # notas faturadas por dia e família (usado no aviso "venda sem CRM")
                     por_dia[(dia, grupo)].add((r.get("empresa"), r.get("nota_fiscal")))
-                if dia and ("cliente" in r or "cnpj" in r):
+                # Hub: venda de Mercado Livre não precisa de registro no CRM, só Licitação (Thais, 14/10/2026).
+                # Vendas do Hub vêm com vendedor "Jéssica"; sem a marcação is_lic (arquivo antigo) contam como Mercado Livre.
+                hub_ml = r.get("is_ml") or (r.get("vendedor") == "Jéssica" and not r.get("is_lic"))
+                if dia and ("cliente" in r or "cnpj" in r) and not hub_ml:
                     ch = (r.get("empresa"), r.get("nota_fiscal"))
                     n = notas_cli.setdefault(ch, {"e": r.get("empresa"), "nf": r.get("nota_fiscal"), "ped": r.get("pedido"),
                                                   "cli": r.get("cliente") or "", "doc": r.get("cnpj") or "", "d": dia,
@@ -384,6 +387,31 @@ def extrair_vendas(repo_dir):
 # ----------------------------------------------------------------------------
 # montagem dos dados (função pura: recebe o que veio do Omie, devolve o dicionário do painel)
 # ----------------------------------------------------------------------------
+def anuncios_hub(cfg):
+    """Anúncios do Hub registrados na planilha (página anuncios-hub.html). Devolve lista de {data, link, ...}
+    ou None se a planilha não estiver configurada. Se a leitura falhar, reaproveita os anúncios do arquivo atual."""
+    url = cfg.get("hub", {}).get("anuncios_url")
+    if not url:
+        return None
+    try:
+        sep = "&" if "?" in url else "?"
+        with urllib.request.urlopen(f"{url}{sep}anuncios=1", timeout=60) as resp:   # o Google redireciona; urllib segue sozinho
+            j = json.loads(resp.read().decode("utf-8"))
+        if not j.get("ok"):
+            raise ValueError(j.get("erro"))
+        print(f"Anúncios do Hub na planilha: {len(j['anuncios'])}")
+        return j["anuncios"]
+    except Exception as e:
+        print(f"AVISO: não consegui ler os anúncios do Hub na planilha ({e}) — mantendo os da última atualização")
+        try:
+            with open(SAIDA_JS, encoding="utf-8") as f:
+                txt = f.read()
+            ant = json.loads(txt[txt.index("{"):txt.rstrip().rstrip(";").rindex("}") + 1])
+            return [{"data": d} for d, regra, qtd in ant.get("hubRegistros", []) if regra == "anuncio" for _ in range(qtd)]
+        except Exception:
+            return None
+
+
 def _nome_cli(s):
     return re.sub(r"[^a-z0-9]", "", norm(s or ""))
 
@@ -426,7 +454,7 @@ def notas_sem_crm(vendas, opp_info, ultima_tarefa, cfg):
     return faltando, info
 
 
-def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
+def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None):
     """
     empresas = { 'matriz': {'lookups': {...}, 'oportunidades': [...], 'tarefas': [...]}, 'papeis': {...} }
     hoje     = datetime.date (data de hoje em São Paulo)
@@ -501,6 +529,8 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
             descr = norm(f"{t.get('cDescricao', '')} {info['nome'] if info else ''}")
             # Hub: por solução do Hub ou por palavra na descrição
             for regra, palavras in cfg["hub"].get("regras_texto", {}).items():
+                if regra == "anuncio" and anuncios is not None:
+                    continue   # anúncios contam pela planilha de links (ver anuncios_hub)
                 if any(norm(p) in descr for p in palavras) and (info is None or info["fam"] in (None, "hub")):
                     hub_cont[(d_iso, regra)] += 1
             if info is None or info["fam"] is None or info["fam"] == "hub":
@@ -513,6 +543,11 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None):
                 ultima_tarefa[chave] = d_iso
             recentes.append((d_iso, t.get("cHora", "00:00"), vend, canal, info["fam"]))
 
+    if anuncios is not None:   # cada link de anúncio registrado na planilha = 1 anúncio no dia informado
+        for a in anuncios:
+            d_iso = str(a.get("data", ""))[:10]
+            if inicio <= d_iso <= hoje_iso:
+                hub_cont[(d_iso, "anuncio")] += 1
     atividades = [[d, f, v, c, ti, qtd] for (d, f, v, c, ti), qtd in sorted(contagem.items())]
     hub_regs = [[d, r, qtd] for (d, r), qtd in sorted(hub_cont.items())]
 
@@ -744,7 +779,7 @@ def main():
         print(f"{emp}: {len(oportunidades)} oportunidades, {len(tarefas)} tarefas")
         empresas[emp] = {"lookups": lookups, "oportunidades": oportunidades, "tarefas": tarefas}
 
-    dados = montar_dados(empresas, cfg, vendas, hoje)
+    dados = montar_dados(empresas, cfg, vendas, hoje, anuncios=anuncios_hub(cfg))
     # trava de segurança: nunca sobrescreve o arquivo bom com um vazio
     if not dados["atividades"]:
         print("VALIDAÇÃO FALHOU: nenhuma atividade encontrada — esforco_data.js NÃO foi alterado.")

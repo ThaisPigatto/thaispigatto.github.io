@@ -1007,7 +1007,7 @@ def montar_data(real_rows, prev_rows):
         return [{"Vendedor": k[0], "Família de Produto": k[1], "Total de Mercadoria": round(v, 2)} for k, v in vf.items()]
 
     raw_cols = ["familia", "vendedor", "nota_fiscal", "pedido", "situacao", "empresa", "operacao", "cfop", "total",
-                "data_previsao", "data_fatura", "cliente", "cnpj"]
+                "data_previsao", "data_fatura", "cliente", "cnpj", "is_ml", "is_lic"]
 
     return {
         "totais": totais,
