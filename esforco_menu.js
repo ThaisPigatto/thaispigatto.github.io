@@ -25,6 +25,9 @@ window.ESFORCO_MENU = [
 
   {id:'diag', nome:'Diagnóstico Geral - Trimestre/Ano', tipo:'pagina', src:'resultados.html', restrito:true},
 
+  // PORTAL DO VENDEDOR: dentro do dash abre no modo gestão (escolhe o vendedor no topo). Cada vendedor usa o próprio link (links-vendedores.txt).
+  {id:'portal', nome:'Portal do Vendedor', tipo:'pagina', src:'vendedor.html', restrito:true},
+
   // NÚMEROS PARA O TÁTICO: única área aberta SEM senha. Todas as famílias usam o mesmo arquivo numeros-tatico.html (?f=família).
   {id:'tatico', nome:'NÚMEROS PARA O TÁTICO', tipo:'grupo', restrito:false, filhos:[
     {id:'tatico-plasticos',      nome:'Plásticos de Engenharia', src:'numeros-tatico.html?f=plasticos'},
