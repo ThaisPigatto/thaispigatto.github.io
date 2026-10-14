@@ -28,6 +28,9 @@ window.ESFORCO_MENU = [
   // PORTAL DO VENDEDOR: dentro do dash abre no modo gestão (escolhe o vendedor no topo). Cada vendedor usa o próprio link (links-vendedores.txt).
   {id:'portal', nome:'Portal do Vendedor', tipo:'pagina', src:'vendedor.html', restrito:true},
 
+  // ANÚNCIOS DO HUB: registra o link de cada anúncio (conta na meta de anúncios do Hub)
+  {id:'anuncios', nome:'Anúncios do Hub (registrar)', tipo:'pagina', src:'anuncios-hub.html', restrito:true},
+
   // NÚMEROS PARA O TÁTICO: única área aberta SEM senha. Todas as famílias usam o mesmo arquivo numeros-tatico.html (?f=família).
   {id:'tatico', nome:'NÚMEROS PARA O TÁTICO', tipo:'grupo', restrito:false, filhos:[
     {id:'tatico-plasticos',      nome:'Plásticos de Engenharia', src:'numeros-tatico.html?f=plasticos'},
