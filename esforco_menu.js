@@ -38,5 +38,8 @@ window.ESFORCO_MENU = [
     {id:'tatico-hub',            nome:'Pigatto Hub + Licitação', src:'numeros-tatico.html?f=hub'},
     {id:'tatico-especialidades', nome:'Especialidades',          src:'numeros-tatico.html?f=especialidades'},
     {id:'tatico-papeis',         nome:'Papéis + Etiquetas',      src:'numeros-tatico.html?f=papeis'}
-  ]}
+  ]},
+
+  // CHAMADOS/SUPORTE: abre SEM a senha 0201 — cada pessoa da equipe entra com o próprio usuário e senha (criada no 1º acesso)
+  {id:'chamados', nome:'CHAMADOS/SUPORTE', tipo:'pagina', src:'chamados.html', restrito:false}
 ];
