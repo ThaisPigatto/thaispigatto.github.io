@@ -148,6 +148,13 @@ tr.hub td{background:#FFFBD6}
 .pr.alta input:checked + span{background:#D64545;color:#fff}
 .pr input:focus-visible + span{outline:3px solid var(--orange);outline-offset:2px}
 .form textarea{min-height:200px}
+.btn.vermelho-g{background:#D64545;border-color:#D64545;color:#fff;font-size:16px;padding:12px 22px;box-shadow:0 6px 16px rgba(214,69,69,.3)}
+.btn.vermelho-g:hover{background:#B83434}
+.pm{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.pm-ctrl{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pm-ctrl select,.pm-ctrl input,.pm-ctrl textarea{padding:8px 10px;border:1px solid var(--line);border-radius:9px;font:inherit}
+.pm-ctrl textarea{width:100%;min-height:60px}
+.novo-ler{width:100%;background:#EFE7FB;border:2px dashed #8E5BD6;color:#5A2F9E;margin-top:8px}
 .sup-intro{font-size:16px;margin:4px 0 12px}
 .sup-aviso{display:flex;gap:10px;align-items:flex-start;background:#EAF2FB;border:1px solid #9CC0E8;border-left:5px solid #1D5FAF;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:14.5px}
 .sup-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -374,11 +381,14 @@ function pontosDeAtencao(){
     const zerados = bs.its.filter(i => i.meta >= 1 && i.real === 0).map(i => i.nome);
     if (eS >= .4 && zerados.length && xs !== 0) at.push(['', `<b>${esc(bs.f.nome)}:</b> sem registro nesta semana em ${esc(zerados.join(', '))}.`]);
   });
-  if (VIDX >= 0){
-    const ult = ROWS.filter(r => r.v === VIDX && r.d <= HOJE).reduce((m,r) => r.d > m ? r.d : m, '');
-    let d = addDays(parse(HOJE), -1); while (!isBiz(d)) d = addDays(d,-1); const ontem = iso(d);
-    if (!ult) at.push(['bad', 'Nenhuma ação sua registrada no CRM ainda.']);
-    else if (ult < ontem) at.push(['', `Sua última ação registrada no CRM foi em <b>${dm(ult)}</b>.`]);
+  { // última ação registrada no CRM pela família (todos os vendedores dela)
+    const fis = V.famCrm.map(f => FAMID[f]).filter(x => x != null);
+    if (fis.length){
+      const ult = ROWS.filter(r => fis.includes(r.f) && r.d <= HOJE).reduce((m,r) => r.d > m ? r.d : m, '');
+      let d = addDays(parse(HOJE), -1); while (!isBiz(d)) d = addDays(d,-1); const ontem = iso(d);
+      if (!ult) at.push(['bad', 'Nenhuma ação da família registrada no CRM ainda.']);
+      else if (ult < ontem) at.push(['', `A última ação da família registrada no CRM foi em <b>${dm(ult)}</b>.`]);
+    }
   }
   if (VD) gruposDoVendedor().forEach(g => { const t = VD.totais || {}; const p = g.realizado_pct, e = t.esperado_pct;
     if (p != null && e != null && e >= .2 && p < e * .8) at.push(['', `<b>Faturamento ${esc(nomeGrupo(g))}:</b> ${P(p)} da meta, esperado ${P(e)} até hoje.`]); });
@@ -420,7 +430,7 @@ function renderCRM(){
   const nfs = notasSemCrm(), info = D.nfSemCrmInfo;
   const nfCard = `<div class="card nfalert ${nfs && !nfs.length ? 'ok' : ''}">
     <div class="nfalert-h"><span class="nfalert-ic" aria-hidden="true">${nfs && !nfs.length ? '✅' : '⚠️'}</span><div><div class="nfalert-t">${nfs && !nfs.length ? 'Notas faturadas: tudo registrado no CRM' : 'Atenção: notas faturadas sem registro no CRM'}</div>
-      <div class="sub" style="margin:2px 0 0">Notas suas no relatório de vendas cujo cliente ainda não tem oportunidade registrada no CRM${info ? ` (desde ${dm(info.desde)}/${info.desde.slice(0,4)})` : ''}. Depois que você registrar, a nota some daqui na próxima atualização.</div></div></div>
+      <div class="sub" style="margin:2px 0 0">Notas da sua família no relatório de vendas cujo cliente ainda não tem oportunidade registrada no CRM${info ? ` (desde ${dm(info.desde)}/${info.desde.slice(0,4)})` : ''}. Depois que você registrar, a nota some daqui na próxima atualização.</div></div></div>
     ${!nfs ? '<div class="loading" style="padding:10px;text-align:left">Esta lista começa a aparecer a partir da próxima atualização dos robôs.</div>' :
       `<div class="nfbox" style="margin-top:14px"><div class="nfnum ${nfs.length ? '' : 'zero'}">${nfs.length}</div><div>${nfs.length ? `nota(s) aguardando registro no CRM · ${R(nfs.reduce((t,n) => t + n.v, 0))}` : 'Nenhuma nota pendente.'}</div>
        ${nfs.length ? '<button class="btn laranja" id="btNfs">Ver quais são</button>' : ''}</div><div id="nfLista" class="hidden" style="margin-top:14px"></div>`}</div>`;
@@ -439,12 +449,13 @@ function renderCRM(){
   const sm = $('crmMes'); if (sm) sm.onchange = e => { MES_CRM = e.target.value; renderCRM(); };
   const bt = $('btNfs');
   if (bt) bt.onclick = () => { const l = $('nfLista'); l.classList.toggle('hidden'); bt.textContent = l.classList.contains('hidden') ? 'Ver quais são' : 'Esconder lista';
-    l.innerHTML = `<div class="tw"><table><thead><tr><th>Nota fiscal</th><th>Pedido</th><th>Cliente</th><th>CNPJ / CPF</th><th>Data da venda</th><th>Empresa</th><th>Valor</th></tr></thead><tbody>${
-      nfs.map(n => `<tr><td>${esc(n.nf)}</td><td>${esc(n.ped || '—')}</td><td style="text-align:left">${esc(n.cli || '—')}</td><td>${esc(n.doc || '—')}</td><td>${dm(n.d)}/${n.d.slice(0,4)}</td><td>${n.e === 'papeis' ? 'Pápeis' : 'Matriz'}</td><td>${R(n.v)}</td></tr>`).join('')}</tbody></table></div>`; };
+    l.innerHTML = `<div class="tw"><table><thead><tr><th>Nota fiscal</th><th>Pedido</th><th>Vendedor</th><th>Cliente</th><th>CNPJ / CPF</th><th>Data da venda</th><th>Empresa</th><th>Valor</th></tr></thead><tbody>${
+      nfs.map(n => `<tr class="${V.vendas.includes(n.vend) ? 'meu' : ''}"><td>${esc(n.nf)}</td><td>${esc(n.ped || '—')}</td><td>${esc(n.vend || '—')}</td><td style="text-align:left">${esc(n.cli || '—')}</td><td>${esc(n.doc || '—')}</td><td>${dm(n.d)}/${n.d.slice(0,4)}</td><td>${n.e === 'papeis' ? 'Pápeis' : 'Matriz'}</td><td>${R(n.v)}</td></tr>`).join('')}</tbody></table></div><p class="foot">As linhas destacadas são suas.</p>`; };
 }
-function notasSemCrm(){
+function notasSemCrm(){ // notas da FAMÍLIA (todos os vendedores dela). Licitação do Hub (vendedor "Jéssica") aparece só para o Hub.
   if (!D || !D.nfSemCrmInfo || !D.nfSemCrmInfo.disponivel) return null;
-  return (D.nfSemCrm||[]).filter(n => V.vendas.includes(n.vend));
+  const hub = V.famCrm.includes('hub');
+  return (D.nfSemCrm||[]).filter(n => hub ? n.vend === 'Jéssica' : (n.vend !== 'Jéssica' && (n.fams||[]).some(f => V.famCrm.includes(f))));
 }
 
 /* ---------------- vendas ---------------- */
@@ -553,25 +564,33 @@ function renderTatico(){
     el.innerHTML = `<div class="ifr-top"><span>Números para o Tático · ${esc(V.setor)}</span><a class="btn" href="${src}" target="_blank" rel="noopener">Abrir em nova aba ↗</a></div>
       <iframe class="tat" src="${src}" title="Números para o Tático"></iframe>`; el.dataset.ok = '1'; }
 }
+const STV = { TRIAGEM:'Aguardando direcionamento', PENDENTE:'Pendente de visualização', ABERTO:'Em aberto', ANDAMENTO:'Em andamento', FINAL:'Em fase final', CONCLUIDO:'Concluído', CANCELADO:'Cancelado' };
+const stCor = s => ({'Aguardando direcionamento':['#E8ECF3','#33415C'],'Pendente de visualização':['#EFE7FB','#6B3FB5'],'Em aberto':['#E3EEFB','#1D5FAF'],'Em andamento':['#FFF0DC','#A85A00'],
+  'Em fase final':['#DDF4F1','#0E7C6B'],'Concluído':['#E3F5E8','#1E7A3C'],'Cancelado':['#EEF1F5','#5B6B80']})[s] || ['#EEF1F5','#5B6B80'];
+const stPill = s => { const [bg, fg] = stCor(s); return `<span class="pct" style="background:${bg};color:${fg}">${esc(s)}</span>`; };
+const dtc = s => s ? new Date(s).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '—';
 function renderAjuste(){
-  const el = $('tab-ajuste'), EQ = window.SUPORTE || [], CRIT = window.SUPORTE_CRITERIOS || {};
-  el.innerHTML = `<div class="card"><h2>Suporte / Ajuda</h2><p class="sup-intro">Está com alguma dúvida, precisa de algum dado, ou alguma informação precisa de ajuste?<br><b>Solicite abaixo:</b></p>
+  const el = $('tab-ajuste'), EQ = window.SUPORTE || [];
+  el.innerHTML = `<div class="card"><h2>Suporte / Ajuda</h2><p class="sup-intro">Está com alguma dúvida, precisa de algum dado, ou alguma informação precisa de ajuste?</p>
+    <button class="btn vermelho-g" id="abrirCh">+ Abrir chamado / Solicitar ajuda</button>
+    <p class="crit" style="margin:8px 0 14px">O chamado vai para o Gabriel Saenz, que direciona para a pessoa certa. Você acompanha o andamento aqui embaixo, em "Minhas solicitações".</p>
     <div class="sup-aviso"><span aria-hidden="true">ℹ️</span><div><b>Esta aba é somente para chamados de ajuste ou ajuda (suporte).</b><br>
       Não use para solicitar compra ou solicitar frete: esses pedidos seguem pelo processo normal de cada área.</div></div>
+    <h3 style="font-family:var(--display);margin:6px 0 10px;font-size:16px">Quem faz o quê</h3>
     <div class="sup-grid">${EQ.map(p => `<div class="sup-card"><div class="sup-top"><img src="${p.foto}" alt="Foto de ${esc(p.nome)}"><div>
         <div class="sup-nome">${esc(p.nome)}</div><div class="sup-cargo">${esc(p.cargo)}</div>
-        <div class="sup-btns"><button class="btn laranja" data-sup="${p.id}">Solicite auxílio</button>${p.botao ? `<a class="btn azul" href="${esc(p.botao.url)}" target="_blank" rel="noopener">${esc(p.botao.texto)} ↗</a>` : ''}</div></div></div>
+        ${p.botao ? `<div class="sup-btns"><a class="btn azul" href="${esc(p.botao.url)}" target="_blank" rel="noopener">${esc(p.botao.texto)} ↗</a></div>` : ''}</div></div>
         <ul class="sup-areas">${p.areas.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>`).join('')}</div></div>
+    <div class="card hidden" id="paraMimCard"><h2>Chamados direcionados a você</h2><p class="sub">O Gabriel Saenz direcionou estes chamados para você. Abra, leia e atualize o andamento.</p><div id="paraMim"></div></div>
     <div class="card" id="minhas"><h2>Minhas solicitações</h2><div id="minhasLista" class="sub">Carregando…</div></div>`;
-  el.querySelectorAll('[data-sup]').forEach(b => b.onclick = () => formSuporte(EQ.find(p => p.id === b.dataset.sup)));
+  $('abrirCh').onclick = () => formSuporte();
   minhasSolicitacoes();
 }
-function formSuporte(p){
+function formSuporte(){
   const CRIT = window.SUPORTE_CRITERIOS || {}, SETORES = ['Plásticos de Engenharia','Adesivos Estruturais','Especialidades','Pigatto Hub + Licitação','Papéis + Etiquetas'];
   const nomes = (window.VENDEDORES||[]).map(v => v.nome);
-  $('mTit').textContent = 'Solicitação para ' + p.nome;
-  $('mBody').innerHTML = `<div class="sup-para"><img src="${p.foto}" alt=""><div><b>${esc(p.nome)}</b><br><span class="foot">${esc(p.cargo)}</span></div></div>
-    <p class="crit" style="margin:-4px 0 12px">Somente ajuste ou ajuda (suporte). Pedidos de compra ou de frete não são feitos por aqui.</p>
+  $('mTit').textContent = 'Abrir chamado / Solicitar ajuda';
+  $('mBody').innerHTML = `<p class="crit" style="margin:-4px 0 12px">Somente ajuste ou ajuda (suporte). Pedidos de compra ou de frete não são feitos por aqui. O Gabriel Saenz recebe e direciona para o responsável.</p>
     <div class="form">
       <label>Nome<select id="aNome">${nomes.map(n => `<option ${n === V.nome ? 'selected' : ''}>${esc(n)}</option>`).join('')}<option value="__outro">Outros</option></select></label>
       <label id="aOutroBox" class="hidden">Escreva o seu nome<input id="aOutro" autocomplete="name"></label>
@@ -583,7 +602,7 @@ function formSuporte(p){
       <div class="crit" id="aCrit"></div>
       <label>Qual a solicitação?<textarea id="aMsg" placeholder="Descreva com detalhes o que precisa (cliente, pedido, nota, produto…)."></textarea></label>
       <label>Seu e-mail<input id="aEmail" type="email" autocomplete="email" placeholder="nome@pigattodistribuidora.com.br"></label>
-      <div><button class="btn laranja" id="aEnviar">Enviar solicitação</button></div><div id="aRes"></div></div>`;
+      <div><button class="btn vermelho-g" id="aEnviar">Enviar chamado</button></div><div id="aRes"></div></div>`;
   $('modal').classList.remove('hidden');
   try { const e = localStorage.getItem('portal_email'); if (e) $('aEmail').value = e; } catch(e){}
   const crit = () => { const u = (document.querySelector('input[name="aPrio"]:checked') || {}).value; $('aCrit').textContent = CRIT[u] || ''; };
@@ -596,30 +615,43 @@ function formSuporte(p){
     if (msg.length < 5){ alert('Descreva a solicitação antes de enviar.'); $('aMsg').focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Informe um e-mail válido para receber o retorno.'); $('aEmail').focus(); return; }
     try { localStorage.setItem('portal_email', email); } catch(e){}
-    const corpo = { acao:'chamado', para:p.id, nome, setor:$('aSetor').value, urgencia:urg, solicitacao:msg, email, k:K, pagina:'Portal do vendedor · link de ' + V.nome };
+    const corpo = { acao:'chamado', nome, setor:$('aSetor').value, urgencia:urg, solicitacao:msg, email, k:K, pagina:'Portal do vendedor · link de ' + V.nome };
     const btn = $('aEnviar'); btn.disabled = true; btn.textContent = 'Enviando…';
     try { const r = await fetch(API_CHAMADOS, { method:'POST', body: JSON.stringify(corpo) }); const j = await r.json(); if (!j.ok) throw new Error(j.erro || 'erro');
       $('mBody').innerHTML = `<div class="okmsg" style="font-size:16px">✅ <b>Solicitação enviada com sucesso, aguarde o retorno por e-mail!</b><br>
-        <span class="foot">Protocolo ${esc(j.protocolo)} · para ${esc(j.para)} · prazo de resposta até ${new Date(j.prazo).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</span></div>
+        <span class="foot">Protocolo ${esc(j.protocolo)} · o Gabriel Saenz vai direcionar para o responsável. Acompanhe em "Minhas solicitações".</span></div>
         <p style="margin-top:14px"><button class="btn" onclick="document.getElementById('modal').classList.add('hidden')">Fechar</button></p>`;
       minhasSolicitacoes(); }
-    catch(e){ const mailto = `mailto:${EMAIL_THAIS}?subject=${encodeURIComponent(`[${urg}] Solicitação para ${p.nome} — ${nome}`)}&body=${encodeURIComponent(`Para: ${p.nome}\nNome: ${nome}\nSetor: ${corpo.setor}\nUrgência: ${urg}\nE-mail: ${email}\n\n${msg}`)}`;
+    catch(e){ const mailto = `mailto:gabriel.saenz@grupopigatto.com.br?subject=${encodeURIComponent(`[${urg}] Chamado — ${nome}`)}&body=${encodeURIComponent(`Nome: ${nome}\nSetor: ${corpo.setor}\nUrgência: ${urg}\nE-mail: ${email}\n\n${msg}`)}`;
       $('aRes').innerHTML = `<div class="errmsg">Não foi possível enviar agora. <a href="${mailto}">Clique aqui para enviar por e-mail</a> com tudo já preenchido.</div>`; }
-    finally { if ($('aEnviar')){ btn.disabled = false; btn.textContent = 'Enviar solicitação'; } }
+    finally { if ($('aEnviar')){ btn.disabled = false; btn.textContent = 'Enviar chamado'; } }
   };
 }
 async function minhasSolicitacoes(){
   const el = $('minhasLista'); if (!el) return;
   if (!K){ el.innerHTML = 'No modo gestão, as solicitações aparecem só no link pessoal do vendedor. Para ver todas, use a página CHAMADOS/SUPORTE.'; return; }
-  try { const r = await fetch(API_CHAMADOS, { method:'POST', body: JSON.stringify({ acao:'chamados-vendedor', k:K }) }); const j = await r.json(); if (!j.ok) throw 0;
-    const agora = Date.now();
-    el.innerHTML = j.chamados.length ? `<div class="tw"><table><thead><tr><th>Protocolo</th><th>Para</th><th>Urgência</th><th>Aberto em</th><th>Situação</th><th style="text-align:left">Solicitação / resposta</th></tr></thead><tbody>${
-      j.chamados.map(c => { const fin = c.status === 'Finalizado', venc = !fin && c.prazo && new Date(c.prazo) < agora;
-        return `<tr><td>${esc(c.protocolo)}</td><td>${esc(c.paraNome)}</td><td><span class="pct ${c.urgencia === 'Alta' ? 'r' : 'v'}" style="${c.urgencia === 'Média' ? 'background:#FFF4CC;color:#8A6400' : ''}">${esc(c.urgencia)}</span></td>
-          <td>${new Date(c.abertoEm).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</td>
-          <td>${fin ? `<span class="pct ${c.resolvido === 'Sim' ? 'v' : 'r'}">${c.resolvido === 'Sim' ? '✔ Resolvido' : 'Não resolvido'}</span>` : `<span class="pct" style="background:${venc ? '#FCE7E7' : '#EEF2F6'};color:${venc ? '#B42318' : '#5B6B80'}">${venc ? 'Em aberto · prazo vencido' : 'Em aberto'}</span>`}</td>
-          <td style="text-align:left;white-space:normal;min-width:260px">${esc(c.solicitacao)}${fin && c.desfecho ? `<div class="resp-v"><b>Resposta de ${esc(c.finalizadoPor)}:</b> ${esc(c.desfecho)}</div>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : 'Você ainda não abriu nenhuma solicitação.'; }
-  catch(e){ el.textContent = 'Não foi possível carregar as suas solicitações agora.'; }
+  let j; try { const r = await fetch(API_CHAMADOS, { method:'POST', body: JSON.stringify({ acao:'chamados-vendedor', k:K }) }); j = await r.json(); if (!j.ok) throw 0; }
+  catch(e){ el.textContent = 'Não foi possível carregar as suas solicitações agora.'; return; }
+  const agora = Date.now();
+  el.innerHTML = j.chamados.length ? `<div class="tw"><table><thead><tr><th>Protocolo</th><th>Aberto em</th><th>Urgência</th><th>Situação</th><th>Responsável</th><th>Previsão</th><th style="text-align:left">Solicitação / andamento</th></tr></thead><tbody>${
+    j.chamados.map(c => { const fim = c.status === STV.CONCLUIDO || c.status === STV.CANCELADO, venc = !fim && c.sla && new Date(c.sla) < agora;
+      return `<tr><td>${esc(c.protocolo)}</td><td>${dtc(c.abertoEm)}</td><td>${esc(c.urgencia)}</td><td>${stPill(c.status)}${venc ? '<br><span class="foot" style="color:#B42318">prazo vencido</span>' : ''}</td>
+        <td>${esc(c.paraNome || 'Gabriel Saenz (triagem)')}</td><td>${esc(c.previsao || '—')}</td>
+        <td style="text-align:left;white-space:normal;min-width:260px">${esc(c.solicitacao)}${c.andamento ? `<div class="resp-v"><b>${fim ? 'Resposta' : 'Andamento'}:</b> ${esc(c.andamento)}</div>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : 'Você ainda não abriu nenhuma solicitação.';
+  const pm = j.paraMim || [], card = $('paraMimCard');
+  if (card){ card.classList.toggle('hidden', !pm.length);
+    $('paraMim').innerHTML = pm.map(c => { const fim = c.status === STV.CONCLUIDO || c.status === STV.CANCELADO, P = esc(c.protocolo);
+      return `<div class="pm"><div><b>${P}</b> · ${esc(c.urgencia)} · ${stPill(c.status)} <span class="foot">· de ${esc(c.solicitante)} · ${dtc(c.abertoEm)}</span></div>
+        ${c.status === STV.PENDENTE ? `<button class="btn novo-ler" data-ler="${P}">📩 Novo chamado para você · clique para abrir e ler</button>` : `<div style="margin-top:6px">${esc(c.solicitacao)}</div>
+        ${c.andamento ? `<div class="resp-v"><b>Último andamento:</b> ${esc(c.andamento)}</div>` : ''}
+        ${fim ? '' : `<div class="pm-ctrl"><select data-st="${P}">${[STV.ABERTO, STV.ANDAMENTO, STV.FINAL, STV.CONCLUIDO, STV.CANCELADO].map(s => `<option ${s === c.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
+          <input data-prev="${P}" placeholder="Previsão (ex.: 2 dias)" value="${esc(c.previsao || '')}"><textarea data-com="${P}" placeholder="Andamento / resposta"></textarea>
+          <button class="btn verde" data-at="${P}">Atualizar</button></div>`}`}</div>`; }).join('');
+    const upd = async (corpo, b) => { b.disabled = true; try { const r = await fetch(API_CHAMADOS, { method:'POST', body: JSON.stringify({ acao:'chamado-vendedor-atualizar', k:K, ...corpo }) }); const x = await r.json(); if (!x.ok) throw 0; minhasSolicitacoes(); } catch(e){ alert('Não foi possível atualizar agora.'); b.disabled = false; } };
+    document.querySelectorAll('#paraMim [data-ler]').forEach(b => b.onclick = () => upd({ protocolo:b.dataset.ler }, b));
+    document.querySelectorAll('#paraMim [data-at]').forEach(b => b.onclick = () => { const P = b.dataset.at;
+      upd({ protocolo:P, status:document.querySelector(`[data-st="${P}"]`).value, previsao:document.querySelector(`[data-prev="${P}"]`).value.trim(), comentario:document.querySelector(`[data-com="${P}"]`).value.trim() }, b); });
+  }
 }
 
 /* ---------------- navegação e início ---------------- */
