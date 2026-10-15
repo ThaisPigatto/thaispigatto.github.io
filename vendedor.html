@@ -564,16 +564,16 @@ function renderTatico(){
     el.innerHTML = `<div class="ifr-top"><span>Números para o Tático · ${esc(V.setor)}</span><a class="btn" href="${src}" target="_blank" rel="noopener">Abrir em nova aba ↗</a></div>
       <iframe class="tat" src="${src}" title="Números para o Tático"></iframe>`; el.dataset.ok = '1'; }
 }
-const STV = { TRIAGEM:'Aguardando direcionamento', PENDENTE:'Pendente de visualização', ABERTO:'Em aberto', ANDAMENTO:'Em andamento', FINAL:'Em fase final', CONCLUIDO:'Concluído', CANCELADO:'Cancelado' };
-const stCor = s => ({'Aguardando direcionamento':['#E8ECF3','#33415C'],'Pendente de visualização':['#EFE7FB','#6B3FB5'],'Em aberto':['#E3EEFB','#1D5FAF'],'Em andamento':['#FFF0DC','#A85A00'],
+const STV = { NOVO:'Aguardando visualização', VISTO:'Visualizado pelo Gabriel Saenz', PENDENTE:'Direcionado', ABERTO:'Em aberto', ANDAMENTO:'Em andamento', FINAL:'Em fase final', CONCLUIDO:'Concluído', CANCELADO:'Cancelado' };
+const stCor = s => ({'Aguardando visualização':['#E8ECF3','#33415C'],'Visualizado pelo Gabriel Saenz':['#E3EEFB','#1D5FAF'],'Direcionado':['#EFE7FB','#6B3FB5'],'Em aberto':['#E3EEFB','#1D5FAF'],'Em andamento':['#FFF0DC','#A85A00'],
   'Em fase final':['#DDF4F1','#0E7C6B'],'Concluído':['#E3F5E8','#1E7A3C'],'Cancelado':['#EEF1F5','#5B6B80']})[s] || ['#EEF1F5','#5B6B80'];
-const stPill = s => { const [bg, fg] = stCor(s); return `<span class="pct" style="background:${bg};color:${fg}">${esc(s)}</span>`; };
+const stPill = (s, c) => { const [bg, fg] = stCor(s); return `<span class="pct" style="background:${bg};color:${fg}">${esc(s === STV.PENDENTE && c && c.paraNome ? 'Direcionado para: ' + c.paraNome : s)}</span>`; };
 const dtc = s => s ? new Date(s).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '—';
 function renderAjuste(){
   const el = $('tab-ajuste'), EQ = window.SUPORTE || [];
   el.innerHTML = `<div class="card"><h2>Suporte / Ajuda</h2><p class="sup-intro">Está com alguma dúvida, precisa de algum dado, ou alguma informação precisa de ajuste?</p>
     <button class="btn vermelho-g" id="abrirCh">+ Abrir chamado / Solicitar ajuda</button>
-    <p class="crit" style="margin:8px 0 14px">O chamado vai para o Gabriel Saenz, que direciona para a pessoa certa. Você acompanha o andamento aqui embaixo, em "Minhas solicitações".</p>
+    <p class="crit" style="margin:8px 0 14px">Todo chamado cai para o <b>Gabriel Saenz</b>, que direciona para a pessoa certa (veja abaixo quem faz o quê). Você acompanha o andamento aqui mesmo, em <b>"Minhas solicitações"</b>.</p>
     <div class="sup-aviso"><span aria-hidden="true">ℹ️</span><div><b>Esta aba é somente para chamados de ajuste ou ajuda (suporte).</b><br>
       Não use para solicitar compra ou solicitar frete: esses pedidos seguem pelo processo normal de cada área.</div></div>
     <h3 style="font-family:var(--display);margin:6px 0 10px;font-size:16px">Quem faz o quê</h3>
@@ -618,8 +618,9 @@ function formSuporte(){
     const corpo = { acao:'chamado', nome, setor:$('aSetor').value, urgencia:urg, solicitacao:msg, email, k:K, pagina:'Portal do vendedor · link de ' + V.nome };
     const btn = $('aEnviar'); btn.disabled = true; btn.textContent = 'Enviando…';
     try { const r = await fetch(API_CHAMADOS, { method:'POST', body: JSON.stringify(corpo) }); const j = await r.json(); if (!j.ok) throw new Error(j.erro || 'erro');
-      $('mBody').innerHTML = `<div class="okmsg" style="font-size:16px">✅ <b>Solicitação enviada com sucesso, aguarde o retorno por e-mail!</b><br>
-        <span class="foot">Protocolo ${esc(j.protocolo)} · o Gabriel Saenz vai direcionar para o responsável. Acompanhe em "Minhas solicitações".</span></div>
+      $('mBody').innerHTML = `<div class="okmsg" style="font-size:16px">✅ <b>Chamado aberto! Protocolo ${esc(j.protocolo)}.</b><br>
+        O <b>Gabriel Saenz</b> vai direcionar para o responsável, e você recebe o retorno por e-mail.<br>
+        Você pode acompanhar a sua solicitação em: <b>seu Portal do Vendedor → aba Suporte/Ajuda → "Minhas solicitações"</b>.</div>
         <p style="margin-top:14px"><button class="btn" onclick="document.getElementById('modal').classList.add('hidden')">Fechar</button></p>`;
       minhasSolicitacoes(); }
     catch(e){ const mailto = `mailto:gabriel.saenz@grupopigatto.com.br?subject=${encodeURIComponent(`[${urg}] Chamado — ${nome}`)}&body=${encodeURIComponent(`Nome: ${nome}\nSetor: ${corpo.setor}\nUrgência: ${urg}\nE-mail: ${email}\n\n${msg}`)}`;
@@ -635,14 +636,15 @@ async function minhasSolicitacoes(){
   const agora = Date.now();
   el.innerHTML = j.chamados.length ? `<div class="tw"><table><thead><tr><th>Protocolo</th><th>Aberto em</th><th>Urgência</th><th>Situação</th><th>Responsável</th><th>Previsão</th><th style="text-align:left">Solicitação / andamento</th></tr></thead><tbody>${
     j.chamados.map(c => { const fim = c.status === STV.CONCLUIDO || c.status === STV.CANCELADO, venc = !fim && c.sla && new Date(c.sla) < agora;
-      return `<tr><td>${esc(c.protocolo)}</td><td>${dtc(c.abertoEm)}</td><td>${esc(c.urgencia)}</td><td>${stPill(c.status)}${venc ? '<br><span class="foot" style="color:#B42318">prazo vencido</span>' : ''}</td>
-        <td>${esc(c.paraNome || 'Gabriel Saenz (triagem)')}</td><td>${esc(c.previsao || '—')}</td>
+      return `<tr><td>${esc(c.protocolo)}</td><td>${dtc(c.abertoEm)}</td><td>${esc(c.urgencia)}</td><td>${stPill(c.status, c)}${venc ? '<br><span class="foot" style="color:#B42318">prazo vencido</span>' : ''}</td>
+        <td>${esc(c.paraNome || 'Gabriel Saenz (direcionando)')}</td><td>${esc(c.previsao || '—')}</td>
         <td style="text-align:left;white-space:normal;min-width:260px">${esc(c.solicitacao)}${c.andamento ? `<div class="resp-v"><b>${fim ? 'Resposta' : 'Andamento'}:</b> ${esc(c.andamento)}</div>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : 'Você ainda não abriu nenhuma solicitação.';
   const pm = j.paraMim || [], card = $('paraMimCard');
   if (card){ card.classList.toggle('hidden', !pm.length);
     $('paraMim').innerHTML = pm.map(c => { const fim = c.status === STV.CONCLUIDO || c.status === STV.CANCELADO, P = esc(c.protocolo);
-      return `<div class="pm"><div><b>${P}</b> · ${esc(c.urgencia)} · ${stPill(c.status)} <span class="foot">· de ${esc(c.solicitante)} · ${dtc(c.abertoEm)}</span></div>
+      return `<div class="pm"><div><b>${P}</b> · ${esc(c.urgencia)} · ${stPill(c.status === STV.PENDENTE ? 'Novo para você' : c.status)} <span class="foot">· de ${esc(c.solicitante)} · ${dtc(c.abertoEm)}</span></div>
         ${c.status === STV.PENDENTE ? `<button class="btn novo-ler" data-ler="${P}">📩 Novo chamado para você · clique para abrir e ler</button>` : `<div style="margin-top:6px">${esc(c.solicitacao)}</div>
+        ${c.orientacao ? `<div class="resp-v" style="background:#FFF4E5"><b>Orientação de ${esc(c.direcionadoPor || 'Gabriel Saenz')}:</b> ${esc(c.orientacao)}</div>` : ''}
         ${c.andamento ? `<div class="resp-v"><b>Último andamento:</b> ${esc(c.andamento)}</div>` : ''}
         ${fim ? '' : `<div class="pm-ctrl"><select data-st="${P}">${[STV.ABERTO, STV.ANDAMENTO, STV.FINAL, STV.CONCLUIDO, STV.CANCELADO].map(s => `<option ${s === c.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
           <input data-prev="${P}" placeholder="Previsão (ex.: 2 dias)" value="${esc(c.previsao || '')}"><textarea data-com="${P}" placeholder="Andamento / resposta"></textarea>

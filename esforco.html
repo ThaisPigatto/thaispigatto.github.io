@@ -526,6 +526,10 @@ $('#menuShow').addEventListener('click',function(){menuOculto(false);});
 function abrirPorHash(){
   var partes=(location.hash||'').replace('#','').split('/'), id=partes[0]; if(!id) return;
   if(id==='semana'&&/^\d{4}-\d{2}-\d{2}$/.test(partes[1]||'')) SEM.ini=partes[1];
+  if(id==='chamados'&&/^CH-\d+$/.test(partes[1]||'')){   // link do e-mail: #chamados/CH-0001 abre direto o chamado
+    var pc=todasPaginas().filter(function(p){return p.id==='chamados';})[0];
+    if(pc){ if(pc.id!==ATUAL) abrir(pc); var f=document.querySelector('#view-chamados iframe'); if(f){ f.src='chamados.html#c='+partes[1]; carregadas.chamados=1; } }
+    return; }
   var alvo=todasPaginas().filter(function(p){return p.id===id;})[0];
   if(!alvo){ var g=MENU_CFG.filter(function(m){return m.tipo==='grupo'&&m.id===id;})[0]; if(g) alvo=filhosDe(g)[0]; }
   if(alvo&&alvo.id!==ATUAL) abrir(alvo); }

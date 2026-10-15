@@ -127,6 +127,25 @@ details.hist ol{margin:8px 0 0;padding-left:18px;color:var(--muted)}
 .prio .b{background:#E3F5E8;color:#1E7A3C}.prio .m{background:#FFF4CC;color:#8A6400}.prio .a{background:#FCE7E7;color:#B42318}
 .prio label:has(input:checked){border-color:currentColor}
 .crit{font-size:13px;color:var(--muted)}
+.st-novo{background:#E8ECF3;color:#33415C}.st-visto{background:#E3EEFB;color:#1D5FAF}
+.picker{display:grid;gap:8px;width:100%}
+.picker .grp{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+.picker .ops{display:flex;flex-wrap:wrap;gap:8px}
+.picker label{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px;cursor:pointer;font-weight:600;font-size:13.5px;background:#fff}
+.picker label img{width:34px;height:34px;border-radius:50%;object-fit:cover}
+.picker label small{color:var(--muted);font-weight:500;font-size:11.5px;display:block;line-height:1.1}
+.picker input{position:absolute;opacity:0;pointer-events:none}
+.picker label:has(input:checked){border-color:var(--orange);background:#FFF4E5;box-shadow:0 0 0 2px var(--orange)}
+.picker label:has(input:focus-visible){outline:3px solid var(--orange);outline-offset:2px}
+.orient{background:#FFF4E5;border-left:4px solid var(--orange);border-radius:10px;padding:8px 12px;font-size:14px;margin-top:8px}
+details.redir{margin-top:10px}
+details.redir summary{cursor:pointer;font-weight:700;color:var(--navy)}
+.quemfaz{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin:4px 0 6px}
+.quemfaz div{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:8px;font-size:12px;color:var(--muted)}
+.quemfaz img{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none}
+.quemfaz b{display:block;color:var(--ink);font-size:13px}
+.btn.navy-b{background:var(--navy);border-color:var(--navy);color:#fff}
+.okbox{background:#E8F6EC;border:1px solid #B8E2C5;border-radius:12px;padding:14px 16px;font-size:15px}
 </style>
 </head>
 <body>
@@ -175,9 +194,11 @@ const quem = id => EQ.find(p => p.id === id) || {};
 const dt = s => s ? new Date(s).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '—';
 function dur(ms){ const h = Math.abs(ms) / 36e5; return h < 1 ? Math.round(h*60) + ' min' : h < 48 ? h.toFixed(h < 10 ? 1 : 0).replace('.', ',') + ' h' : Math.round(h/24) + ' dias'; }
 const pct = x => x == null ? '—' : Math.round(x*100) + '%';
-const ST = { TRIAGEM:'Aguardando direcionamento', PENDENTE:'Pendente de visualização', ABERTO:'Em aberto', ANDAMENTO:'Em andamento', FINAL:'Em fase final', CONCLUIDO:'Concluído', CANCELADO:'Cancelado' };
-const stCls = s => ({[ST.TRIAGEM]:'triagem',[ST.PENDENTE]:'pendente',[ST.ABERTO]:'aberto',[ST.ANDAMENTO]:'andamento',[ST.FINAL]:'final',[ST.CONCLUIDO]:'concluido',[ST.CANCELADO]:'cancelado'})[s] || 'triagem';
+const ST = { NOVO:'Aguardando visualização', VISTO:'Visualizado pelo Gabriel Saenz', PENDENTE:'Direcionado', ABERTO:'Em aberto', ANDAMENTO:'Em andamento', FINAL:'Em fase final', CONCLUIDO:'Concluído', CANCELADO:'Cancelado' };
+const stCls = s => ({[ST.NOVO]:'novo',[ST.VISTO]:'visto',[ST.PENDENTE]:'pendente',[ST.ABERTO]:'aberto',[ST.ANDAMENTO]:'andamento',[ST.FINAL]:'final',[ST.CONCLUIDO]:'concluido',[ST.CANCELADO]:'cancelado'})[s] || 'novo';
+const stTexto = c => c.status === ST.PENDENTE ? 'Direcionado para: ' + (c.paraNome || '') : c.status;
 const fin = c => c.status === ST.CONCLUIDO || c.status === ST.CANCELADO;
+const triagem = c => c.status === ST.NOVO || c.status === ST.VISTO;
 const CRIT = window.SUPORTE_CRITERIOS || {};
 let USER = null, SENHA = null, CH = [], TAB = null, ORDEM = 'chegada', ALVO = (location.hash.match(/c=([\w-]+)/) || [])[1] || null, SEL = null, TEM = false;
 
@@ -215,7 +236,7 @@ $('sair').onclick = () => { try { sessionStorage.removeItem('sup'); } catch(e){}
 function abasDoPerfil(){
   const t = USER.triagem;
   const n = f => CH.filter(f).length;
-  const A = t ? [['pendentes', `Pendentes recebidas (${n(c => c.status === ST.TRIAGEM)})`], ['direcionadas', `Direcionadas (${n(c => !fin(c) && c.status !== ST.TRIAGEM)})`], ['finalizadas', `Finalizadas (${n(fin)})`]]
+  const A = t ? [['pendentes', `Pendentes recebidas (${n(triagem)})`], ['direcionadas', `Direcionadas (${n(c => !fin(c) && !triagem(c))})`], ['finalizadas', `Finalizadas (${n(fin)})`]]
               : [['recebidas', `Recebidas para mim (${n(c => meuResp(c) && !fin(c))})`], ['abertas', `Abertas por mim (${n(c => meuSolic(c) && !fin(c))})`], ['finalizadas', `Finalizadas (${n(fin)})`]];
   if (USER.admin) A.push(['equipe', 'Equipe']);
   return A;
@@ -229,13 +250,17 @@ async function entrarPainel(){
   $('fPara').innerHTML = '<option value="">Todos</option>' + EQ.map(x => `<option value="csc:${x.id}">${esc(x.nome)}</option>`).join('') + VS.map(v => `<option value="vendedor:${v.id}">${esc(v.nome)} (vendedor)</option>`).join('');
   await carregar();
   TAB = abasDoPerfil()[0][0];
-  if (ALVO){ const c = CH.find(x => x.protocolo === ALVO);
-    if (c){ if (meuResp(c) && c.status === ST.PENDENTE) { try { await acao({ acao:'visualizar', protocolo:c.protocolo }); } catch(e){} }
-      const c2 = CH.find(x => x.protocolo === ALVO);
-      TAB = fin(c2) ? 'finalizadas' : USER.triagem ? (c2.status === ST.TRIAGEM ? 'pendentes' : 'direcionadas') : meuResp(c2) ? 'recebidas' : 'abertas'; } }
+  await irPara(ALVO);
   render();
   if (!window._t) window._t = setInterval(() => { if (!document.querySelector('.ctrl :focus') && $('modal').classList.contains('hidden')) carregar(); }, 120000);
 }
+async function irPara(prot){   // abre o chamado do link (e-mail): conta como visualizado
+  if (!prot) return; const c = CH.find(x => x.protocolo === prot); if (!c) return;
+  if ((meuResp(c) && c.status === ST.PENDENTE) || (USER.triagem && c.status === ST.NOVO)) { try { await acao({ acao:'visualizar', protocolo:c.protocolo }); } catch(e){} }
+  const c2 = CH.find(x => x.protocolo === prot) || c;
+  TAB = fin(c2) ? 'finalizadas' : USER.triagem ? (triagem(c2) ? 'pendentes' : 'direcionadas') : meuResp(c2) ? 'recebidas' : 'abertas';
+}
+window.addEventListener('hashchange', async () => { const p = (location.hash.match(/c=([\w-]+)/) || [])[1]; if (!p || !USER) return; ALVO = p; await carregar(); await irPara(p); render(); });
 async function carregar(){
   try { const j = await api({ acao:'meus-chamados', user:USER.id, senha:SENHA });
     if (!j.ok){ if (j.erro === 'senha'){ alert('A sua senha mudou. Entre de novo.'); $('sair').click(); } return; }
@@ -255,12 +280,12 @@ function render(){
   const fins = CH.filter(fin), tempos = fins.filter(c => c.finalizadoEm).map(c => new Date(c.finalizadoEm) - new Date(c.abertoEm));
   const medio = tempos.length ? tempos.reduce((a,b) => a + b, 0) / tempos.length : null;
   const K = USER.triagem
-    ? [['Aguardando direcionamento', CH.filter(c => c.status === ST.TRIAGEM).length, CH.some(c => c.status === ST.TRIAGEM)], ['Direcionadas em aberto', CH.filter(c => !fin(c) && c.status !== ST.TRIAGEM).length], ['Prazo vencido', CH.filter(venc).length, CH.some(venc)], ['Finalizadas', fins.length], ['Tempo médio até finalizar', medio == null ? '—' : dur(medio)]]
-    : [['Recebidas em aberto', CH.filter(c => meuResp(c) && !fin(c)).length], ['Pendentes de visualização', CH.filter(c => meuResp(c) && c.status === ST.PENDENTE).length, CH.some(c => meuResp(c) && c.status === ST.PENDENTE)], ['Prazo vencido', CH.filter(c => meuResp(c) && venc(c)).length, CH.some(c => meuResp(c) && venc(c))], ['Finalizadas', fins.length], ['Tempo médio até finalizar', medio == null ? '—' : dur(medio)]];
+    ? [['Para direcionar', CH.filter(triagem).length, CH.some(c => c.status === ST.NOVO)], ['Direcionadas em aberto', CH.filter(c => !fin(c) && !triagem(c)).length], ['Prazo vencido', CH.filter(venc).length, CH.some(venc)], ['Finalizadas', fins.length], ['Tempo médio até finalizar', medio == null ? '—' : dur(medio)]]
+    : [['Recebidas em aberto', CH.filter(c => meuResp(c) && !fin(c)).length], ['Novas, não abertas', CH.filter(c => meuResp(c) && c.status === ST.PENDENTE).length, CH.some(c => meuResp(c) && c.status === ST.PENDENTE)], ['Prazo vencido', CH.filter(c => meuResp(c) && venc(c)).length, CH.some(c => meuResp(c) && venc(c))], ['Finalizadas', fins.length], ['Tempo médio até finalizar', medio == null ? '—' : dur(medio)]];
   $('kpis').innerHTML = K.map(([l, v, alerta]) => `<div class="kpi ${alerta ? 'vermelho' : ''}"><div class="lb">${l}</div><div class="vl">${v}</div></div>`).join('');
   // lista da aba
   const fu = $('fUrg').value, fb = $('fBusca').value.trim().toLowerCase(), fp = $('fPara').value;
-  let rs = CH.filter(c => TAB === 'pendentes' ? c.status === ST.TRIAGEM : TAB === 'direcionadas' ? !fin(c) && c.status !== ST.TRIAGEM
+  let rs = CH.filter(c => TAB === 'pendentes' ? triagem(c) : TAB === 'direcionadas' ? !fin(c) && !triagem(c)
                   : TAB === 'recebidas' ? meuResp(c) && !fin(c) : TAB === 'abertas' ? meuSolic(c) && !fin(c) : fin(c))
     .filter(c => !fu || c.urgencia === fu).filter(c => !fp || TAB === 'pendentes' || `${c.paraTipo}:${c.paraId}` === fp)
     .filter(c => !fb || [c.protocolo, c.solicitante, c.setor, c.solicitacao, c.paraNome].join(' ').toLowerCase().includes(fb));
@@ -268,42 +293,58 @@ function render(){
   if (TAB === 'finalizadas') rs.sort((a,b) => new Date(b.finalizadoEm) - new Date(a.finalizadoEm));
   else if (TAB === 'pendentes' && ORDEM === 'urgencia') rs.sort((a,b) => (ord[a.urgencia] - ord[b.urgencia]) || (new Date(a.abertoEm) - new Date(b.abertoEm)));
   else rs.sort((a,b) => new Date(a.abertoEm) - new Date(b.abertoEm));   // ordem de chegada: mais antigo primeiro
-  $('lista').innerHTML = rs.length ? rs.map(c => cartao(c, agora)).join('') : `<div class="vazio">${({pendentes:'Nenhum chamado aguardando direcionamento. 🎉', direcionadas:'Nenhum chamado direcionado em aberto.', recebidas:'Nenhum chamado para você agora. 🎉', abertas:'Você não tem chamados abertos em andamento.', finalizadas:'Nenhum chamado finalizado ainda.'})[TAB]}</div>`;
+  $('lista').innerHTML = rs.length ? rs.map(c => cartao(c, agora)).join('') : `<div class="vazio">${({pendentes:'Nenhum chamado para direcionar. 🎉', direcionadas:'Nenhum chamado direcionado em aberto.', recebidas:'Nenhum chamado para você agora. 🎉', abertas:'Você não tem chamados abertos em andamento.', finalizadas:'Nenhum chamado finalizado ainda.'})[TAB]}</div>`;
   ligarCartoes();
   if (ALVO){ const el = $('ch-' + ALVO); if (el){ el.scrollIntoView({behavior:'smooth', block:'center'}); ALVO = null; } }
 }
-function opcoesPara(sel){
+function opcoesPara(sel){   // usado no formulário "abrir chamado" (lista simples)
   return `<option value="">Direcionar para…</option><optgroup label="CSC">${EQ.map(x => `<option value="csc:${x.id}" ${sel === 'csc:' + x.id ? 'selected' : ''}>${esc(x.nome)}</option>`).join('')}</optgroup>
     <optgroup label="Vendedores">${VS.map(v => `<option value="vendedor:${v.id}" ${sel === 'vendedor:' + v.id ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</optgroup>`;
 }
+function picker(nome){   // escolha do responsável com foto
+  const op = (val, foto, n, sub) => `<label><input type="radio" name="${nome}" value="${val}"><img src="${foto}" alt=""><span>${esc(n)}<small>${esc(sub)}</small></span></label>`;
+  return `<div class="picker"><div class="grp">CSC</div><div class="ops">${EQ.map(x => op('csc:' + x.id, x.foto, x.nome, x.cargo)).join('')}</div>
+    <div class="grp">Vendedores</div><div class="ops">${VS.map(v => op('vendedor:' + v.id, v.foto, v.nome, v.setor)).join('')}</div></div>`;
+}
+function blocoDirecionar(P, c, redir){
+  return `<div class="ctrl" style="flex-direction:column;align-items:stretch"><b>${redir ? 'Redirecionar para:' : 'Quem vai atender?'}</b>${picker('para-' + P)}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${redir ? '' : `<b>Urgência:</b><select data-urg="${P}">${['Alta','Média','Baixa'].map(u => `<option ${u === c.urgencia ? 'selected' : ''}>${u}</option>`).join('')}</select>`}</div>
+    <textarea data-ori="${P}" placeholder="Orientação para quem vai atender (opcional): contexto, prioridade, com quem falar…">${redir ? esc(c.orientacao || '') : ''}</textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn laranja" data-dir="${P}">${redir ? 'REDIRECIONAR' : 'DIRECIONAR CHAMADO'}</button>
+      ${c.paraTipo === 'csc' && c.paraId === USER.id ? '' : `<button class="btn verde" data-eu="${P}">ATENDER CHAMADO</button>`}</div></div>`;
+}
 function cartao(c, agora){
   const espera = agora - new Date(c.abertoEm), vencido = !fin(c) && c.sla && new Date(c.sla) < agora, P = c.protocolo;
-  const podeAtualizar = !fin(c) && c.status !== ST.TRIAGEM && (meuResp(c) || USER.triagem) && !(c.paraTipo === 'vendedor' && !USER.triagem);
+  const podeAtualizar = !fin(c) && !triagem(c) && (meuResp(c) || USER.triagem) && !(c.paraTipo === 'vendedor' && !USER.triagem);
   let ctrl = '';
-  if (TAB === 'pendentes') ctrl = `<div class="ctrl"><select data-para="${P}">${opcoesPara('')}</select>
-      <select data-urg="${P}">${['Alta','Média','Baixa'].map(u => `<option ${u === c.urgencia ? 'selected' : ''}>${u}</option>`).join('')}</select>
-      <button class="btn laranja" data-dir="${P}">Direcionar</button></div>`;
+  const fechado = (TAB === 'pendentes' && c.status === ST.NOVO) || (meuResp(c) && c.status === ST.PENDENTE);
+  if (TAB === 'pendentes' && c.status === ST.NOVO) ctrl = `<button class="novo-ler" data-ler="${P}">📩 Novo chamado · clique para abrir e ler</button>`;
+  else if (TAB === 'pendentes') ctrl = blocoDirecionar(P, c, false);
   else if (meuResp(c) && c.status === ST.PENDENTE) ctrl = `<button class="novo-ler" data-ler="${P}">📩 Novo chamado para você · clique para abrir e ler</button>`;
   else if (podeAtualizar) ctrl = `<div class="ctrl"><select data-st="${P}">${[ST.ABERTO, ST.ANDAMENTO, ST.FINAL, ST.CONCLUIDO, ST.CANCELADO].map(s => `<option ${s === c.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
       <input data-prev="${P}" placeholder="Previsão (ex.: 2 dias, 16/10)" value="${esc(c.previsao || '')}" maxlength="60">
       <textarea data-com="${P}" placeholder="Andamento / resposta (o solicitante vê esta mensagem)"></textarea>
-      <button class="btn verde" data-at="${P}">Atualizar chamado</button>${USER.triagem ? `<select data-para="${P}" style="margin-left:auto">${opcoesPara('')}</select><button class="btn" data-dir="${P}">Redirecionar</button>` : ''}</div>`;
-  const esperaTag = c.status === ST.TRIAGEM ? `<span class="espera ${espera > 2*36e5 || c.urgencia === 'Alta' ? 'alta' : ''}">aguardando há ${dur(espera)}</span>`
+      <button class="btn verde" data-at="${P}">Atualizar chamado</button></div>${USER.triagem ? `<details class="redir"><summary>Redirecionar para outra pessoa</summary>${blocoDirecionar(P, c, true)}</details>` : ''}`;
+  const esperaTag = triagem(c) ? `<span class="espera ${espera > 2*36e5 || c.urgencia === 'Alta' ? 'alta' : ''}">aguardando há ${dur(espera)}</span>`
     : fin(c) ? '' : vencido ? `<span class="pill venc">prazo vencido há ${dur(agora - new Date(c.sla))}</span>` : `<span class="pill prazo">prazo em ${dur(new Date(c.sla) - agora)}</span>`;
   return `<article class="ch u-${esc(c.urgencia)} ${P === ALVO ? 'alvo' : ''}" id="ch-${esc(P)}">
-    <div class="l1"><span class="prot">${esc(P)}</span><span class="pill ${esc(c.urgencia)}">${esc(c.urgencia)}</span><span class="st st-${stCls(c.status)}">${esc(c.status)}</span>${esperaTag}</div>
+    <div class="l1"><span class="prot">${esc(P)}</span><span class="pill ${esc(c.urgencia)}">${esc(c.urgencia)}</span><span class="st st-${stCls(c.status)}">${esc(stTexto(c))}</span>${esperaTag}</div>
     <div class="meta"><b>De:</b> ${esc(c.solicitante)}${c.setor ? ' · ' + esc(c.setor) : ''}${c.email ? ` · <a href="mailto:${esc(c.email)}?subject=${encodeURIComponent('Chamado ' + P)}">${esc(c.email)}</a>` : ''} &nbsp;|&nbsp; aberto em ${dt(c.abertoEm)}
       ${c.paraNome ? ` &nbsp;|&nbsp; <b>Responsável:</b> ${esc(c.paraNome)}${c.paraTipo === 'vendedor' ? ' (vendedor)' : ''}` : ''}${c.previsao ? ` &nbsp;|&nbsp; <b>Previsão:</b> ${esc(c.previsao)}` : ''}</div>
-    ${meuResp(c) && c.status === ST.PENDENTE ? '' : `<div class="txt">${esc(c.solicitacao)}</div>${c.andamento ? `<div class="and"><b>Último andamento:</b> ${esc(c.andamento)}</div>` : ''}`}
+    ${fechado ? '' : `<div class="txt">${esc(c.solicitacao)}</div>${c.orientacao ? `<div class="orient"><b>Orientação de ${esc(c.direcionadoPor || 'Gabriel Saenz')}:</b> ${esc(c.orientacao)}</div>` : ''}${c.andamento ? `<div class="and"><b>Último andamento:</b> ${esc(c.andamento)}</div>` : ''}`}
     ${ctrl}
     ${c.historico && c.historico.length ? `<details class="hist"><summary>Histórico (${c.historico.length})</summary><ol>${c.historico.map(h => `<li>${dt(h.quando)} · <b>${esc(h.quem)}</b> · ${esc(h.status)}${h.texto ? ' — ' + esc(h.texto) : ''}</li>`).join('')}</ol></details>` : ''}
   </article>`;
 }
 function ligarCartoes(){
   document.querySelectorAll('[data-dir]').forEach(b => b.onclick = async () => {
-    const P = b.dataset.dir, para = document.querySelector(`[data-para="${P}"]`).value, u = document.querySelector(`[data-urg="${P}"]`);
-    if (!para){ alert('Escolha para quem direcionar.'); return; }
-    b.disabled = true; try { await acao({ acao:'direcionar', protocolo:P, para, urgencia: u ? u.value : undefined }); } catch(e){ alert(e.message); b.disabled = false; } });
+    const P = b.dataset.dir, box = b.closest('.ctrl'), sel = box.querySelector(`input[name="para-${P}"]:checked`), u = box.querySelector(`[data-urg="${P}"]`), ori = box.querySelector(`[data-ori="${P}"]`);
+    if (!sel){ alert('Escolha quem vai atender (clique na foto).'); return; }
+    b.disabled = true; try { await acao({ acao:'direcionar', protocolo:P, para:sel.value, urgencia: u ? u.value : undefined, orientacao: ori ? ori.value.trim() : '' }); } catch(e){ alert(e.message); b.disabled = false; } });
+  document.querySelectorAll('[data-eu]').forEach(b => b.onclick = async () => {   // o Saenz assume o atendimento
+    const P = b.dataset.eu, box = b.closest('.ctrl'), u = box.querySelector(`[data-urg="${P}"]`), ori = box.querySelector(`[data-ori="${P}"]`);
+    b.disabled = true; try { await acao({ acao:'direcionar', protocolo:P, para:'csc:' + USER.id, urgencia: u ? u.value : undefined, orientacao: ori ? ori.value.trim() : '' }); TAB = 'direcionadas'; ALVO = P; render(); }
+    catch(e){ alert(e.message); b.disabled = false; } });
   document.querySelectorAll('[data-ler]').forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = 'Abrindo…'; try { await acao({ acao:'visualizar', protocolo:b.dataset.ler }); } catch(e){ alert(e.message); } });
   document.querySelectorAll('[data-at]').forEach(b => b.onclick = async () => {
     const P = b.dataset.at, st = document.querySelector(`[data-st="${P}"]`).value, prev = document.querySelector(`[data-prev="${P}"]`).value.trim(), com = document.querySelector(`[data-com="${P}"]`).value.trim();
@@ -317,10 +358,12 @@ document.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { ORDEM = b
 /* ---------- abrir chamado ---------- */
 $('abrirCh').onclick = () => {
   $('mTit').textContent = 'Abrir chamado / Solicitar ajuda';
-  $('mBody').innerHTML = `<div class="form"><p class="crit" style="margin:0">Somente ajuste ou ajuda (suporte). ${USER.triagem ? 'Você pode já direcionar para alguém.' : 'O chamado vai para o Gabriel Saenz, que direciona para o responsável.'}</p>
+  $('mBody').innerHTML = `<div class="form"><p class="crit" style="margin:0">Somente ajuste ou ajuda (suporte). ${USER.triagem ? 'Você pode já direcionar para alguém.' : 'Todo chamado cai para o <b>Gabriel Saenz</b>, que direciona para a pessoa certa. Veja quem faz o quê:'}</p>
+    ${USER.triagem ? '' : `<div class="quemfaz">${EQ.map(p => `<div><img src="${p.foto}" alt=""><span><b>${esc(p.nome)}</b>${esc(p.areas.join(', '))}</span></div>`).join('')}</div>`}
     <div><b style="font-size:14px">Urgência</b><div class="prio" style="margin-top:6px"><label class="b"><input type="radio" name="nu" value="Baixa" checked> Baixa</label><label class="m"><input type="radio" name="nu" value="Média"> Média</label><label class="a"><input type="radio" name="nu" value="Alta"> Alta</label></div><div class="crit" id="nCrit" style="margin-top:6px"></div></div>
     <label>Qual a solicitação?<textarea id="nTxt" placeholder="Descreva com detalhes (cliente, pedido, nota, produto…)."></textarea></label>
-    ${USER.triagem ? `<label>Direcionar para (opcional)<select id="nPara">${opcoesPara('').replace('Direcionar para…', 'Deixar na triagem')}</select></label>` : ''}
+    ${USER.triagem ? `<label>Direcionar para (opcional)<select id="nPara">${opcoesPara('').replace('Direcionar para…', 'Deixar para direcionar depois').replace(`value="csc:${USER.id}"`, `value="csc:${USER.id}" data-eu="1"`).replace(`>${esc(quem(USER.id).nome || '')}</option>`, `>${esc(quem(USER.id).nome || '')} (atender chamado)</option>`)}</select></label>
+      <label>Orientação para quem vai atender (opcional)<textarea id="nOri" style="min-height:70px"></textarea></label>` : ''}
     <div><button class="btn vermelho" id="nEnviar">Abrir chamado</button></div><div class="erro" id="nErr"></div></div>`;
   $('modal').classList.remove('hidden');
   const crit = () => $('nCrit').textContent = CRIT[(document.querySelector('input[name="nu"]:checked') || {}).value] || ''; crit();
@@ -328,8 +371,13 @@ $('abrirCh').onclick = () => {
   $('nEnviar').onclick = async () => {
     const txt = $('nTxt').value.trim(); if (txt.length < 5){ $('nErr').textContent = 'Descreva a solicitação.'; return; }
     const b = $('nEnviar'); b.disabled = true; b.textContent = 'Enviando…';
-    try { await acao({ acao:'chamado-csc', urgencia: document.querySelector('input[name="nu"]:checked').value, solicitacao:txt, para: $('nPara') ? $('nPara').value : '' });
-      $('modal').classList.add('hidden'); TAB = USER.triagem ? ($('nPara') && $('nPara').value ? 'direcionadas' : 'pendentes') : 'abertas'; render(); }
+    const dir = $('nPara') ? $('nPara').value : '';
+    try { const j = await acao({ acao:'chamado-csc', urgencia: document.querySelector('input[name="nu"]:checked').value, solicitacao:txt, para:dir, orientacao: $('nOri') ? $('nOri').value.trim() : '' });
+      const novo = j.chamados.filter(c => c.solicitanteId === USER.id).sort((a,b) => new Date(b.abertoEm) - new Date(a.abertoEm))[0];
+      $('mBody').innerHTML = `<div class="okbox">✅ <b>Chamado aberto${novo ? ' · ' + esc(novo.protocolo) : ''}!</b><br>${dir ? `Direcionado para <b>${esc(novo ? novo.paraNome : '')}</b>.` : 'O <b>Gabriel Saenz</b> vai direcionar para o responsável.'}<br>
+        Você pode acompanhar a sua solicitação em: <b>CHAMADOS/SUPORTE → aba "${USER.triagem ? (dir ? 'Direcionadas' : 'Pendentes recebidas') : 'Abertas por mim'}"</b>.</div>
+        <p style="margin-top:12px"><button class="btn" onclick="document.getElementById('modal').classList.add('hidden')">Fechar</button></p>`;
+      TAB = USER.triagem ? (dir ? 'direcionadas' : 'pendentes') : 'abertas'; render(); }
     catch(e){ $('nErr').textContent = e.message; b.disabled = false; b.textContent = 'Abrir chamado'; }
   };
 };
