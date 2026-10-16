@@ -709,6 +709,50 @@ const NOME_CANAL_ML = 'Pigatto HUB - Marketplace/Licitação';
   titulo.textContent = '⚠️ Conferir (' + alertas.length + ')';
   box.appendChild(titulo);
   alertas.forEach(a => { const p = document.createElement('div'); p.textContent = '• ' + a; box.appendChild(p); });
+  // Botões de decisão para NFS-e de venda direta sem família (16/10/2026, pedido da Thais).
+  // O site é público e não guarda senha: o botão abre um formulário já preenchido no GitHub;
+  // só a conta dona do repositório consegue aprovar (workflow aprovar-venda-direta.yml), e o
+  // robô soma na rodada seguinte puxando data/valor/cliente direto da OMIE.
+  const pend = DATA.nfse_pendentes || [];
+  const fams = DATA.familias_venda_direta || [];
+  const REPO = 'https://github.com/ThaisPigatto/thaispigatto.github.io/issues/new';
+  const brl = v => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  function abrirDecisao(n, decisao, familia){
+    const corpo = Object.assign({}, n, {decisao: decisao, familia: decisao === 'sim' ? familia : null});
+    const titulo = '[venda-direta] ' + (decisao === 'sim' ? 'SIM — contabilizar' : 'NÃO contabilizar') +
+                   ' NFS-e ' + n.nfse_numero + ' (' + n.cliente + ', ' + brl(n.valor) + ')' +
+                   (decisao === 'sim' ? ' em ' + familia : '');
+    const body = 'Decisão registrada pelo botão do Painel Comercial. Clique em **Submit new issue** para confirmar.\n\n' +
+                 '```json\n' + JSON.stringify(corpo, null, 2) + '\n```';
+    window.open(REPO + '?title=' + encodeURIComponent(titulo) + '&body=' + encodeURIComponent(body), '_blank', 'noopener');
+  }
+  pend.forEach(n => {
+    const linha = document.createElement('div');
+    linha.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 2px 12px;';
+    const rot = document.createElement('span');
+    rot.style.cssText = 'font-weight:600;';
+    rot.textContent = 'NFS-e ' + n.nfse_numero + ' — contabilizar no relatório?';
+    const sel = document.createElement('select');
+    sel.style.cssText = 'font-size:12px;padding:3px 6px;border:1px solid var(--amber);border-radius:6px;background:#fff;';
+    const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Família…'; sel.appendChild(o0);
+    fams.forEach(f => { const o = document.createElement('option'); o.value = f; o.textContent = f; sel.appendChild(o); });
+    const bSim = document.createElement('button');
+    bSim.textContent = 'Sim, contabilizar';
+    bSim.style.cssText = 'font-size:12px;padding:4px 10px;border:0;border-radius:6px;background:#1B6B3D;color:#fff;cursor:pointer;';
+    bSim.onclick = () => { if (!sel.value) { sel.focus(); sel.style.borderColor = '#C0392B'; return; } abrirDecisao(n, 'sim', sel.value); };
+    const bNao = document.createElement('button');
+    bNao.textContent = 'Não contabilizar';
+    bNao.style.cssText = 'font-size:12px;padding:4px 10px;border:1px solid #8a8a8a;border-radius:6px;background:#fff;color:#333;cursor:pointer;';
+    bNao.onclick = () => abrirDecisao(n, 'nao', null);
+    linha.append(rot, sel, bSim, bNao);
+    box.appendChild(linha);
+  });
+  if (pend.length) {
+    const nota = document.createElement('div');
+    nota.style.cssText = 'font-size:11px;color:#6b6b6b;margin:6px 0 0 12px;';
+    nota.textContent = 'Abre o GitHub já preenchido: confirme em "Submit new issue". O painel soma na próxima atualização (poucos minutos).';
+    box.appendChild(nota);
+  }
   kpis.parentNode.insertBefore(box, kpis);
 })();
 

@@ -28,6 +28,10 @@ REPO_DIR = os.path.dirname(BASE_DIR)
 INDEX_HTML_PATH = os.path.join(REPO_DIR, "index.html")
 TEMPLATE_HTML_PATH = os.path.join(BASE_DIR, "template_painel.html")
 MESES_JSON_PATH = os.path.join(REPO_DIR, "meses.json")
+# Decisões da Thais sobre NFS-e de venda direta (16/10/2026): cada aprovação "sim"/"nao" com
+# família, quem pediu e quando. Gravado pelo botão do painel (workflow aprovar-venda-direta.yml)
+# ou manualmente. O robô puxa da OMIE data/valor/cliente da nota aprovada — nada é digitado à mão.
+APROVACOES_NFSE_PATH = os.path.join(REPO_DIR, "vendas_diretas_aprovadas.json")
 
 CACHE_FAM_NOME = os.path.join(BASE_DIR, "fam_nome_cache.json")
 CACHE_VEND_NOME = os.path.join(BASE_DIR, "vend_nome_cache.json")
@@ -130,6 +134,9 @@ CFOP_DEVOLUCAO_VENDA = {"1.202", "2.202", "3.202"}
 
 # Alertas que aparecem no topo do painel (05/10/2026). Zerado a cada montagem de mês.
 ALERTAS = []
+# NFS-e autorizadas sem decisão (16/10/2026) — vão para DATA["nfse_pendentes"] e o painel mostra
+# os botões "Sim, contabilizar" / "Não contabilizar" ao lado do alerta.
+NFSE_PENDENTES = []
 
 
 def fmt_brl(v):
@@ -706,7 +713,10 @@ def linhas_vendas_diretas():
 
 
 def checar_nfse():
-    """Alertas de NFS-e (05/10/2026). A venda direta sai como NFS-e e o robô ainda NÃO soma
+    """Alertas de NFS-e (05/10/2026) + soma das NFS-e APROVADAS (16/10/2026): retorna as linhas
+    das NFS-e com decisão "sim" em vendas_diretas_aprovadas.json (dados puxados da OMIE).
+    Sem decisão → alerta + botões no painel (NFSE_PENDENTES). Texto original abaixo:
+    A venda direta sai como NFS-e e o robô ainda NÃO soma
     NFS-e automaticamente (falta a regra de família, que a Thais vai definir). Pra nenhuma venda
     sumir sem ninguém ver, o painel avisa:
       1) NFS-e AUTORIZADA no mês que não está em VENDAS_DIRETAS_MANUAIS;
@@ -714,6 +724,9 @@ def checar_nfse():
          manual — caso Marbocote (set/26): a nota foi emitida fora da OMIE e na OMIE ficou só
          a tentativa cancelada. O robô NÃO enxerga nota que nunca passou pela OMIE."""
     mes_id = f"{ANO:04d}-{MES:02d}"
+    NFSE_PENDENTES.clear()
+    linhas_aprovadas = []
+    aprovacoes = carregar_aprovacoes_nfse(mes_id)
     manuais = VENDAS_DIRETAS_MANUAIS.get(mes_id, [])
     clientes_manuais = {(v["empresa"], v.get("nCodigoCliente")) for v in manuais}
     numeros_manuais = {(v["empresa"], str(v.get("nfse_numero"))) for v in manuais}
@@ -750,12 +763,78 @@ def checar_nfse():
             valor = cab.get("nValorNFSe") or 0
             nome = cab.get("cRazaoDestinatario", "")
             if status == "F" and (empresa, num) not in numeros_manuais:
-                ALERTAS.append(f"NFS-e {num} ({nome}, {fmt_brl(valor)}) autorizada e AINDA NÃO somada no "
-                               f"painel — falta informar a família da venda direta.")
+                ap = achar_aprovacao_nfse(aprovacoes, empresa, num, nome, cab.get("nCodNF"))
+                if ap is None:
+                    ALERTAS.append(f"NFS-e {num} ({nome}, {fmt_brl(valor)}) autorizada e AINDA NÃO somada no "
+                                   f"painel — falta informar a família da venda direta.")
+                    NFSE_PENDENTES.append({"mes": mes_id, "empresa": empresa, "nfse_numero": num,
+                                           "nCodNF": cab.get("nCodNF"), "cliente": nome,
+                                           "nCodigoCliente": cli, "valor": round(float(valor), 2),
+                                           "data_emissao": data_emissao_nfse(n)})
+                elif ap.get("decisao") == "nao":
+                    print(f"NFS-e {num} ({nome}) NÃO contabilizada — decisão de {ap.get('aprovado_por')} "
+                          f"em {ap.get('aprovado_em')}.")
+                elif ap.get("familia") not in {f for g in GRUPOS for f in g["familias"]}:
+                    ALERTAS.append(f"NFS-e {num} ({nome}): família \"{ap.get('familia')}\" da aprovação não "
+                                   f"existe nos grupos do painel — NÃO somada. Corrija a aprovação.")
+                elif ap.get("valor") is not None and abs(float(ap["valor"]) - float(valor)) > 0.01:
+                    ALERTAS.append(f"NFS-e {num} ({nome}): valor na OMIE ({fmt_brl(valor)}) diferente do "
+                                   f"aprovado ({fmt_brl(float(ap['valor']))}) — NÃO somada. Confira a nota.")
+                else:
+                    linhas_aprovadas.append({
+                        "familia": ap["familia"], "vendedor": "", "is_ml": False, "is_lic": False,
+                        "nota_fiscal": f"NFS-e {num}", "pedido": None, "situacao": "Autorizado",
+                        "empresa": empresa, "operacao": "Venda direta (NFS-e)", "cfop": "NFS-e 10.05",
+                        "total": round(float(valor), 2), "data_previsao": "",
+                        "data_fatura": data_emissao_nfse(n) or ap.get("data_emissao", ""),
+                        "cliente": nome,
+                    })
+                    print(f"NFS-e {num} ({nome}, R$ {float(valor):.2f}) somada em {ap['familia']} — "
+                          f"aprovada por {ap.get('aprovado_por')} em {ap.get('aprovado_em')}.")
             elif status == "C" and cli not in autorizados and (empresa, cli) not in clientes_manuais:
                 ALERTAS.append(f"NFS-e de {nome} ({fmt_brl(valor)}) CANCELADA na OMIE sem reemissão no mês. "
                                f"Se a nota foi emitida fora da OMIE, lance na OMIE ou avise para lançar manual.")
         time.sleep(1.0)
+    return linhas_aprovadas
+
+
+def carregar_aprovacoes_nfse(mes_id):
+    """Decisões do mês em vendas_diretas_aprovadas.json (lista). Arquivo ausente = nenhuma."""
+    if not os.path.exists(APROVACOES_NFSE_PATH):
+        return []
+    try:
+        todas = json.load(open(APROVACOES_NFSE_PATH, encoding="utf-8"))
+    except Exception as e:
+        ALERTAS.append(f"Não consegui ler vendas_diretas_aprovadas.json ({e}). Nenhuma aprovação aplicada.")
+        return []
+    return [a for a in todas if a.get("mes") == mes_id]
+
+
+def _norm(t):
+    return re.sub(r"\s+", " ", str(t or "")).strip().upper()
+
+
+def achar_aprovacao_nfse(aprovacoes, empresa, num, nome, ncodnf):
+    """Casa a NFS-e da OMIE com a decisão: pelo nCodNF (botão do painel) ou por número + cliente
+    (+ empresa, quando informada). A última decisão registrada vale."""
+    achada = None
+    for a in aprovacoes:
+        if a.get("nCodNF") and ncodnf and str(a["nCodNF"]) == str(ncodnf):
+            achada = a
+        elif (str(a.get("nfse_numero")) == str(num) and _norm(a.get("cliente")) == _norm(nome)
+              and a.get("empresa") in (None, "", empresa)):
+            achada = a
+    return achada
+
+
+def data_emissao_nfse(n):
+    """Data de emissão da NFS-e no retorno do ListarNFSEs (campo varia; tenta os conhecidos)."""
+    for bloco in ("Emissao", "Cabecalho", "Inclusao"):
+        b = n.get(bloco) or {}
+        for k in ("cDataEmissao", "dDataEmissao", "dEmissao", "dDtEmissao", "dInc"):
+            if b.get(k):
+                return str(b[k])
+    return ""
 
 
 # ----------------------------------------------------------------------------
@@ -1022,6 +1101,8 @@ def montar_data(real_rows, prev_rows):
         "raw_real": [{c: r.get(c) for c in raw_cols} for r in real_rows],
         "raw_prev": [{c: r.get(c) for c in raw_cols} for r in prev_rows],
         "alertas": list(dict.fromkeys(ALERTAS)),  # sem repetidos, na ordem em que surgiram
+        "nfse_pendentes": list(NFSE_PENDENTES),  # botões Sim/Não no alerta (16/10/2026)
+        "familias_venda_direta": [f for g in GRUPOS for f in g["familias"]],
     }
 
 
@@ -1077,7 +1158,7 @@ def recomputar_mes_fechado(ano, mes, meta_geral_hist, grupos_metas_hist, hub_met
         produto_familia = atualizar_cache_familias(linhas_real, linhas_prev, produto_familia)
         real_rows, prev_rows = montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia)
         real_rows += linhas_vendas_diretas()
-        checar_nfse()
+        real_rows += checar_nfse()
         data = montar_data(real_rows, prev_rows)
         return data, produto_familia
     finally:
@@ -1164,7 +1245,7 @@ def main():
 
     real_rows, prev_rows = montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia)
     real_rows += linhas_vendas_diretas()
-    checar_nfse()
+    real_rows += checar_nfse()
 
     data = montar_data(real_rows, prev_rows)
 
