@@ -446,7 +446,9 @@ function hubSoma(kind,from,to){ var t=0; (D.hubRegistros||[]).forEach(function(h
 /* métricas de meta (semanais) -> como se mede o realizado */
 var METRICAS=[{k:'carteira',nome:'Contato (carteira)'},{k:'novos',nome:'Contato (cliente novo)'},{k:'visita',nome:'Teste / visita'},{k:'ligacao',nome:'Ligação'}];
 function canaisDa(fi,m){ var fam=FAM[fi];
-  if(m==='carteira'||m==='novos'){ var c=['whatsapp','email']; if(fam.metas.ligacao==null&&LIG_EM_CONTATO) c.push('ligacao','ligacao_nao'); return c; }
+  // Contato (carteira) / Contato (cliente novo): TODA tarefa registrada (WhatsApp, e-mail, ligação, visita, reunião, cotação...)
+  // conta no contato do tipo do cliente. Ligação e visita contam TAMBÉM nas metas próprias (Ligação, Teste/visita). Regra de 16/10/2026.
+  if(m==='carteira'||m==='novos') return D.canais.slice();
   if(m==='visita') return ['visita'];
   return ['ligacao','ligacao_nao']; }
 function realiz(fi,m,from,to){ return soma({from:from,to:to,f:fi,canais:canaisDa(fi,m),tipo:m==='carteira'?'carteira':m==='novos'?'novo':null}); }

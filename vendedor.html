@@ -330,7 +330,7 @@ function soma(o){ let t = 0; for (const r of ROWS){ if (o.from && r.d < o.from) 
   if (o.f != null && r.f !== o.f) continue; if (o.v != null && r.v !== o.v) continue; if (o.tipo && r.t !== o.tipo) continue;
   if (o.canais && o.canais.indexOf(r.c) < 0) continue; t += r.q; } return t; }
 function canaisDa(fi, m){ const fam = D.familias[fi];
-  if (m === 'carteira' || m === 'novos'){ const c = ['whatsapp','email']; if (fam.metas.ligacao == null && LIG_EM_CONTATO) c.push('ligacao','ligacao_nao'); return c; }
+  if (m === 'carteira' || m === 'novos') return D.canais.slice();   // toda tarefa conta no contato do tipo do cliente (mesma regra do dash)
   if (m === 'visita') return ['visita']; return ['ligacao','ligacao_nao']; }
 const realiz = (fi,m,from,to,v) => soma({from, to, f:fi, v, canais:canaisDa(fi,m), tipo: m === 'carteira' ? 'carteira' : m === 'novos' ? 'novo' : null});
 const metaPer = (sem,from,to) => sem * bizDays(from,to) / 5;
