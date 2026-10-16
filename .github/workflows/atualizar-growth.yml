@@ -1,0 +1,34 @@
+name: Atualizar painel Growth - Google Ads
+on:
+  schedule:
+    - cron: "0 9 * * *"   # 09h UTC = 06h em Brasília
+  workflow_dispatch: {}    # botão "Run workflow" para rodar na hora
+permissions:
+  contents: write
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependência de criptografia
+        run: pip install cryptography==43.0.3
+      - name: Ler Omie, Tintim e Google Ads
+        env:
+          OMIE_MATRIZ_APP_KEY: ${{ secrets.OMIE_MATRIZ_APP_KEY }}
+          OMIE_MATRIZ_APP_SECRET: ${{ secrets.OMIE_MATRIZ_APP_SECRET }}
+          OMIE_PAPEIS_APP_KEY: ${{ secrets.OMIE_PAPEIS_APP_KEY }}
+          OMIE_PAPEIS_APP_SECRET: ${{ secrets.OMIE_PAPEIS_APP_SECRET }}
+          GADS_CSV_URL: ${{ secrets.GADS_CSV_URL }}
+          TINTIM_URL: ${{ secrets.TINTIM_URL }}
+          PAINEL_SENHA: ${{ secrets.PAINEL_SENHA }}
+        run: python automacao/atualizar_growth.py
+      - name: Salvar no repositório
+        run: |
+          git config user.name "robo-growth"
+          git config user.email "robo-growth@users.noreply.github.com"
+          git add dados/growth-omie.enc.json
+          git diff --cached --quiet || git commit -m "Growth Ads: atualização diária $(date -u +%F)"
+          git pull --rebase origin main && git push
