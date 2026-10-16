@@ -138,7 +138,7 @@
     "anuncios_url": "https://script.google.com/macros/s/AKfycbxAfTiOwt-qhyn3vjy-uhFkd7LiC-Jxb05xseGaq3PuLKBEZ310GwUx4G559MFHZg_Lug/exec",
     "_obs_anuncios": "Anúncios contam pelos links registrados na página anuncios-hub.html (planilha do Tático, aba \"anuncios\"). Licitações continuam pelo CRM. Vendas de Mercado Livre não entram no aviso de nota sem CRM."
   },
-  "cliente_reciclado_conta_como": "novo",
+  "cliente_reciclado_conta_como": "carteira",
   "ligacao_conta_em_contato_se_familia_sem_meta_de_ligacao": true,
   "vendedor_alias": {},
   "projetos": {
@@ -171,5 +171,12 @@
     "_obs": "Aviso 'nota faturada sem registro no CRM' (portal do vendedor). Uma nota conta como registrada quando o mesmo cliente (CNPJ/CPF ou nome) tem oportunidade no CRM com movimento a partir de N dias antes da venda.",
     "desde": "2026-10-01",
     "dias_antes_da_venda": 60
+  },
+  "novo_so_no_mes_de_entrada": {
+    "_obs": "Cliente novo só conta como NOVO no mês em que a oportunidade foi criada; nos meses seguintes conta como CARTEIRA. Vale para os vendedores da lista (ou para todos com \"todos\": true).",
+    "todos": false,
+    "vendedores": [
+      "Rhamayana Ramos"
+    ]
   }
 }

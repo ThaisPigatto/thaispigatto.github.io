@@ -276,6 +276,16 @@ def tipo_cliente(nome_tipo, cfg):
     return "carteira"             # 'Cliente Corrente' e qualquer outro
 
 
+def tipo_na_data(info, vend, d_iso, cfg):
+    """Novo x carteira da tarefa. Regra (16/10/2026): para os vendedores listados em "novo_so_no_mes_de_entrada",
+    oportunidade marcada como cliente novo só conta como NOVO no mês em que foi criada; nos meses seguintes conta como CARTEIRA."""
+    regra = cfg.get("novo_so_no_mes_de_entrada", {})
+    if info["tipo"] == "novo" and info.get("criada") and (regra.get("todos") or vend in regra.get("vendedores", [])):
+        if info["criada"] < d_iso[:7] + "-01":
+            return "carteira"
+    return info["tipo"]
+
+
 def status_oportunidade(nome_status):
     n = norm(nome_status)
     if "conquist" in n:
@@ -498,6 +508,7 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None):
                 "fam": fam, "sol": sol,
                 "vend": vendedor_canonico(lk["usuarios"].get(ident.get("nCodVendedor"), f"Vendedor {ident.get('nCodVendedor')}"), cfg),
                 "tipo": tipo_cliente(lk["tipos_cli"].get(ou.get("nCodTipo"), ""), cfg),
+                "tipo_nome": lk["tipos_cli"].get(ou.get("nCodTipo"), "") or "(sem tipo)",
                 "origem": origem_nome,
                 "status": status_oportunidade(lk["status"].get(fs.get("nCodStatus"), "")),
                 "criada": data_br_para_iso(ou.get("dInclusao", "")),
@@ -537,7 +548,7 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None):
                 if info is None:
                     q["tarefas_sem_oportunidade"] += 1
                 continue
-            contagem[(d_iso, fam_idx[info["fam"]], idx_vend(vend), CANAIS.index(canal), TIPOS.index(info["tipo"]))] += 1
+            contagem[(d_iso, fam_idx[info["fam"]], idx_vend(vend), CANAIS.index(canal), TIPOS.index(tipo_na_data(info, vend, d_iso, cfg)))] += 1
             toques[chave][canal] += 1
             if d_iso > ultima_tarefa.get(chave, ""):
                 ultima_tarefa[chave] = d_iso
@@ -591,6 +602,14 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None):
 
     nf_sem_crm, nf_info = notas_sem_crm(vendas, opp_info, ultima_tarefa, cfg)
 
+    # conferência: como cada "Tipo" de oportunidade do CRM está sendo contado (novo x carteira), por empresa e vendedor
+    tipos_cliente = defaultdict(lambda: defaultdict(lambda: {"contaComo": "", "oportunidades": 0, "porVendedor": defaultdict(int)}))
+    for (emp_, cod_), info_ in opp_info.items():
+        t_ = tipos_cliente[emp_][info_["tipo_nome"]]
+        t_["contaComo"] = info_["tipo"]; t_["oportunidades"] += 1; t_["porVendedor"][info_["vend"]] += 1
+    tipos_cliente = {e: {n: {"contaComo": t["contaComo"], "oportunidades": t["oportunidades"], "porVendedor": dict(t["porVendedor"])}
+                         for n, t in d.items()} for e, d in tipos_cliente.items()}
+
     qualidade = {
         "tarefasTotal": q["tarefas_total"],
         "tarefasSemOportunidade": q["tarefas_sem_oportunidade"],
@@ -632,6 +651,7 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None):
         "fasesCrm": fases_crm,
         "recentes": ult,
         "alertasExtra": [],
+        "tiposCliente": tipos_cliente,
         "nfSemCrm": nf_sem_crm,
         "nfSemCrmInfo": nf_info,
     }
