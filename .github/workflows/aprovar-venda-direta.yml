@@ -1,0 +1,99 @@
+name: Aprovar venda direta (NFS-e)
+# Pedido da Thais, 16/10/2026: botão "Sim, contabilizar / Não contabilizar" no alerta do painel.
+# O botão abre uma issue já preenchida ("[venda-direta] ..."). Este workflow:
+#   1) só aceita issue aberta pela DONA do repositório (author_association = OWNER);
+#   2) valida o JSON (mês, número, família existente nos grupos, decisão sim/nao);
+#   3) grava a decisão em vendas_diretas_aprovadas.json com quem/quando (registro de auditoria);
+#   4) dispara o robô (atualizar-painel.yml), que puxa a nota da OMIE e soma no painel;
+#   5) comenta o resultado e fecha a issue.
+# Issue de qualquer outra pessoa é ignorada (o repositório é público).
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: write
+  issues: write
+  actions: write
+concurrency:
+  group: atualizar-painel-aprovacao
+  cancel-in-progress: false
+jobs:
+  aprovar:
+    if: startsWith(github.event.issue.title, '[venda-direta]') && github.event.issue.author_association == 'OWNER'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar e gravar decisão
+        id: gravar
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, ast, datetime
+          from zoneinfo import ZoneInfo
+          body = os.environ["ISSUE_BODY"] or ""
+          m = re.search(r"```json\s*(\{.*?\})\s*```", body, re.S)
+          out = open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8")
+          def falha(msg):
+              out.write("ok=false\n"); out.write(f"msg={msg}\n"); raise SystemExit(0)
+          if not m:
+              falha("Não encontrei o bloco JSON da decisão na issue.")
+          try:
+              d = json.loads(m.group(1))
+          except Exception as e:
+              falha(f"JSON inválido: {e}")
+          # famílias válidas = GRUPOS do robô (lido do código, sem executar o script)
+          src = open("automacao/atualizar_painel.py", encoding="utf-8").read()
+          g = re.search(r"^GRUPOS = (\[.*?^\])", src, re.S | re.M)
+          familias = {f for grp in ast.literal_eval(g.group(1)) for f in grp["familias"]}
+          if d.get("decisao") not in ("sim", "nao"):
+              falha("Decisão precisa ser 'sim' ou 'nao'.")
+          if not re.fullmatch(r"\d{4}-\d{2}", str(d.get("mes", ""))):
+              falha("Mês inválido.")
+          if not str(d.get("nfse_numero", "")).strip():
+              falha("Número da NFS-e ausente.")
+          if d["decisao"] == "sim" and d.get("familia") not in familias:
+              falha(f"Família '{d.get('familia')}' não existe nos grupos do painel.")
+          agora = datetime.datetime.now(ZoneInfo("America/Sao_Paulo"))
+          reg = {k: d.get(k) for k in ("mes", "decisao", "familia", "empresa", "nfse_numero", "nCodNF",
+                                       "cliente", "nCodigoCliente", "valor", "data_emissao")}
+          reg.update({"aprovado_por": os.environ["ISSUE_USER"], "aprovado_em": agora.strftime("%d/%m/%Y %H:%M"),
+                      "origem": f"botão do painel — issue #{os.environ['ISSUE_NUM']}"})
+          p = "vendas_diretas_aprovadas.json"
+          lista = json.load(open(p, encoding="utf-8")) if os.path.exists(p) else []
+          lista.append(reg)
+          json.dump(lista, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+          txt = (f"Decisão gravada: NFS-e {reg['nfse_numero']} ({reg['cliente']}) — "
+                 + (f"SIM, contabilizar em {reg['familia']}" if reg["decisao"] == "sim" else "NÃO contabilizar")
+                 + f", por {reg['aprovado_por']} em {reg['aprovado_em']}. O painel atualiza em alguns minutos.")
+          out.write("ok=true\n"); out.write(f"msg={txt}\n")
+          PY
+      - name: Publicar decisão e disparar o robô
+        if: steps.gravar.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "Painel Pigatto (robô)"
+          git config user.email "actions@github.com"
+          git add vendas_diretas_aprovadas.json
+          git commit -m "Venda direta: decisão da issue #${{ github.event.issue.number }}"
+          for i in 1 2 3 4 5; do
+            git push && break
+            git pull --rebase origin main; sleep 5
+          done
+          gh workflow run atualizar-painel.yml --ref main
+      - name: Responder e fechar a issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MSG: ${{ steps.gravar.outputs.msg }}
+          OK: ${{ steps.gravar.outputs.ok }}
+        run: |
+          if [ "$OK" = "true" ]; then
+            gh issue comment ${{ github.event.issue.number }} --body "✅ $MSG"
+            gh issue close ${{ github.event.issue.number }}
+          else
+            gh issue comment ${{ github.event.issue.number }} --body "⚠️ Não registrei a decisão: ${MSG:-erro inesperado, veja o log do Actions}. Nada foi alterado no painel."
+          fi
