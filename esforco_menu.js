@@ -31,6 +31,9 @@ window.ESFORCO_MENU = [
   // ANÚNCIOS DO HUB: registra o link de cada anúncio (conta na meta de anúncios do Hub)
   {id:'anuncios', nome:'Anúncios do Hub (registrar)', tipo:'pagina', src:'anuncios-hub.html', restrito:true},
 
+  // GROWTH - GOOGLE ADS: mesmo padrão do PROJETOS CLAUDE (sem cadeado no menu, fundo laranja). A própria página pede a senha dela. inicial:false = o dash continua abrindo no NÚMEROS PARA O TÁTICO.
+  {id:'growth', nome:'GROWTH - GOOGLE ADS', titulo:'Growth — Google Ads', tipo:'pagina', src:'growth-google-ads.html', restrito:false, destaque:true, inicial:false},
+
   // NÚMEROS PARA O TÁTICO: única área aberta SEM senha. Todas as famílias usam o mesmo arquivo numeros-tatico.html (?f=família).
   {id:'tatico', nome:'NÚMEROS PARA O TÁTICO', tipo:'grupo', restrito:false, filhos:[
     {id:'tatico-plasticos',      nome:'Plásticos de Engenharia', src:'numeros-tatico.html?f=plasticos'},

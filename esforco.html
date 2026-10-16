@@ -484,8 +484,8 @@ function criarView(p){
   if(document.getElementById('view-'+p.id)) return;
   var sec=document.createElement('section'); sec.id='view-'+p.id; sec.className='view';
   sec.innerHTML='<div class="topbar slim"><div><h1></h1><div class="sub"></div></div><a class="abrir" target="_blank" rel="noopener">Abrir em nova aba ↗</a></div><div class="panel" style="padding:0;overflow:hidden"><iframe class="ifr"></iframe></div>';
-  sec.querySelector('h1').textContent=p.nome; sec.querySelector('.sub').textContent=p.descricao||'';
-  sec.querySelector('a.abrir').href=p.src; sec.querySelector('iframe').title=p.nome;
+  sec.querySelector('h1').textContent=p.titulo||p.nome; sec.querySelector('.sub').textContent=p.descricao||'';   // titulo: opcional (título da página diferente do nome no menu)
+  sec.querySelector('a.abrir').href=p.src; sec.querySelector('iframe').title=p.titulo||p.nome;
   $('#paginasExtras').appendChild(sec); }
 function abrir(p){
   if(p.restrito&&!unlocked){
@@ -546,7 +546,7 @@ function garantirLiberado(){
   if(unlocked) return;
   var paginas=todasPaginas(), atual=paginas.filter(function(p){return p.id===ATUAL;})[0];
   if(atual&&!atual.restrito) return;
-  var livre=paginas.filter(function(p){return !p.restrito&&!p.oculto;})[0];
+  var livre=paginas.filter(function(p){return !p.restrito&&!p.oculto&&p.inicial!==false;})[0];   // inicial:false = nunca abre sozinha como página inicial
   if(livre){ abrir(livre); montarMenu(); }
   else { $$('.view').forEach(function(x){x.classList.remove('active');}); }
 }
