@@ -14,7 +14,7 @@ concurrency:
 jobs:
   atualizar:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50  # 19/10/2026: mais folga para as novas tentativas quando a OMIE oscila
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v4
@@ -102,7 +102,23 @@ jobs:
                    f"Detalhes: {os.environ['LINK_EXECUCAO']}\n\n--- últimas linhas do log ---\n{log}\n")
           msg = MIMEText(corpo, "plain", "utf-8")
           msg["Subject"], msg["From"], msg["To"] = assunto, USER, ", ".join(DEST)
-          with smtplib.SMTP("smtp.gmail.com", 587) as s:
-              s.starttls(); s.login(USER, os.environ["SMTP_APP_PASSWORD"]); s.sendmail(USER, DEST, msg.as_string())
-          print("Aviso enviado para", DEST)
+          # 19/10/2026: tenta 587 (STARTTLS) e, se o Gmail fechar a conexão, 465 (SSL).
+          senha = os.environ.get("SMTP_APP_PASSWORD", "").replace(" ", "")
+          if not senha:
+              raise SystemExit("Secret SMTP_APP_PASSWORD vazio — cadastre a senha de app do Gmail nos Secrets.")
+          erros = []
+          for modo in ("starttls", "ssl"):
+              try:
+                  if modo == "starttls":
+                      s = smtplib.SMTP("smtp.gmail.com", 587, timeout=30); s.starttls()
+                  else:
+                      s = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30)
+                  with s:
+                      s.login(USER, senha); s.sendmail(USER, DEST, msg.as_string())
+                  print("Aviso enviado para", DEST, "via", modo); break
+              except Exception as e:
+                  erros.append(f"{modo}: {type(e).__name__}: {e}")
+          else:
+              raise SystemExit("Gmail recusou o login nas duas formas — a senha de app (SMTP_APP_PASSWORD) "
+                               "provavelmente foi revogada. Gere uma nova e atualize o Secret. Detalhe: " + " | ".join(erros))
           PY
