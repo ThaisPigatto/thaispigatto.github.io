@@ -46,7 +46,7 @@ jobs:
         run: |
           git config user.name "Painel Pigatto (robô)"
           git config user.email "actions@github.com"
-          git add index.html meses.json automacao/produto_familia_cache.json
+          git add index.html meses.json automacao/produto_familia_cache.json automacao/fam_nome_cache.json automacao/vend_nome_cache.json
           git add -- *.html
           git add -A pdf 2>/dev/null || true
           if git diff --cached --quiet; then
