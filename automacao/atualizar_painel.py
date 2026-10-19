@@ -139,7 +139,23 @@ ALERTAS = []
 NFSE_PENDENTES = []
 
 
+def _num(v):
+    """Converte valor da OMIE em float sem quebrar (aceita 1360.8, "1360.80", "1.360,80", None)."""
+    if v is None or v == "":
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    t = str(v).strip().replace("R$", "").strip()
+    if "," in t:
+        t = t.replace(".", "").replace(",", ".")
+    try:
+        return float(t)
+    except ValueError:
+        return 0.0
+
+
 def fmt_brl(v):
+    v = _num(v)
     return "R$ " + f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 TZ_SP = zoneinfo.ZoneInfo("America/Sao_Paulo")
@@ -286,18 +302,27 @@ def call(url_path, call_name, param, app_key, app_secret, retries=8):
     payload = {"call": call_name, "app_key": app_key, "app_secret": app_secret, "param": [param]}
     req = urllib.request.Request(url, data=json.dumps(payload).encode(),
                                   headers={"Content-Type": "application/json"})
+    # 19/10/2026: antes só repetia em erro HTTP; queda de conexão/timeout da OMIE derrubava a
+    # rodada inteira na hora. Agora repete também nesses casos, com espera crescente, e espera
+    # mais quando a OMIE avisa consumo redundante/bloqueio temporário (regra da própria OMIE).
+    ultimo = None
     for attempt in range(retries):
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=60) as resp:
                 return json.loads(resp.read().decode())
         except urllib.error.HTTPError as e:
-            body = e.read().decode()
+            body = e.read().decode(errors="replace")
             if "Client-5113" in body:
                 return {"pedido_venda_produto": [], "total_de_paginas": 0}
-            if attempt < retries - 1:
-                time.sleep(4)
-                continue
-            raise
+            ultimo = f"HTTP {e.code} em {call_name}: {body[:300]}"
+            espera = 65 if any(t in body.lower() for t in ("redundan", "bloquead", "consumo")) else 4 * (attempt + 1)
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError, json.JSONDecodeError) as e:
+            ultimo = f"{type(e).__name__} em {call_name}: {e}"
+            espera = 5 * (attempt + 1)
+        if attempt < retries - 1:
+            print(f"   OMIE instável ({ultimo[:160]}) — tentativa {attempt + 1}/{retries}, aguardando {espera}s")
+            time.sleep(espera)
+    raise RuntimeError(f"OMIE não respondeu após {retries} tentativas. Último erro: {ultimo}")
 
 
 # ----------------------------------------------------------------------------
@@ -712,7 +737,7 @@ def linhas_vendas_diretas():
     return linhas
 
 
-def checar_nfse():
+def _checar_nfse_impl():
     """Alertas de NFS-e (05/10/2026) + soma das NFS-e APROVADAS (16/10/2026): retorna as linhas
     das NFS-e com decisão "sim" em vendas_diretas_aprovadas.json (dados puxados da OMIE).
     Sem decisão → alerta + botões no painel (NFSE_PENDENTES). Texto original abaixo:
@@ -760,7 +785,7 @@ def checar_nfse():
             cab = n.get("Cabecalho", {})
             status, cli = cab.get("cStatusNFSe"), cab.get("nCodigoCliente")
             num = str(cab.get("nNumeroNFSe") or "s/nº")
-            valor = cab.get("nValorNFSe") or 0
+            valor = _num(cab.get("nValorNFSe"))
             nome = cab.get("cRazaoDestinatario", "")
             if status == "F" and (empresa, num) not in numeros_manuais:
                 ap = achar_aprovacao_nfse(aprovacoes, empresa, num, nome, cab.get("nCodNF"))
@@ -769,7 +794,7 @@ def checar_nfse():
                                    f"painel — falta informar a família da venda direta.")
                     NFSE_PENDENTES.append({"mes": mes_id, "empresa": empresa, "nfse_numero": num,
                                            "nCodNF": cab.get("nCodNF"), "cliente": nome,
-                                           "nCodigoCliente": cli, "valor": round(float(valor), 2),
+                                           "nCodigoCliente": cli, "valor": round(valor, 2),
                                            "data_emissao": data_emissao_nfse(n)})
                 elif ap.get("decisao") == "nao":
                     print(f"NFS-e {num} ({nome}) NÃO contabilizada — decisão de {ap.get('aprovado_por')} "
@@ -777,25 +802,38 @@ def checar_nfse():
                 elif ap.get("familia") not in {f for g in GRUPOS for f in g["familias"]}:
                     ALERTAS.append(f"NFS-e {num} ({nome}): família \"{ap.get('familia')}\" da aprovação não "
                                    f"existe nos grupos do painel — NÃO somada. Corrija a aprovação.")
-                elif ap.get("valor") is not None and abs(float(ap["valor"]) - float(valor)) > 0.01:
+                elif ap.get("valor") is not None and abs(_num(ap["valor"]) - valor) > 0.01:
                     ALERTAS.append(f"NFS-e {num} ({nome}): valor na OMIE ({fmt_brl(valor)}) diferente do "
-                                   f"aprovado ({fmt_brl(float(ap['valor']))}) — NÃO somada. Confira a nota.")
+                                   f"aprovado ({fmt_brl(_num(ap['valor']))}) — NÃO somada. Confira a nota.")
                 else:
                     linhas_aprovadas.append({
                         "familia": ap["familia"], "vendedor": "", "is_ml": False, "is_lic": False,
                         "nota_fiscal": f"NFS-e {num}", "pedido": None, "situacao": "Autorizado",
                         "empresa": empresa, "operacao": "Venda direta (NFS-e)", "cfop": "NFS-e 10.05",
-                        "total": round(float(valor), 2), "data_previsao": "",
+                        "total": round(valor, 2), "data_previsao": "",
                         "data_fatura": data_emissao_nfse(n) or ap.get("data_emissao", ""),
                         "cliente": nome,
                     })
-                    print(f"NFS-e {num} ({nome}, R$ {float(valor):.2f}) somada em {ap['familia']} — "
+                    print(f"NFS-e {num} ({nome}, R$ {valor:.2f}) somada em {ap['familia']} — "
                           f"aprovada por {ap.get('aprovado_por')} em {ap.get('aprovado_em')}.")
             elif status == "C" and cli not in autorizados and (empresa, cli) not in clientes_manuais:
                 ALERTAS.append(f"NFS-e de {nome} ({fmt_brl(valor)}) CANCELADA na OMIE sem reemissão no mês. "
                                f"Se a nota foi emitida fora da OMIE, lance na OMIE ou avise para lançar manual.")
         time.sleep(1.0)
     return linhas_aprovadas
+
+
+def checar_nfse():
+    """Invólucro (19/10/2026): a conferência de NFS-e NUNCA pode impedir o painel de publicar.
+    Qualquer erro inesperado vira alerta no topo do painel e o restante segue normal."""
+    try:
+        return _checar_nfse_impl()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        ALERTAS.append(f"Não consegui conferir as NFS-e de venda direta ({type(e).__name__}: {e}). "
+                       f"As vendas diretas aprovadas podem não estar somadas nesta atualização.")
+        return []
 
 
 def carregar_aprovacoes_nfse(mes_id):
