@@ -301,6 +301,9 @@
   }
   .pedidos-btn.faturado{background:var(--dark-green);}
   .pedidos-btn.previsto{background:#8A6D00;}
+  .pedidos-btn.vendadireta{background:#4F4A8C;}
+  .vd-vazio{color:var(--muted);font-size:13px;padding:10px 0;}
+  .vd-total td{font-weight:700;border-top:2px solid #6B1E28;}
   .pedidos-btn:hover{filter:brightness(1.08);}
 
   .pedidos-overlay{
@@ -446,8 +449,9 @@
     <h2 style="text-align:center;justify-content:center;">Ver todos os pedidos (dados brutos do OMIE)</h2>
     <div class="desc" style="text-align:center;">Lista linha a linha, exatamente como vem do relatório extraído do OMIE — sem agrupar nem calcular nada.</div>
     <div class="pedidos-btns">
-      <button type="button" class="pedidos-btn faturado" id="btnAbrirFaturado">📄 Abrir Faturados (Realizado)</button>
-      <button type="button" class="pedidos-btn previsto" id="btnAbrirPrevisto">📄 Abrir Previstos</button>
+      <button type="button" class="pedidos-btn faturado" id="btnAbrirFaturado">📄 Ver Faturados (Realizado)</button>
+      <button type="button" class="pedidos-btn previsto" id="btnAbrirPrevisto">📄 Ver Previstos</button>
+      <button type="button" class="pedidos-btn vendadireta" id="btnAbrirVendaDireta">📄 Ver Vendas Diretas</button>
     </div>
   </div>
 
@@ -552,6 +556,16 @@
       <tbody id="vendorFamTable"></tbody>
     </table>
     <div class="desc" id="vendorForaNote" style="margin-top:10px;"></div>
+    <div id="vendorVendaDiretaBox" style="margin-top:18px;display:none;">
+      <h3 style="font-size:14px;margin:0 0 4px 0;">Vendas diretas das suas famílias</h3>
+      <div class="desc" style="margin-bottom:8px;">Notas de serviço (NFS-e) de venda direta faturadas no mês nas famílias que você atende. Já estão somadas no Faturado da família.</div>
+      <table class="simple">
+        <thead>
+          <tr><th>Família de Produto</th><th>Cliente</th><th>Nota Fiscal</th><th>Data Faturamento</th><th class="num">Valor</th></tr>
+        </thead>
+        <tbody id="vendorVendaDiretaTable"></tbody>
+      </table>
+    </div>
     </div>
   </div>
 
@@ -587,6 +601,29 @@
         </tr>
       </thead>
       <tbody id="tbodyFaturadoRaw"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pedidos-overlay" id="overlayVendaDireta">
+  <div class="pedidos-header">
+    <h2>📄 Vendas Diretas (NFS-e) — faturadas no mês</h2>
+    <button type="button" class="pedidos-close" id="fecharVendaDireta">✕ Fechar</button>
+  </div>
+  <div class="pedidos-body">
+    <div class="desc" style="margin-bottom:10px;">Notas de serviço (NFS-e) de venda direta já somadas no Faturado da família. Também aparecem em "Ver Faturados".</div>
+    <table class="simple pedidos-table">
+      <thead>
+        <tr>
+          <th>Família de Produto</th>
+          <th>Cliente</th>
+          <th>Nota Fiscal</th>
+          <th>Empresa</th>
+          <th>Data Faturamento</th>
+          <th class="num">Valor</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyVendaDiretaRaw"></tbody>
     </table>
   </div>
 </div>
@@ -1153,6 +1190,7 @@ function showVendorDetail(vendedor){
   document.getElementById('vendorRankingBox').style.display = 'none';
   document.getElementById('vendorDetailBox').style.display = '';
   renderVendor(vendedor);
+  renderVendasDiretasVendedor(vendedor);
 }
 
 // ---- Corrida das famílias: mesma métrica do ranking (Prev+Fat sobre a meta da família),
@@ -1386,6 +1424,48 @@ if (initial) {
   renderRanking();
 }
 
+// ---- Vendas diretas (NFS-e) — pedido da Thais, 16/10/2026 ----
+// Linhas de venda direta = operação "Venda direta (NFS-e)" no Faturado (mesmas linhas que
+// já somam na família; aqui é só uma lente para consulta, não recalcula nada).
+// função (não const): é chamada por showVendorDetail antes deste trecho no link #v=Nome.
+function vendasDiretas(){ return (DATA.raw_real || []).filter(r => r.operacao === 'Venda direta (NFS-e)'); }
+function linhasVendaDireta(tbody, linhas, colunas, msgVazio){
+  tbody.innerHTML = '';
+  if (!linhas.length){
+    const tr = document.createElement('tr'); const td = document.createElement('td');
+    td.colSpan = colunas.length; td.className = 'vd-vazio'; td.textContent = msgVazio;
+    tr.appendChild(td); tbody.appendChild(tr); return;
+  }
+  linhas.forEach(l => {
+    const tr = document.createElement('tr');
+    colunas.forEach(c => {
+      const td = document.createElement('td');
+      if (c === 'total'){ td.className = 'num'; td.textContent = fmtBRL(l.total ?? 0); }
+      else td.textContent = l[c] ?? '';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  const tot = document.createElement('tr'); tot.className = 'vd-total';
+  const tdL = document.createElement('td'); tdL.colSpan = colunas.length - 1;
+  tdL.textContent = 'Total (' + linhas.length + (linhas.length === 1 ? ' nota)' : ' notas)');
+  const tdV = document.createElement('td'); tdV.className = 'num';
+  tdV.textContent = fmtBRL(linhas.reduce((s, l) => s + (l.total || 0), 0));
+  tot.append(tdL, tdV); tbody.appendChild(tot);
+}
+linhasVendaDireta(document.getElementById('tbodyVendaDiretaRaw'), vendasDiretas(),
+  ['familia','cliente','nota_fiscal','empresa','data_fatura','total'], 'Nenhuma venda direta faturada neste mês.');
+function renderVendasDiretasVendedor(vendedor){
+  const box = document.getElementById('vendorVendaDiretaBox');
+  const fams = VENDOR_FAMILIAS_RESP[vendedor];
+  if (!box) return;
+  if (!fams || !fams.length){ box.style.display = 'none'; return; }  // ex.: Jéssica (canal HUB)
+  box.style.display = '';
+  linhasVendaDireta(document.getElementById('vendorVendaDiretaTable'),
+    vendasDiretas().filter(l => fams.includes(l.familia)),
+    ['familia','cliente','nota_fiscal','data_fatura','total'], 'Nenhuma venda direta nas suas famílias neste mês.');
+}
+
 // ---- Telas de pedidos (dados brutos do OMIE, linha a linha) ----
 function montarTabelaPedidos(tbodyId, linhas){
   const tbody = document.getElementById(tbodyId);
@@ -1417,6 +1497,8 @@ document.getElementById('btnAbrirFaturado').addEventListener('click', () => abri
 document.getElementById('btnAbrirPrevisto').addEventListener('click', () => abrirOverlay('overlayPrevisto'));
 document.getElementById('fecharFaturado').addEventListener('click', () => fecharOverlay('overlayFaturado'));
 document.getElementById('fecharPrevisto').addEventListener('click', () => fecharOverlay('overlayPrevisto'));
+document.getElementById('btnAbrirVendaDireta').addEventListener('click', () => abrirOverlay('overlayVendaDireta'));
+document.getElementById('fecharVendaDireta').addEventListener('click', () => fecharOverlay('overlayVendaDireta'));
 </script>
 
 </body>
