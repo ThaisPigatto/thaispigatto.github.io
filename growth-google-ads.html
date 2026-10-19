@@ -187,12 +187,26 @@ footer{margin-top:22px;color:var(--muted);font-size:12.5px}
     <button class="tab" role="tab" data-p="familia" aria-selected="false">Números por família</button>
     <button class="tab" role="tab" data-p="orcamentos" aria-selected="false">Orçamentos</button>
     <button class="tab" role="tab" data-p="pedidos" aria-selected="false">Pedidos e vendas</button>
+    <button class="tab" role="tab" data-p="abc" aria-selected="false">Clientes A/B/C</button>
     <button class="tab" role="tab" data-p="leads" aria-selected="false">Leads do mês</button>
     <button class="tab" role="tab" data-p="ads" aria-selected="false">Google Ads</button>
     <button class="tab" role="tab" data-p="lps" aria-selected="false">Landing pages</button>
     <button class="tab" role="tab" data-p="plan" aria-selected="false">Planejamento</button>
     <button class="tab" role="tab" data-p="fontes" aria-selected="false">Fontes e qualidade</button>
   </nav>
+
+  <div class="box" id="perBar" style="display:none;padding:14px 18px">
+    <div class="filters" style="margin:0">
+      <div><span class="flabel">De</span><input type="date" class="sel" id="dIni"></div>
+      <div><span class="flabel">Até</span><input type="date" class="sel" id="dFim"></div>
+      <div><span class="flabel">Atalhos</span><div class="seg" id="perPre">
+        <button type="button" data-p="mes">Este mês</button><button type="button" data-p="ant">Mês passado</button><button type="button" data-p="90">Últimos 90 dias</button><button type="button" data-p="tudo" aria-pressed="true">Tudo</button></div></div>
+      <div class="pill" id="perInfo"></div>
+    </div>
+    <p class="note" style="margin:8px 0 0">Orçamentos e clientes: filtra pela <b>data em que o lead entrou no CRM</b>. Pedidos: pela data do pedido; os faturados, pela data de faturamento.</p>
+  </div>
+
+  <div class="box" id="perResumo" style="display:none"><h3>Resumo por mês</h3><p class="sub">Dentro do período escolhido.</p><div class="tw"><table><thead><tr><th>Mês</th><th class="n">Leads Ads no CRM</th><th class="n">Valor orçado</th><th class="n">Conquistados</th><th class="n">Pedidos emitidos</th><th class="n">Faturados</th><th class="n">Valor faturado</th></tr></thead><tbody id="perBody"></tbody></table></div></div>
 
   <!-- NÚMEROS GERAIS -->
   <section class="panel on" id="p-gerais">
@@ -245,18 +259,73 @@ footer{margin-top:22px;color:var(--muted);font-size:12.5px}
     <p class="note">Só entram pedidos emitidos depois da criação da oportunidade de Google Ads no CRM. Venda = pedido faturado no Omie.</p></div>
   </section>
 
+  <!-- CLIENTES ABC -->
+  <section class="panel" id="p-abc">
+    <div class="box"><h3>Clientes que vieram do Google Ads: recorrência e classificação</h3>
+      <p class="sub" id="cSub"></p>
+      <div class="grid kpis" id="cKpis"></div>
+      <div class="alert" id="cRegra"></div>
+      <div class="filters edonly" id="cCfg"></div>
+    </div>
+    <div class="filters">
+      <div><span class="flabel">Buscar</span><input class="sel" id="cQ" placeholder="Cliente, CNPJ, telefone"></div>
+      <div><span class="flabel">Classe</span><select class="sel" id="cCl"><option value="">Todas</option><option>A</option><option>Potencial A</option><option>B</option><option>C</option><option>Sem compra</option></select></div>
+      <div><span class="flabel">Família</span><select class="sel" id="cFam"><option value="">Todas</option></select></div>
+    </div>
+    <div class="box"><div class="tw"><table><thead><tr><th>Classe</th><th>Cliente</th><th>Contato</th><th>Família</th><th class="n">Compras</th><th class="n">Total faturado</th><th class="n">Ticket médio</th><th>1ª compra</th><th>Última compra</th><th class="n">Dias sem comprar</th><th class="n">Em aberto</th><th>Pedidos</th></tr></thead><tbody id="cBody"></tbody></table></div>
+    <p class="note">A classificação usa todo o histórico de compras do cliente; o período filtra pela data em que o lead entrou no CRM. Compras = pedidos faturados no Omie a partir da data em que o cliente entrou como lead do Google Ads no CRM. Cliente A ou B há mais de 60 dias sem comprar aparece em vermelho: é hora de reativar.</p></div>
+  </section>
+
   <!-- LEADS DO MÊS -->
   <section class="panel" id="p-leads">
     <div class="box" id="tintimBox"></div>
-    <div class="box"><h3>Leads novos de outubro</h3><p class="sub">Levantamento do WhatsApp (número da Thais). Os leads de chapas do WhatsApp da Jéssica estão no quadro do Tintim acima.</p><div class="grid kpis" id="lKpis"></div></div>
+    <div class="box"><h3>Leads fora do Tintim (cadastro manual)</h3>
+      <p class="sub">Leads que chegam no seu WhatsApp, no de outros vendedores ou por telefone: tudo que não passa pelo número da Jéssica. Os de chapas da Jéssica estão no quadro do Tintim acima.</p>
+      <p><button class="btn warn" id="lAdd" type="button">＋ Adicionar lead</button></p>
+      <div class="grid kpis" id="lKpis"></div></div>
     <div class="filters">
-      <div><span class="flabel">Buscar</span><input class="sel" id="lQ" placeholder="Cliente, produto, vendedor"></div>
-      <div><span class="flabel">Semana</span><select class="sel" id="lSem"><option value="">Todas</option></select></div>
+      <div><span class="flabel">Buscar</span><input class="sel" id="lQ" placeholder="Nome, empresa, telefone, CNPJ"></div>
+      <div><span class="flabel">Mês</span><select class="sel" id="lMes"><option value="">Todos</option></select></div>
+      <div><span class="flabel">Semana</span><select class="sel" id="lSem"><option value="">Todas</option><option value="1">S1 (01–05)</option><option value="2">S2 (06–12)</option><option value="3">S3 (13–19)</option><option value="4">S4 (20–26)</option><option value="5">S5 (27–31)</option></select></div>
       <div><span class="flabel">Família</span><select class="sel" id="lFam"><option value="">Todas</option></select></div>
       <div><span class="flabel">Atendido por</span><select class="sel" id="lVend"><option value="">Todos</option></select></div>
     </div>
-    <div class="box"><div class="tw"><table><thead><tr><th>Data</th><th>Sem.</th><th>Cliente</th><th>Família</th><th>1º produto procurado</th><th>Origem</th><th>Atendido por</th><th>Orçamento</th><th class="n">Valor orç.</th><th>Venda</th><th>CRM</th></tr></thead><tbody id="lBody"></tbody></table></div>
-    <p class="note">Clique no telefone para abrir a conversa no WhatsApp. Semanas: S1 = 01 a 05/10, S2 = 06 a 12/10, S3 = 13 a 19/10, S4 = 20 a 26/10.</p></div>
+    <div class="box"><div class="tw"><table><thead><tr><th>Chegou em</th><th>Cliente</th><th>Empresa</th><th>Família / LP</th><th>Origem</th><th>Atendido por</th><th>Orçamento</th><th>Venda</th><th>Observação</th><th></th></tr></thead><tbody id="lBody"></tbody></table></div>
+    <p class="note">Clique no telefone para abrir a conversa no WhatsApp. Semanas do mês: S1 = dias 01 a 05, S2 = 06 a 12, S3 = 13 a 19, S4 = 20 a 26, S5 = 27 em diante. Depois de adicionar ou editar, clique em "Baixar dados criptografados" e suba o arquivo no GitHub para todos verem.</p></div>
+
+    <dialog id="leadDlg" style="border:0;border-radius:18px;padding:0;max-width:720px;width:calc(100% - 24px)">
+      <form id="leadForm" method="dialog" style="padding:22px">
+        <h3 style="margin:0 0 4px;color:var(--navy)" id="leadDlgT">Adicionar lead</h3>
+        <p class="note" style="margin:0 0 14px">Campos com * são obrigatórios.</p>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+          <label><span class="flabel">Chegou em *</span><input class="sel" type="date" name="data" required style="width:100%"></label>
+          <label><span class="flabel">Nome do contato *</span><input class="sel" name="nome" required style="width:100%"></label>
+          <label><span class="flabel">Telefone / WhatsApp *</span><input class="sel" name="tel" inputmode="tel" placeholder="(41) 99999-9999" required style="width:100%"></label>
+          <label><span class="flabel">E-mail</span><input class="sel" name="email" type="email" style="width:100%"></label>
+          <label><span class="flabel">Empresa</span><input class="sel" name="empresa" style="width:100%"></label>
+          <label><span class="flabel">CNPJ</span><input class="sel" name="cnpj" inputmode="numeric" style="width:100%"></label>
+          <label><span class="flabel">Cidade / UF</span><input class="sel" name="cidade" placeholder="Curitiba/PR" style="width:100%"></label>
+          <label><span class="flabel">Família *</span><select class="sel" name="familia" required style="width:100%"><option value="">Escolha</option><option>Chapas Acrílico</option><option>Chapas PS</option><option>Chapas PSAI</option><option>Chapas (outros materiais)</option><option>Biochem</option><option>Chemlok</option><option>Parker Lord</option><option>Marbocote</option><option>Papéis e etiquetas</option><option>Outros</option></select></label>
+          <label><span class="flabel">Landing page</span><input class="sel" name="lp" list="lpList" placeholder="Escolha ou digite" style="width:100%"><datalist id="lpList"></datalist></label>
+          <label><span class="flabel">Origem *</span><select class="sel" name="origem" required style="width:100%"><option>Google Ads</option><option>Site (orgânico)</option><option>Direto (WhatsApp)</option><option>Indicação</option><option>Telefone</option><option>Outro</option></select></label>
+          <label><span class="flabel">1º produto procurado</span><input class="sel" name="produto" style="width:100%"></label>
+          <label><span class="flabel">Atendido por *</span><input class="sel" name="atendente" list="vendList" required style="width:100%"><datalist id="vendList"></datalist></label>
+          <label><span class="flabel">Gerou orçamento?</span><select class="sel" name="orcamento" style="width:100%"><option>Não</option><option>Sim</option><option>Em andamento</option></select></label>
+          <label><span class="flabel">Nº do orçamento</span><input class="sel" name="n_orc" style="width:100%"></label>
+          <label><span class="flabel">Valor orçado (R$)</span><input class="sel" name="valor_orc" inputmode="decimal" placeholder="1.234,56" style="width:100%"></label>
+          <label><span class="flabel">Virou venda?</span><select class="sel" name="venda" style="width:100%"><option>Não</option><option>Sim</option><option>Perdido</option></select></label>
+          <label><span class="flabel">Nº do pedido</span><input class="sel" name="n_ped" style="width:100%"></label>
+          <label><span class="flabel">Valor da venda (R$)</span><input class="sel" name="valor_venda" inputmode="decimal" style="width:100%"></label>
+          <label><span class="flabel">Está no CRM do Omie?</span><select class="sel" name="crm" style="width:100%"><option>Não</option><option>Sim</option></select></label>
+        </div>
+        <label style="display:block;margin-top:12px"><span class="flabel">Observação</span><textarea class="sel" name="obs" rows="2" style="width:100%"></textarea></label>
+        <div class="err" id="leadErr" style="color:var(--red);font-size:13px;min-height:18px;margin-top:6px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+          <button class="btn" type="button" id="leadCancel">Cancelar</button>
+          <button class="btn primary" type="submit" value="ok">Salvar lead</button>
+        </div>
+      </form>
+    </dialog>
   </section>
 
   <!-- (tintim é renderizado dentro de Leads do mês) -->
@@ -341,7 +410,7 @@ async function abrir(pw){
     alert("Nenhum arquivo de dados encontrado. Clique em \"Importar JSON\" e escolha o growth-ads.json; depois \"Baixar dados criptografados\" e suba no GitHub.");}
   init();
 }
-function vazio(){return{versao:1,atualizado_em:new Date().toISOString(),historico:{"Plásticos de Engenharia":{}},investimento:{},verba_mensal:0,distribuicao:{itens:[]},leads_outubro:[],orcamentos:[],planejamento:[],pendencias_plan:[],lps:[],google_ads:{},alteracoes:[],divergencias:[]};}
+function vazio(){return{versao:1,atualizado_em:new Date().toISOString(),historico:{"Plásticos de Engenharia":{}},investimento:{},verba_mensal:0,distribuicao:{itens:[]},leads:[],orcamentos:[],planejamento:[],pendencias_plan:[],lps:[],google_ads:{},alteracoes:[],divergencias:[]};}
 function load(){
   $("lockForm").addEventListener("submit",e=>{e.preventDefault();abrir($("lockPw").value);});
   const pw=sessionStorage.getItem(SS_KEY);if(pw)abrir(pw);
@@ -447,12 +516,31 @@ function renderFam(){
   else{const w=D.historico[f][m]||[];$("fChartT").textContent="Semanas de "+mesNome(m);chart("fChart",barCfg(w.map(x=>dbr(x.fim).slice(0,5)),w));$("fTabT").textContent="Semana a semana";weekTable($("fTab"),m,f);}
   $("fNote").textContent=D.notas_historico||"";
 }
+const INICIO_ADS="2026-06-01";
+const hojeISO=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const dPed=p=>p.faturado?(p.data_faturamento||p.data):p.data;
+function inP(s){if(!s)return false;s=String(s).slice(0,10);return s>=(state.ini||INICIO_ADS)&&s<=(state.fim||hojeISO());}
+function setPer(ini,fim,pre){state.ini=ini;state.fim=fim;$("dIni").value=ini;$("dFim").value=fim;
+  document.querySelectorAll("#perPre button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===pre));
+  $("perInfo").textContent=`Período: ${dbr(ini)} a ${dbr(fim)}`;renderOrc();renderPedidos();renderABC();renderResumoPer();}
+function preset(k){const h=new Date(),y=h.getFullYear(),m=h.getMonth(),iso=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  if(k==="mes")return[iso(new Date(y,m,1)),hojeISO()];if(k==="ant")return[iso(new Date(y,m-1,1)),iso(new Date(y,m,0))];
+  if(k==="90")return[iso(new Date(Date.now()-89*864e5)),hojeISO()];return[INICIO_ADS,hojeISO()];}
+function renderResumoPer(){
+  const M={},row=k=>M[k]=M[k]||{leads:0,orc:0,conq:0,ped:0,fat:0,vfat:0},vistos=new Set();
+  orcList().forEach(o=>{if(inP(o.data)){const r=row(o.data.slice(0,7));r.leads++;r.orc+=+o.valor||0;if(/conquist/i.test(o.status))r.conq++;}
+    (o.pedidos||[]).forEach(p=>{const k=p.empresa+"-"+p.numero;if(vistos.has(k))return;vistos.add(k);
+      if(inP(p.data))row(p.data.slice(0,7)).ped++;if(p.faturado&&inP(dPed(p))){const r=row(dPed(p).slice(0,7));r.fat++;r.vfat+=+p.valor||0;}});});
+  const ks=Object.keys(M).sort(),T={leads:0,orc:0,conq:0,ped:0,fat:0,vfat:0};ks.forEach(k=>Object.keys(T).forEach(f=>T[f]+=M[k][f]));
+  $("perBody").innerHTML=ks.map(k=>{const r=M[k];return`<tr><td>${mesNome(k)}</td><td class="n">${int(r.leads)}</td><td class="n">${brl(r.orc)}</td><td class="n">${int(r.conq)}</td><td class="n">${int(r.ped)}</td><td class="n">${int(r.fat)}</td><td class="n">${brl(r.vfat)}</td></tr>`}).join("")+
+    (ks.length?`<tr class="tot"><td>Total</td><td class="n">${int(T.leads)}</td><td class="n">${brl(T.orc)}</td><td class="n">${int(T.conq)}</td><td class="n">${int(T.ped)}</td><td class="n">${int(T.fat)}</td><td class="n">${brl(T.vfat)}</td></tr>`:`<tr><td colspan="7">Nada no período.</td></tr>`);
+}
 function orcList(){return OMIE&&OMIE.orcamentos?OMIE.orcamentos:D.orcamentos;}
-function stTag(s){const k=/conquist|ganh|fatur/i.test(s)?"t-ok":/perd|cancel/i.test(s)?"t-bad":/proposta/i.test(s)?"t-warn":"t-open";return`<span class="tag ${k}">${esc(s)}</span>`;}
+function stTag(s){if(CL_TAG[s])return`<span class="tag ${CL_TAG[s]}">${esc(s)}</span>`;const k=/conquist|ganh|fatur/i.test(s)?"t-ok":/perd|cancel/i.test(s)?"t-bad":/proposta/i.test(s)?"t-warn":"t-open";return`<span class="tag ${k}">${esc(s)}</span>`;}
 function itensHtml(p){if(!p.itens||!p.itens.length)return'<span class="note">sem itens</span>';
   return`<details class="ped"><summary>${p.itens.length} item(ns)</summary><table><thead><tr><th>Produto</th><th class="n">Qtd</th><th class="n">Unitário</th><th class="n">Total</th></tr></thead><tbody>${p.itens.map(i=>`<tr><td>${esc(i.produto)}</td><td class="n">${int(i.qtd)}</td><td class="n">${brl(i.unitario)}</td><td class="n">${brl(i.total)}</td></tr>`).join("")}</tbody></table></details>`;}
 function renderOrc(){
-  const L=orcList(),today=new Date();
+  const L=orcList().filter(o=>inP(o.data)).map(o=>Object.assign({},o,{valor_faturado:(o.pedidos||[]).filter(p=>p.faturado&&inP(dPed(p))).reduce((s,p)=>s+(+p.valor||0),0)})),today=new Date();
   $("oSub").textContent="Oportunidades com origem Google Ads no CRM Omie (Matriz + Papeis). "+(OMIE?"Atualizado automaticamente em "+new Date(OMIE.atualizado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})+".":(D.orcamentos_posicao||""));
   const open=L.filter(o=>!/conquist|perd|cancel/i.test(o.status)),won=L.filter(o=>/conquist/i.test(o.status));
   const sum=a=>a.reduce((s,o)=>s+(+o.valor||0),0),semValor=L.filter(o=>o.valor==null||o.valor===0).length,fat=L.reduce((s,o)=>s+(+o.valor_faturado||0),0);
@@ -468,7 +556,7 @@ function renderOrc(){
       <td>${esc(o.familia)}</td><td class="n">${brl(o.valor)}</td><td>${stTag(o.status)}</td><td class="n">${o.valor_faturado!=null?brl(o.valor_faturado):"–"}${peds}</td><td class="n"${sty}>${aberto?dias:"–"}</td><td class="note">${esc(o.obs)}${o.vinculo_cliente?`<div>Vínculo: ${esc(o.vinculo_cliente)}</div>`:""}</td></tr>`}).join("")||`<tr><td colspan="10">Nenhum orçamento neste filtro.</td></tr>`;
 }
 function renderPedidos(){
-  const P=[];orcList().forEach(o=>(o.pedidos||[]).forEach(p=>P.push(Object.assign({cliente:o.cliente,cnpj:o.cnpj,familia:o.familia},p))));
+  const P=[],vp=new Set();orcList().forEach(o=>(o.pedidos||[]).forEach(p=>{const k=p.empresa+"-"+p.numero;if(vp.has(k)||!inP(dPed(p)))return;vp.add(k);P.push(Object.assign({cliente:o.cliente,cnpj:o.cnpj,familia:o.familia},p));}));
   $("pSub").textContent=OMIE?"Omie Vendas, atualizado em "+new Date(OMIE.atualizado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})+".":"Os pedidos aparecem depois que o robô diário rodar pela primeira vez (Actions no GitHub).";
   const fat=P.filter(p=>p.faturado),ab=P.filter(p=>!p.faturado&&!p.cancelado),s=a=>a.reduce((x,p)=>x+(+p.valor||0),0);
   $("pKpis").innerHTML=[["Pedidos faturados",int(fat.length),brl(s(fat)),true],["Pedidos não faturados",int(ab.length),brl(s(ab))],["Ticket médio faturado",fat.length?brl(s(fat)/fat.length):"–",""],["Clientes com pedido",int(new Set(P.map(p=>p.cliente)).size),""]]
@@ -477,13 +565,104 @@ function renderPedidos(){
   $("pBody").innerHTML=P.filter(p=>(!q||JSON.stringify(p).toLowerCase().includes(q))&&(!st||(st==="aberto"?(!p.faturado&&!p.cancelado):p.etapa===st))).sort((a,b)=>b.data.localeCompare(a.data)).map(p=>
     `<tr><td>${dbr(p.data)}</td><td>${esc(p.empresa)} nº ${esc(p.numero)}</td><td><b>${esc(p.cliente)}</b></td><td>${fmtCnpj(p.cnpj)}</td><td>${esc(p.familia)}</td><td class="n">${brl(p.valor)}</td><td>${stTag(p.etapa)}</td><td>${itensHtml(p)}</td></tr>`).join("")||`<tr><td colspan="8">Nenhum pedido ainda.</td></tr>`;
 }
+function abcCfg(){D.abc=D.abc||{limite_valor:5000,min_compras:2,limite_oportunidade:20000,dias_inativo:60};return D.abc;}
+function clientesAds(){
+  const map={};
+  orcList().forEach(o=>{
+    const k=o.empresa+"|"+(o.cnpj||o.cod_cliente||String(o.cliente).toLowerCase().trim());
+    const c=map[k]=map[k]||{empresa:o.empresa,cliente:o.cliente,cnpj:o.cnpj,contato:o.contato,telefone:o.telefone,email:o.email,familias:new Set(),ops:[],pedidos:{},primeiro_lead:o.data};
+    c.familias.add(o.familia);c.ops.push(o);if(o.data<c.primeiro_lead)c.primeiro_lead=o.data;
+    if(!c.telefone&&o.telefone)c.telefone=o.telefone;
+    (o.pedidos||[]).forEach(p=>{c.pedidos[p.empresa+"-"+p.numero]=p;});
+  });
+  const cfg=abcCfg();
+  return Object.values(map).map(c=>{
+    const peds=Object.values(c.pedidos),fat=peds.filter(p=>p.faturado).sort((a,b)=>(a.data_faturamento||a.data).localeCompare(b.data_faturamento||b.data));
+    const total=fat.reduce((s,p)=>s+(+p.valor||0),0),n=fat.length;
+    const ult=n?(fat[n-1].data_faturamento||fat[n-1].data):"",pri=n?(fat[0].data_faturamento||fat[0].data):"";
+    const dias=ult?Math.floor((Date.now()-new Date(ult+"T12:00:00"))/864e5):null;
+    const aberto=c.ops.filter(o=>!/conquist|perd|cancel/i.test(o.status)).reduce((s,o)=>s+(+o.valor||0),0);
+    let cl;
+    if(n>=cfg.min_compras&&total>=cfg.limite_valor)cl="A";
+    else if(n>=cfg.min_compras)cl="B";
+    else if(n===1&&total>=cfg.limite_valor)cl="Potencial A";
+    else if(n===1)cl="C";
+    else cl="Sem compra";
+    return Object.assign(c,{familia:[...c.familias].join(", "),fat,total,n,ult,pri,dias,aberto,ticket:n?total/n:null,classe:cl,
+      oportunidade_alta:cl==="Sem compra"&&aberto>=cfg.limite_oportunidade});
+  });
+}
+const CL_TAG={"A":"t-ok","Potencial A":"t-ok","B":"t-open","C":"t-warn","Sem compra":"t-bad"};
+function renderABC(){
+  const C=clientesAds(),cfg=abcCfg();
+  $("cSub").textContent=OMIE?"Clientes do CRM com origem Google Ads desde jun/2026 e os pedidos faturados de cada um. Atualizado em "+new Date(OMIE.atualizado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})+".":"Disponível depois que o robô diário rodar.";
+  const CP=C.filter(c=>inP(c.primeiro_lead)),grp=k=>CP.filter(c=>c.classe===k),s=a=>a.reduce((x,c)=>x+c.total,0);
+  $("cKpis").innerHTML=[["Clientes A",grp("A"),true],["Potencial A",grp("Potencial A")],["Clientes B",grp("B")],["Clientes C",grp("C")],["Ainda sem compra",grp("Sem compra")]]
+    .map(([lb,a,h])=>`<div class="kpi${h?" hero":""}"><div class="lb">${lb}</div><div class="v num">${int(a.length)}</div><div class="d">${lb==="Ainda sem compra"?int(a.filter(c=>c.oportunidade_alta).length)+" com oportunidade ≥ "+brl0(cfg.limite_oportunidade):brl(s(a))+" faturados"}</div></div>`).join("")+
+    `<div class="kpi"><div class="lb">Recorrentes (A + B)</div><div class="v num">${pct(CP.filter(c=>c.n>0).length?(grp("A").length+grp("B").length)/CP.filter(c=>c.n>0).length:null)}</div><div class="d">dos clientes que já compraram</div></div>`;
+  $("cRegra").innerHTML=`<b>Regras:</b> <b>A</b> = ${cfg.min_compras}+ compras e total a partir de ${brl0(cfg.limite_valor)} · <b>B</b> = ${cfg.min_compras}+ compras abaixo de ${brl0(cfg.limite_valor)} · <b>Potencial A</b> = 1 compra a partir de ${brl0(cfg.limite_valor)} (falta recorrência) · <b>C</b> = 1 compra abaixo de ${brl0(cfg.limite_valor)} · <b>Sem compra</b> = lead sem pedido faturado; oportunidade em aberto a partir de ${brl0(cfg.limite_oportunidade)} recebe o selo "oportunidade alta".`;
+  $("cCfg").innerHTML=editing?[["limite_valor","Valor para A (R$)"],["min_compras","Compras para recorrência"],["limite_oportunidade","Oportunidade alta (R$)"],["dias_inativo","Dias para alerta de inatividade"]].map(([k,l])=>`<div><span class="flabel">${l}</span><input class="ed" data-abc="${k}" value="${cfg[k]}"></div>`).join(""):"";
+  $("cCfg").querySelectorAll("input[data-abc]").forEach(i=>i.addEventListener("change",e=>{const v=Number(e.target.value.replace(/\./g,"").replace(",","."));if(isNaN(v))return;const k=e.target.dataset.abc,old=cfg[k];cfg[k]=v;D.atualizado_em=new Date().toISOString();D.alteracoes.unshift({quando:D.atualizado_em.slice(0,16).replace("T"," "),quem:"Thais Brito (edição na página)",o_que:`Regra A/B/C · ${k}: ${old} → ${v}`});saveLocal();renderABC();}));
+  const fs=$("cFam");if(fs.options.length===1)fill(fs,[...new Set(C.flatMap(c=>[...c.familias]))]);
+  const q=($("cQ").value||"").toLowerCase(),cl=$("cCl").value,fm=$("cFam").value,ord={"A":0,"Potencial A":1,"B":2,"C":3,"Sem compra":4};
+  $("cBody").innerHTML=C.filter(c=>inP(c.primeiro_lead)&&(!cl||c.classe===cl)&&(!fm||c.familias.has(fm))&&(!q||(c.cliente+c.cnpj+c.telefone+c.contato).toLowerCase().includes(q)))
+   .sort((a,b)=>ord[a.classe]-ord[b.classe]||b.total-a.total||b.aberto-a.aberto).map(c=>{
+    const alerta=(c.classe==="A"||c.classe==="B")&&c.dias!=null&&c.dias>cfg.dias_inativo;
+    return`<tr><td>${stTag(c.classe)}${c.oportunidade_alta?'<div><span class="tag t-warn">oportunidade alta</span></div>':""}</td>
+    <td><b>${esc(c.cliente)}</b>${c.cnpj?`<div class="note">CNPJ ${fmtCnpj(c.cnpj)}</div>`:""}<div class="note">${esc(c.empresa)} · lead em ${dbr(c.primeiro_lead)}</div></td>
+    <td>${esc(c.contato||"")}<div>${c.telefone?wa(c.telefone):""}</div>${c.email?`<div class="note">${esc(c.email)}</div>`:""}</td>
+    <td>${esc(c.familia)}</td><td class="n">${int(c.n)}</td><td class="n">${brl(c.total)}</td><td class="n">${c.ticket?brl(c.ticket):"–"}</td>
+    <td>${c.pri?dbr(c.pri):"–"}</td><td>${c.ult?dbr(c.ult):"–"}</td><td class="n"${alerta?' style="color:var(--red);font-weight:700"':""}>${c.dias??"–"}</td><td class="n">${c.aberto?brl(c.aberto):"–"}</td>
+    <td>${c.fat.length?`<details class="ped"><summary>${c.fat.length} faturado(s)</summary><table><thead><tr><th>Pedido</th><th>Data</th><th class="n">Valor</th></tr></thead><tbody>${c.fat.map(p=>`<tr><td>${esc(p.numero)}</td><td>${dbr(p.data_faturamento||p.data)}</td><td class="n">${brl(p.valor)}</td></tr>`).join("")}</tbody></table></details>`:'<span class="note">sem pedido faturado</span>'}</td></tr>`;}).join("")||`<tr><td colspan="12">Nenhum cliente neste filtro.</td></tr>`;
+}
+function leadsAll(){if(!D.leads){D.leads=(D.leads_outubro||[]).map(x=>Object.assign({},x));delete D.leads_outubro;}return D.leads;}
+const semDe=s=>{const d=+String(s||"").slice(8,10);return!d?"":d<=5?1:d<=12?2:d<=19?3:d<=26?4:5;};
+const numBR=s=>{if(s==null||String(s).trim()==="")return null;const n=Number(String(s).replace(/[R$\s]/g,"").replace(/\./g,"").replace(",","."));return isNaN(n)?null:n;};
+let leadIdx=null;
+function abrirLead(i){
+  const f=$("leadForm"),x=i==null?{data:hojeISO(),origem:"Google Ads",orcamento:"Não",venda:"Não",crm:"Não"}:leadsAll()[i];leadIdx=i;
+  $("leadDlgT").textContent=i==null?"Adicionar lead":"Editar lead";$("leadErr").textContent="";
+  [...f.elements].forEach(el=>{if(!el.name)return;let v=x[el.name];if(el.name==="valor_orc"||el.name==="valor_venda")v=v==null?"":String(v).replace(".",",");el.value=v??"";});
+  $("lpList").innerHTML=(D.lps||[]).map(l=>`<option value="${esc(l.nome)}">`).join("");
+  $("vendList").innerHTML=[...new Set(leadsAll().map(l=>l.atendente).filter(Boolean).concat(["Jéssica Farias","Maria Cristina","Marcelo","Tiago","Rhamayana","Thais Brito"]))].map(v=>`<option value="${esc(v)}">`).join("");
+  $("leadDlg").showModal();
+}
+function salvarLead(e){
+  e.preventDefault();const f=$("leadForm"),x={};[...f.elements].forEach(el=>{if(el.name)x[el.name]=el.value.trim();});
+  if(String(x.tel).replace(/\D/g,"").length<10){$("leadErr").textContent="Telefone precisa ter DDD + número.";return;}
+  x.valor_orc=numBR(x.valor_orc);x.valor_venda=numBR(x.valor_venda);x.semana=semDe(x.data);x.cnpj=String(x.cnpj||"").replace(/\D/g,"");x.manual=true;
+  const L=leadsAll(),agora=new Date().toISOString();
+  if(leadIdx==null){const dup=L.find(l=>String(l.tel).replace(/\D/g,"").slice(-8)===String(x.tel).replace(/\D/g,"").slice(-8));
+    if(dup&&!confirm(`Já existe um lead com esse telefone (${dup.nome}, ${dbr(dup.data)}). Adicionar mesmo assim?`))return;
+    x.criado_em=agora;L.unshift(x);}
+  else{x.criado_em=L[leadIdx].criado_em||"";L[leadIdx]=Object.assign({},L[leadIdx],x);}
+  D.atualizado_em=agora;D.alteracoes=D.alteracoes||[];D.alteracoes.unshift({quando:agora.slice(0,16).replace("T"," "),quem:"Thais Brito (painel)",o_que:`Lead ${leadIdx==null?"incluído":"editado"}: ${x.nome} (${x.familia}, ${dbr(x.data)})`});
+  saveLocal();$("leadDlg").close();if(!editing&&window.setEdit)window.setEdit(true);preencherFiltrosLeads();renderLeads();
+}
+function excluirLead(i){const l=leadsAll()[i];if(!confirm(`Excluir o lead ${l.nome} (${dbr(l.data)})?`))return;leadsAll().splice(i,1);
+  D.atualizado_em=new Date().toISOString();D.alteracoes.unshift({quando:D.atualizado_em.slice(0,16).replace("T"," "),quem:"Thais Brito (painel)",o_que:`Lead excluído: ${l.nome} (${dbr(l.data)})`});saveLocal();renderLeads();}
+function preencherFiltrosLeads(){const L=leadsAll();
+  [["lMes",[...new Set(L.map(x=>String(x.data||"").slice(0,7)).filter(Boolean))].sort().reverse(),mesNome],["lFam",[...new Set(L.map(x=>x.familia).filter(Boolean))]],["lVend",[...new Set(L.map(x=>x.atendente).filter(Boolean))]]]
+  .forEach(([id,vals,lb])=>{const s=$(id),cur=s.value;while(s.options.length>1)s.remove(1);fill(s,vals,lb);s.value=cur;});}
 function renderLeads(){
-  const L=D.leads_outubro||[],q=$("lQ").value.toLowerCase(),s=$("lSem").value,f=$("lFam").value,v=$("lVend").value;
-  const ads=L.filter(x=>/google ads/i.test(x.origem)).length,orcS=L.filter(x=>x.orcamento==="Sim").length,crmOk=L.filter(x=>/sim|ok/i.test(x.crm)).length;
-  $("lKpis").innerHTML=[["Leads novos",int(L.length),"01/10 até hoje",true],["Origem Google Ads (identificada)",int(ads),"Demais: direto ou indicação"],["Com orçamento confirmado",int(orcS),pct(L.length?orcS/L.length:null)+" dos leads"],["Registrados no CRM",int(crmOk),"Cruzamento com o Omie pendente"]]
+  const L=leadsAll(),q=$("lQ").value.toLowerCase(),m=$("lMes").value,s=$("lSem").value,f=$("lFam").value,v=$("lVend").value;
+  const F=L.map((x,i)=>Object.assign({_i:i},x)).filter(x=>(!m||String(x.data).startsWith(m))&&(!s||String(x.semana||semDe(x.data))===s)&&(!f||x.familia===f)&&(!v||x.atendente===v)&&(!q||JSON.stringify(x).toLowerCase().includes(q)));
+  const ads=F.filter(x=>/google ads/i.test(x.origem)).length,orc=F.filter(x=>x.orcamento==="Sim"),ven=F.filter(x=>x.venda==="Sim");
+  const vOrc=orc.reduce((t,x)=>t+(+x.valor_orc||0),0),vVen=ven.reduce((t,x)=>t+(+x.valor_venda||0),0);
+  $("lKpis").innerHTML=[["Leads",int(F.length),m?mesNome(m):"todos os meses",true],["Origem Google Ads",int(ads),pct(F.length?ads/F.length:null)+" dos leads"],["Com orçamento",int(orc.length),brl(vOrc)+" · "+pct(F.length?orc.length/F.length:null)],["Vendas",int(ven.length),brl(vVen)+" · "+pct(orc.length?ven.length/orc.length:null)+" dos orçamentos"],["Fora do CRM",int(F.filter(x=>x.crm!=="Sim").length),"Cadastrar no Omie com origem"]]
    .map(([a,b,c,h])=>`<div class="kpi${h?" hero":""}"><div class="lb">${a}</div><div class="v num">${b}</div><div class="d">${c}</div></div>`).join("");
-  $("lBody").innerHTML=L.filter(x=>(!s||String(x.semana)===s)&&(!f||x.familia===f)&&(!v||x.atendente===v)&&(!q||JSON.stringify(x).toLowerCase().includes(q))).map(x=>
-   `<tr><td>${dbr(x.data)}</td><td>S${x.semana}</td><td>${esc(x.nome)}<div>${/\d{8}/.test(String(x.tel).replace(/\D/g,""))?wa(x.tel):`<span class="note">${esc(x.tel)}</span>`}</div>${x.obs?`<div class="note">${esc(x.obs)}</div>`:""}</td><td>${esc(x.familia)}</td><td>${esc(x.produto)}</td><td>${esc(x.origem)}</td><td>${esc(x.atendente)}</td><td>${x.orcamento==="Sim"?stTag("Sim"+(x.n_orc?" · nº "+x.n_orc:"")):`<span class="tag t-warn">${esc(x.orcamento)}</span>`}</td><td class="n">${brl(x.valor_orc)}</td><td>${esc(x.venda)}</td><td><span class="tag t-warn">${esc(x.crm)}</span></td></tr>`).join("")||`<tr><td colspan="11">Nenhum lead neste filtro.</td></tr>`;
+  $("lBody").innerHTML=F.sort((a,b)=>String(b.data).localeCompare(String(a.data))).map(x=>
+   `<tr><td>${dbr(x.data)}<div class="note">S${x.semana||semDe(x.data)}</div></td>
+   <td><b>${esc(x.nome)}</b><div>${/\d{8}/.test(String(x.tel).replace(/\D/g,""))?wa(x.tel):`<span class="note">${esc(x.tel||"sem telefone")}</span>`}</div>${x.email?`<div class="note">${esc(x.email)}</div>`:""}</td>
+   <td>${esc(x.empresa||"—")}${x.cnpj&&String(x.cnpj).length===14?`<div class="note">CNPJ ${fmtCnpj(x.cnpj)}</div>`:""}${x.cidade?`<div class="note">${esc(x.cidade)}</div>`:""}</td>
+   <td>${esc(x.familia)}${x.lp?`<div class="note">LP: ${esc(x.lp)}</div>`:""}${x.produto?`<div class="note">${esc(x.produto)}</div>`:""}</td>
+   <td>${esc(x.origem)}</td><td>${esc(x.atendente)}</td>
+   <td>${x.orcamento==="Sim"?stTag("Sim"+(x.n_orc?" · nº "+x.n_orc:"")):`<span class="tag t-warn">${esc(x.orcamento||"Não")}</span>`}${x.valor_orc?`<div class="num">${brl(x.valor_orc)}</div>`:""}</td>
+   <td>${x.venda==="Sim"?stTag("Conquistado"):`<span class="tag ${x.venda==="Perdido"?"t-bad":"t-open"}">${esc(x.venda||"Não")}</span>`}${x.n_ped?`<div class="note">Pedido ${esc(x.n_ped)}</div>`:""}${x.valor_venda?`<div class="num">${brl(x.valor_venda)}</div>`:""}</td>
+   <td class="note">${esc(x.obs||"")}${x.crm==="Sim"?"":'<div><span class="tag t-warn">fora do CRM</span></div>'}</td>
+   <td style="white-space:nowrap"><button class="btn" type="button" data-ed="${x._i}" style="padding:5px 9px">Editar</button>${editing?` <button class="btn" type="button" data-del="${x._i}" style="padding:5px 9px;color:var(--red)">Excluir</button>`:""}</td></tr>`).join("")||`<tr><td colspan="10">Nenhum lead neste filtro.</td></tr>`;
+  $("lBody").querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>abrirLead(+b.dataset.ed));
+  $("lBody").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>excluirLead(+b.dataset.del));
 }
 function tintimConversas(){
   if(OMIE&&OMIE.tintim&&OMIE.tintim.conversas&&OMIE.tintim.conversas.length)
@@ -553,7 +732,7 @@ function renderFontes(){
 }
 function renderAll(){
   $("updated").textContent="Dados atualizados em "+new Date(D.atualizado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})+(OMIE?" · Omie em "+new Date(OMIE.atualizado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"");
-  renderGerais();renderFam();renderOrc();renderPedidos();renderLeads();renderTintim();renderAds();renderLps();renderPlan();renderFontes();
+  renderGerais();renderFam();renderOrc();renderPedidos();renderABC();renderLeads();renderTintim();renderAds();renderLps();renderPlan();renderFontes();
   $("foot").innerHTML=`Fontes: planilha Cockpit de Ads, Omie CRM e Vendas, levantamento do WhatsApp. Atualização automática prevista todo dia às 6h. Valores em receita bruta. Dados comerciais de uso interno do Grupo Pigatto.`;
 }
 
@@ -563,23 +742,25 @@ function init(){
   const ms=meses();state.gMes=state.fMes=ms[ms.length-1];state.fFam=fams()[0];
   fill($("gMes"),[...ms].reverse(),mesNome);fill($("fMes"),[...ms].reverse(),mesNome);fill($("fFam"),fams());
   const os=[...new Set(orcList().map(o=>o.status))],of=[...new Set(orcList().map(o=>o.familia))];fill($("oSt"),os);fill($("oFam"),of);
-  const L=D.leads_outubro||[];fill($("lSem"),[...new Set(L.map(x=>String(x.semana)))],v=>"Semana "+v);fill($("lFam"),[...new Set(L.map(x=>x.familia))]);fill($("lVend"),[...new Set(L.map(x=>x.atendente))]);
+  preencherFiltrosLeads();
   $("gMes").onchange=e=>{state.gMes=e.target.value;renderGerais()};
   $("fMes").onchange=e=>{state.fMes=e.target.value;renderFam()};
   $("fFam").onchange=e=>{state.fFam=e.target.value;renderFam()};
   ["oSt","oFam"].forEach(id=>$(id).onchange=renderOrc);$("oQ").addEventListener("input",renderOrc);
+  ["cQ","cCl","cFam"].forEach(id=>$(id).addEventListener("input",renderABC));
   $("pQ").addEventListener("input",renderPedidos);$("pSt").onchange=renderPedidos;
   $("btnSair").onclick=()=>{sessionStorage.removeItem(SS_KEY);location.reload();};
-  ["lQ","lSem","lFam","lVend"].forEach(id=>$(id).addEventListener("input",renderLeads));
+  ["lQ","lMes","lSem","lFam","lVend"].forEach(id=>$(id).addEventListener("input",renderLeads));
+  $("lAdd").onclick=()=>abrirLead(null);$("leadForm").addEventListener("submit",salvarLead);$("leadCancel").onclick=()=>$("leadDlg").close();
   document.querySelectorAll(".seg").forEach(seg=>seg.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
     seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
     if(seg.dataset.scope==="g"){state.gView=b.dataset.v;renderGerais()}else{state.fView=b.dataset.v;renderFam()}}));
   document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
     document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));
     document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.id==="p-"+t.dataset.p));
-    history.replaceState(null,"","#"+t.dataset.p);Object.values(charts).forEach(c=>c.resize());}));
+    history.replaceState(null,"","#"+t.dataset.p);const per=["orcamentos","pedidos","abc"].includes(t.dataset.p);$("perBar").style.display=per?"":"none";$("perResumo").style.display=per?"":"none";Object.values(charts).forEach(c=>c.resize());}));
   const h=location.hash.slice(1);if(h){const t=document.querySelector(`.tab[data-p="${h}"]`);if(t)t.click();}
-  const setEdit=on=>{editing=on;document.body.classList.toggle("editing",on);$("btnEdit").textContent=on?"Editando…":"Editar números";renderAll();};
+  const setEdit=window.setEdit=on=>{editing=on;document.body.classList.toggle("editing",on);$("btnEdit").textContent=on?"Editando…":"Editar números";renderAll();};
   $("btnEdit").onclick=()=>setEdit(!editing);$("btnStopEdit").onclick=()=>setEdit(false);
   $("btnDiscard").onclick=()=>{if(confirm("Descartar as edições feitas neste navegador?")){localStorage.removeItem(LS_KEY);location.reload();}};
   $("btnDownload").onclick=async()=>{const env=await cifrar(D,SENHA);const b=new Blob([JSON.stringify(env)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="growth-ads.enc.json";a.click();};
@@ -598,7 +779,12 @@ function init(){
     if(![...$("fMes").options].some(o=>o.value===mk)){[$("gMes"),$("fMes")].forEach(sel=>{const o=document.createElement("option");o.value=mk;o.textContent=mesNome(mk);sel.insertBefore(o,sel.firstChild)});}
     state.fMes=mk;$("fMes").value=mk;renderAll();};
   $("lpAdd").onclick=()=>{D.lps.push({nome:"Nova LP",familia:"",link:"",status:"Link a preencher"});saveLocal();renderLps();};
-  renderAll();
+  $("dIni").onchange=e=>setPer(e.target.value||INICIO_ADS,state.fim||hojeISO(),"");
+  $("dFim").onchange=e=>setPer(state.ini||INICIO_ADS,e.target.value||hojeISO(),"");
+  $("perPre").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const[i,f]=preset(b.dataset.p);setPer(i,f,b.dataset.p);});
+  state.ini=INICIO_ADS;state.fim=hojeISO();$("dIni").value=state.ini;$("dFim").value=state.fim;$("dIni").min=$("dFim").min=INICIO_ADS;
+  $("perInfo").textContent=`Período: ${dbr(state.ini)} a ${dbr(state.fim)}`;
+  renderAll();renderResumoPer();
 }
 load();
 </script>
