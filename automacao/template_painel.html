@@ -302,8 +302,26 @@
   .pedidos-btn.faturado{background:var(--dark-green);}
   .pedidos-btn.previsto{background:#8A6D00;}
   .pedidos-btn.vendadireta{background:#4F4A8C;}
-  .vd-vazio{color:var(--muted);font-size:13px;padding:10px 0;}
-  .vd-total td{font-weight:700;border-top:2px solid #6B1E28;}
+  /* Vendas diretas (NFS-e) — 19/10/2026 */
+  .vd-vazio{color:var(--muted);font-size:13px;padding:14px 0;text-align:center;}
+  .vd-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:4px 0 16px;}
+  .vd-kpi{border:1px solid #E3E6EA;border-radius:10px;padding:12px 14px;background:#fff;border-top:4px solid #4F4A8C;}
+  .vd-kpi .l{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700;}
+  .vd-kpi .v{font-size:22px;font-weight:800;color:var(--ink);margin-top:4px;font-variant-numeric:tabular-nums;}
+  .vd-kpi .s{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .vd-fams{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;}
+  .vd-fam{display:flex;align-items:center;gap:8px;border-radius:999px;padding:5px 12px 5px 6px;font-size:12.5px;background:#F4F5F7;}
+  .vd-fam .dot{width:12px;height:12px;border-radius:50%;}
+  .vd-fam b{font-variant-numeric:tabular-nums;}
+  .vd-tabela td.fam{border-left:4px solid transparent;}
+  .vd-tabela td.num,.vd-tabela th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .vd-total td{font-weight:700;border-top:2px solid #6B1E28;background:#FAFAFB;}
+  .vd-acoes{display:flex;gap:6px;justify-content:flex-end;}
+  .vd-btn{font-size:11.5px;padding:4px 10px;border-radius:6px;border:1px solid #4F4A8C;background:#4F4A8C;color:#fff;cursor:pointer;text-decoration:none;white-space:nowrap;}
+  .vd-btn.sec{background:#fff;color:#4F4A8C;}
+  .vd-btn[disabled]{opacity:.45;cursor:not-allowed;}
+  .vd-dica{font-size:11.5px;color:var(--muted);margin-top:10px;}
+  @media (max-width:760px){ .vd-kpis{grid-template-columns:repeat(2,minmax(0,1fr));} }
   .pedidos-btn.pdf{background:#6B1E28;text-decoration:none;display:inline-block;}
   .pedidos-btn:hover{filter:brightness(1.08);}
 
@@ -558,12 +576,13 @@
       <tbody id="vendorFamTable"></tbody>
     </table>
     <div class="desc" id="vendorForaNote" style="margin-top:10px;"></div>
-    <div id="vendorVendaDiretaBox" style="margin-top:18px;display:none;">
-      <h3 style="font-size:14px;margin:0 0 4px 0;">Vendas diretas das suas famílias</h3>
-      <div class="desc" style="margin-bottom:8px;">Notas de serviço (NFS-e) de venda direta faturadas no mês nas famílias que você atende. Já estão somadas no Faturado da família.</div>
-      <table class="simple">
+    <div id="vendorVendaDiretaBox" style="margin-top:22px;display:none;">
+      <h3 style="font-size:15px;margin:0 0 4px 0;">🧾 Vendas diretas das suas famílias</h3>
+      <div class="desc" style="margin-bottom:10px;">Notas de serviço (NFS-e) de venda direta faturadas no mês nas famílias que você atende. Já estão somadas no Faturado da família.</div>
+      <div class="vd-kpis" id="vendorVdKpis"></div>
+      <table class="simple vd-tabela">
         <thead>
-          <tr><th>Família de Produto</th><th>Cliente</th><th>Nota Fiscal</th><th>Data Faturamento</th><th class="num">Valor</th></tr>
+          <tr><th>Família de Produto</th><th>Cliente</th><th>Nota Fiscal</th><th>Data Faturamento</th><th class="num">Valor</th><th class="num">Nota</th></tr>
         </thead>
         <tbody id="vendorVendaDiretaTable"></tbody>
       </table>
@@ -613,8 +632,10 @@
     <button type="button" class="pedidos-close" id="fecharVendaDireta">✕ Fechar</button>
   </div>
   <div class="pedidos-body">
-    <div class="desc" style="margin-bottom:10px;">Notas de serviço (NFS-e) de venda direta já somadas no Faturado da família. Também aparecem em "Ver Faturados".</div>
-    <table class="simple pedidos-table">
+    <div class="desc" style="margin-bottom:12px;">Notas de serviço (NFS-e) de venda direta já somadas no Faturado da família — também aparecem em "Ver Faturados".</div>
+    <div class="vd-kpis" id="vdKpis"></div>
+    <div class="vd-fams" id="vdFams"></div>
+    <table class="simple pedidos-table vd-tabela">
       <thead>
         <tr>
           <th>Família de Produto</th>
@@ -623,10 +644,12 @@
           <th>Empresa</th>
           <th>Data Faturamento</th>
           <th class="num">Valor</th>
+          <th class="num">Nota</th>
         </tr>
       </thead>
       <tbody id="tbodyVendaDiretaRaw"></tbody>
     </table>
+    <div class="vd-dica">"Abrir NFS-e" leva à consulta pública oficial do Portal Nacional da NFS-e. A chave de acesso é copiada automaticamente — se o portal pedir, é só colar (Ctrl+V).</div>
   </div>
 </div>
 
@@ -1445,26 +1468,70 @@ if (initial) {
   renderRanking();
 }
 
-// ---- Vendas diretas (NFS-e) — pedido da Thais, 16/10/2026 ----
+// ---- Vendas diretas (NFS-e) — pedido da Thais, 16/10/2026; visual + "Abrir NFS-e" em 19/10/2026 ----
 // Linhas de venda direta = operação "Venda direta (NFS-e)" no Faturado (mesmas linhas que
 // já somam na família; aqui é só uma lente para consulta, não recalcula nada).
 // função (não const): é chamada por showVendorDetail antes deste trecho no link #v=Nome.
 function vendasDiretas(){ return (DATA.raw_real || []).filter(r => r.operacao === 'Venda direta (NFS-e)'); }
+const PORTAL_NFSE = 'https://www.nfse.gov.br/ConsultaPublica/';
+function corDaFamilia(f){
+  const g = (DATA.grupos_familia || []).find(g => (g.linhas || []).some(l => l.familia === f));
+  return g ? g.cor : '#8A8F98';
+}
+function vdKpis(box, linhas, comPctFaturado){
+  if (!box) return;
+  const total = linhas.reduce((s, l) => s + (l.total || 0), 0);
+  const fams = [...new Set(linhas.map(l => l.familia))];
+  const clientes = [...new Set(linhas.map(l => l.cliente))];
+  const fatTotal = (DATA.totais && DATA.totais.faturado) || 0;
+  const cards = [
+    ['Total em vendas diretas', fmtBRL(total), comPctFaturado && fatTotal ? ((total / fatTotal * 100).toFixed(1).replace('.', ',') + '% do faturado do mês') : 'no mês'],
+    ['Notas (NFS-e)', String(linhas.length), linhas.length === 1 ? 'nota emitida' : 'notas emitidas'],
+    ['Ticket médio', fmtBRL(linhas.length ? total / linhas.length : 0), 'por nota'],
+    ['Famílias / clientes', fams.length + ' / ' + clientes.length, fams.join(', ') || '—'],
+  ];
+  box.innerHTML = '';
+  cards.forEach(([l, v, s]) => {
+    const d = document.createElement('div'); d.className = 'vd-kpi';
+    const a = document.createElement('div'); a.className = 'l'; a.textContent = l;
+    const b = document.createElement('div'); b.className = 'v'; b.textContent = v;
+    const c = document.createElement('div'); c.className = 's'; c.textContent = s;
+    d.append(a, b, c); box.appendChild(d);
+  });
+}
+function abrirNfse(l, btn){
+  if (l.link_nfse) { window.open(l.link_nfse, '_blank', 'noopener'); return; }
+  const chave = l.chave_nfse || '';
+  const abrir = () => window.open(PORTAL_NFSE + (chave ? '?tpc=1&chave=' + encodeURIComponent(chave) : ''), '_blank', 'noopener');
+  if (chave && navigator.clipboard) {
+    navigator.clipboard.writeText(chave).then(() => { btn.textContent = '✓ Chave copiada'; setTimeout(() => btn.textContent = 'Abrir NFS-e', 2500); }).catch(() => {});
+  }
+  abrir();
+}
 function linhasVendaDireta(tbody, linhas, colunas, msgVazio){
+  if (!tbody) return;
   tbody.innerHTML = '';
+  const nCols = colunas.length + 1;
   if (!linhas.length){
     const tr = document.createElement('tr'); const td = document.createElement('td');
-    td.colSpan = colunas.length; td.className = 'vd-vazio'; td.textContent = msgVazio;
+    td.colSpan = nCols; td.className = 'vd-vazio'; td.textContent = msgVazio;
     tr.appendChild(td); tbody.appendChild(tr); return;
   }
-  linhas.forEach(l => {
+  linhas.slice().sort((a, b) => (b.total || 0) - (a.total || 0)).forEach(l => {
     const tr = document.createElement('tr');
     colunas.forEach(c => {
       const td = document.createElement('td');
       if (c === 'total'){ td.className = 'num'; td.textContent = fmtBRL(l.total ?? 0); }
+      else if (c === 'familia'){ td.className = 'fam'; td.style.borderLeftColor = corDaFamilia(l.familia); td.textContent = l.familia ?? ''; }
       else td.textContent = l[c] ?? '';
       tr.appendChild(td);
     });
+    const tdA = document.createElement('td'); tdA.className = 'num';
+    const acoes = document.createElement('div'); acoes.className = 'vd-acoes';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'vd-btn'; b.textContent = 'Abrir NFS-e';
+    if (!l.link_nfse && !l.chave_nfse) { b.disabled = true; b.title = 'Chave de acesso ainda não disponível para esta nota'; }
+    else { b.title = l.chave_nfse ? 'Chave: ' + l.chave_nfse : 'Abrir nota'; b.onclick = () => abrirNfse(l, b); }
+    acoes.appendChild(b); tdA.appendChild(acoes); tr.appendChild(tdA);
     tbody.appendChild(tr);
   });
   const tot = document.createElement('tr'); tot.className = 'vd-total';
@@ -1472,18 +1539,36 @@ function linhasVendaDireta(tbody, linhas, colunas, msgVazio){
   tdL.textContent = 'Total (' + linhas.length + (linhas.length === 1 ? ' nota)' : ' notas)');
   const tdV = document.createElement('td'); tdV.className = 'num';
   tdV.textContent = fmtBRL(linhas.reduce((s, l) => s + (l.total || 0), 0));
-  tot.append(tdL, tdV); tbody.appendChild(tot);
+  tot.append(tdL, tdV, document.createElement('td')); tbody.appendChild(tot);
 }
-linhasVendaDireta(document.getElementById('tbodyVendaDiretaRaw'), vendasDiretas(),
-  ['familia','cliente','nota_fiscal','empresa','data_fatura','total'], 'Nenhuma venda direta faturada neste mês.');
+(function montarTelaVendasDiretas(){
+  const linhas = vendasDiretas();
+  vdKpis(document.getElementById('vdKpis'), linhas, true);
+  const fams = document.getElementById('vdFams');
+  if (fams) {
+    const por = {};
+    linhas.forEach(l => { por[l.familia] = (por[l.familia] || 0) + (l.total || 0); });
+    fams.innerHTML = '';
+    Object.entries(por).sort((a, b) => b[1] - a[1]).forEach(([f, v]) => {
+      const p = document.createElement('span'); p.className = 'vd-fam';
+      const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = corDaFamilia(f);
+      const t = document.createElement('span'); t.textContent = f + ' · ';
+      const b = document.createElement('b'); b.textContent = fmtBRL(v);
+      p.append(dot, t, b); fams.appendChild(p);
+    });
+  }
+  linhasVendaDireta(document.getElementById('tbodyVendaDiretaRaw'), linhas,
+    ['familia','cliente','nota_fiscal','empresa','data_fatura','total'], 'Nenhuma venda direta faturada neste mês.');
+})();
 function renderVendasDiretasVendedor(vendedor){
   const box = document.getElementById('vendorVendaDiretaBox');
   const fams = VENDOR_FAMILIAS_RESP[vendedor];
   if (!box) return;
   if (!fams || !fams.length){ box.style.display = 'none'; return; }  // ex.: Jéssica (canal HUB)
   box.style.display = '';
-  linhasVendaDireta(document.getElementById('vendorVendaDiretaTable'),
-    vendasDiretas().filter(l => fams.includes(l.familia)),
+  const linhas = vendasDiretas().filter(l => fams.includes(l.familia));
+  vdKpis(document.getElementById('vendorVdKpis'), linhas, false);
+  linhasVendaDireta(document.getElementById('vendorVendaDiretaTable'), linhas,
     ['familia','cliente','nota_fiscal','data_fatura','total'], 'Nenhuma venda direta nas suas famílias neste mês.');
 }
 

@@ -137,6 +137,8 @@ ALERTAS = []
 # NFS-e autorizadas sem decisão (16/10/2026) — vão para DATA["nfse_pendentes"] e o painel mostra
 # os botões "Sim, contabilizar" / "Não contabilizar" ao lado do alerta.
 NFSE_PENDENTES = []
+# Descrição dos produtos consultados nesta rodada (só para diagnóstico/alerta, 19/10/2026).
+PRODUTO_DESC = {}
 
 
 def _num(v):
@@ -636,13 +638,16 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
 # ----------------------------------------------------------------------------
 def atualizar_cache_familias(linhas_real, linhas_prev, produto_familia):
     distintos = set((l["empresa"], l["cod_produto"]) for l in linhas_real + linhas_prev)
-    faltando = [(e, c) for (e, c) in distintos if f"{e}|{c}" not in produto_familia]
+    # 19/10/2026: produto gravado SEM família (None) é consultado de novo a cada rodada — assim,
+    # quando o administrativo corrige o cadastro na OMIE, o painel pega sozinho.
+    faltando = [(e, c) for (e, c) in distintos if produto_familia.get(f"{e}|{c}") is None]
     print(f"Produtos novos a resolver: {len(faltando)}")
     for empresa, cod_produto in faltando:
         app_key, app_secret = EMPRESAS[empresa]
         try:
             r = call("geral/produtos", "ConsultarProduto", {"codigo_produto": cod_produto}, app_key, app_secret)
             fam = r.get("codigo_familia") if r else None
+            PRODUTO_DESC[f"{empresa}|{cod_produto}"] = (r or {}).get("descricao", "")
         except Exception:
             fam = None
         produto_familia[f"{empresa}|{cod_produto}"] = fam
@@ -653,6 +658,47 @@ def atualizar_cache_familias(linhas_real, linhas_prev, produto_familia):
 # ----------------------------------------------------------------------------
 # 6) Monta linhas finais com nomes de família/vendedor
 # ----------------------------------------------------------------------------
+def _paginar(url, call_name, chave_lista, app_key, app_secret, extra=None):
+    itens, pagina = [], 1
+    while True:
+        par = {"pagina": pagina, "registros_por_pagina": 100}
+        par.update(extra or {})
+        r = call(url, call_name, par, app_key, app_secret)
+        itens.extend(r.get(chave_lista, []) or [])
+        if pagina >= (r.get("total_de_paginas") or 1):
+            return itens
+        pagina += 1
+        time.sleep(0.5)
+
+
+def completar_nomes(linhas_real, linhas_prev, produto_familia, fam_nome_cache, vend_nome_cache):
+    """19/10/2026: os caches de nome de família/vendedor eram fixos — família ou vendedor criados
+    depois na OMIE ficavam sem nome e a venda caía em "(sem família)", travando o painel.
+    Agora, se aparecer código desconhecido, o robô busca a lista atualizada na OMIE."""
+    linhas = linhas_real + linhas_prev
+    for empresa, (app_key, app_secret) in EMPRESAS.items():
+        fams = {produto_familia.get(f"{empresa}|{l['cod_produto']}") for l in linhas if l["empresa"] == empresa}
+        if any(f is not None and f"{empresa}|{f}" not in fam_nome_cache for f in fams):
+            try:
+                for f in _paginar("geral/familias", "PesquisarFamilias", "famCadastro", app_key, app_secret):
+                    cod = f.get("codigo") or f.get("codFamilia")
+                    nome = f.get("nomeFamilia") or f.get("descricao")
+                    if cod and nome:
+                        fam_nome_cache[f"{empresa}|{cod}"] = nome
+                print(f"{empresa}: lista de famílias atualizada da OMIE")
+            except Exception as e:
+                print(f"{empresa}: não consegui atualizar famílias ({e})")
+        vends = {l.get("cod_vend") for l in linhas if l["empresa"] == empresa}
+        if any(v is not None and f"{empresa}|{v}" not in vend_nome_cache for v in vends):
+            try:
+                for v in _paginar("geral/vendedores", "ListarVendedores", "cadastro", app_key, app_secret):
+                    if v.get("codigo") and v.get("nome"):
+                        vend_nome_cache[f"{empresa}|{v['codigo']}"] = v["nome"]
+                print(f"{empresa}: lista de vendedores atualizada da OMIE")
+            except Exception as e:
+                print(f"{empresa}: não consegui atualizar vendedores ({e})")
+
+
 def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia):
     def nome_familia(empresa, cod_produto):
         codfam = produto_familia.get(f"{empresa}|{cod_produto}")
@@ -688,7 +734,7 @@ def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache
             "cliente": l.get("cliente", ""), "cnpj": l.get("cnpj", ""),
             "empresa": l["empresa"],
             "operacao": "Devolução de Venda" if l.get("is_devolucao") else "Orçamento",
-            "cfop": l["cfop"], "total": l["valor"],
+            "cfop": l["cfop"], "total": l["valor"], "cod_produto": l.get("cod_produto"),
             "data_previsao": "",  # não se aplica ao faturado — já tem nota fiscal emitida
             "data_fatura": l.get("data_fatura", ""),  # data de emissão da nota (venda ou devolução)
         }
@@ -813,6 +859,8 @@ def _checar_nfse_impl():
                         "total": round(valor, 2), "data_previsao": "",
                         "data_fatura": data_emissao_nfse(n) or ap.get("data_emissao", ""),
                         "cliente": nome,
+                        "chave_nfse": chave_nfse(n) or ap.get("chave_nfse", ""),
+                        "link_nfse": link_nfse(n),
                     })
                     print(f"NFS-e {num} ({nome}, R$ {valor:.2f}) somada em {ap['familia']} — "
                           f"aprovada por {ap.get('aprovado_por')} em {ap.get('aprovado_em')}.")
@@ -863,6 +911,34 @@ def achar_aprovacao_nfse(aprovacoes, empresa, num, nome, ncodnf):
               and a.get("empresa") in (None, "", empresa)):
             achada = a
     return achada
+
+
+def _strings(o):
+    if isinstance(o, dict):
+        for v in o.values():
+            yield from _strings(v)
+    elif isinstance(o, list):
+        for v in o:
+            yield from _strings(v)
+    elif o is not None:
+        yield str(o)
+
+
+def chave_nfse(n):
+    """Chave de acesso da NFS-e Nacional (50 dígitos), se a OMIE devolver no registro."""
+    for t in _strings(n):
+        m = re.fullmatch(r"\s*(\d{50})\s*", t)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def link_nfse(n):
+    """Link de visualização/PDF da NFS-e, se a OMIE devolver no registro."""
+    for t in _strings(n):
+        if t.startswith("http"):
+            return t
+    return ""
 
 
 def data_emissao_nfse(n):
@@ -1124,7 +1200,8 @@ def montar_data(real_rows, prev_rows):
         return [{"Vendedor": k[0], "Família de Produto": k[1], "Total de Mercadoria": round(v, 2)} for k, v in vf.items()]
 
     raw_cols = ["familia", "vendedor", "nota_fiscal", "pedido", "situacao", "empresa", "operacao", "cfop", "total",
-                "data_previsao", "data_fatura", "cliente", "cnpj", "is_ml", "is_lic"]
+                "data_previsao", "data_fatura", "cliente", "cnpj", "is_ml", "is_lic",
+                "chave_nfse", "link_nfse"]
 
     return {
         "totais": totais,
@@ -1194,6 +1271,7 @@ def recomputar_mes_fechado(ano, mes, meta_geral_hist, grupos_metas_hist, hub_met
         linhas_real = montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis)
 
         produto_familia = atualizar_cache_familias(linhas_real, linhas_prev, produto_familia)
+        completar_nomes(linhas_real, linhas_prev, produto_familia, fam_nome_cache, vend_nome_cache)
         real_rows, prev_rows = montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia)
         real_rows += linhas_vendas_diretas()
         real_rows += checar_nfse()
@@ -1281,6 +1359,7 @@ def main():
     produto_familia = atualizar_cache_familias(linhas_real, linhas_prev, produto_familia)
     json.dump(produto_familia, open(CACHE_PRODUTO_FAMILIA, "w", encoding="utf-8"), ensure_ascii=False)
 
+    completar_nomes(linhas_real, linhas_prev, produto_familia, fam_nome_cache, vend_nome_cache)
     real_rows, prev_rows = montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia)
     real_rows += linhas_vendas_diretas()
     real_rows += checar_nfse()
@@ -1307,7 +1386,12 @@ def main():
             if r.get("is_ml") or r.get("is_lic") or r["familia"] in familias_grupos:  # HUB vai p/ "Sem família"
                 continue
             e = fora.setdefault(r["familia"] or "(sem família)", {"valor": 0.0, "notas": set()})
-            e["valor"] += r["total"]; e["notas"].add(f"{r['empresa']} NF {r['nota_fiscal']}")
+            chave_p = f"{r['empresa']}|{r.get('cod_produto')}"
+            desc = PRODUTO_DESC.get(chave_p, "")
+            codfam = produto_familia.get(chave_p)
+            e["valor"] += r["total"]
+            e["notas"].add(f"{r['empresa']} NF {r['nota_fiscal']} (produto {r.get('cod_produto')}"
+                           f"{' ' + desc if desc else ''}; cód. família OMIE: {codfam if codfam else 'NÃO CADASTRADA'})")
         for fam, e in sorted(fora.items(), key=lambda x: -abs(x[1]["valor"])):
             print(f"   -> família fora dos grupos: {fam} | R$ {e['valor']:.2f} | {', '.join(sorted(e['notas']))}")
         sys.exit(1)
@@ -1326,6 +1410,9 @@ def main():
         f.write(new_html)
 
     print("index.html atualizado com sucesso.")
+    # 19/10/2026: guarda nomes novos de família/vendedor que vieram da OMIE nesta rodada.
+    json.dump(fam_nome_cache, open(CACHE_FAM_NOME, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    json.dump(vend_nome_cache, open(CACHE_VEND_NOME, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 
 def reprocessar_mes_manual(mes_id):
