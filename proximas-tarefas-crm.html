@@ -114,6 +114,8 @@
   .user-option .ud-email { font-size: .68rem; color: var(--text-mute); }
   @media print { .user-switch { display: none !important; } }
 
+  input[type="date"] { background:#fff; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; font-size:.85rem; }
+  .dtl { display:flex; align-items:center; gap:6px; font-size:.8rem; font-weight:600; opacity:.85; }
 </style>
 </head>
 <body>
@@ -156,6 +158,13 @@
       <option value="Matriz">Só Matriz</option>
       <option value="Papéis">Só Papéis</option>
     </select>
+    <label class="dtl">Data prevista de <input type="date" id="dtDe"></label>
+    <label class="dtl">até <input type="date" id="dtAte"></label>
+    <select id="dtAtalho" title="Atalhos de período">
+      <option value="">Período…</option><option value="hoje">Hoje</option><option value="ult7">Últimos 7 dias</option><option value="ult30">Últimos 30 dias</option>
+      <option value="prox7">Próximos 7 dias</option><option value="mes">Este mês</option><option value="mespass">Mês passado</option>
+    </select>
+    <button class="btn ghost" id="dtLimpar" type="button">Limpar datas</button>
     <input type="search" id="busca" placeholder="Buscar por cliente, nº oportunidade...">
     <button class="btn ghost" id="btnExcel">⬇ Excel</button>
     <button class="btn" id="btnPdf">⬇ PDF</button>
@@ -198,14 +207,28 @@ const DATA = [{"empresa": "Papéis", "vendedor": "Rhamayana Ramos", "data_previs
 function restanteClass(d){ return d === 0 ? 'hoje' : ''; }
 function restanteLabel(d){ return d === 0 ? 'Hoje' : (d === 1 ? 'Amanhã' : d + ' dias'); }
 
+const TODAY = new Date(2026,9,6); // 06/10/2026 (data da foto)
+function dataISO(br){ const p = String(br).split('/'); return p[2] + '-' + p[1] + '-' + p[0]; }          // dd/mm/aaaa -> aaaa-mm-dd
+function isoLocal(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function dmyBr(iso){ return iso ? iso.split('-').reverse().join('/') : ''; }
+function atalhoPeriodo(p){
+  const t = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate()), add = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const r = { hoje:[t,t], ult7:[add(t,-6),t], ult30:[add(t,-29),t], prox7:[t,add(t,7)],
+    mes:[new Date(t.getFullYear(),t.getMonth(),1), new Date(t.getFullYear(),t.getMonth()+1,0)],
+    mespass:[new Date(t.getFullYear(),t.getMonth()-1,1), new Date(t.getFullYear(),t.getMonth(),0)] }[p];
+  return r ? [isoLocal(r[0]), isoLocal(r[1])] : null;
+}
 function render(){
   const vendSel = document.getElementById('filtroVendedor').value;
   const empSel = document.getElementById('filtroEmpresa').value;
   const busca = document.getElementById('busca').value.trim().toLowerCase();
+  const dtDe = document.getElementById('dtDe').value, dtAte = document.getElementById('dtAte').value;   // período da data prevista (calendário)
 
   let rows = DATA.filter(r => {
     if (vendSel && r.vendedor !== vendSel) return false;
     if (empSel && r.empresa !== empSel) return false;
+    if (dtDe && dataISO(r.data_prevista) < dtDe) return false;
+    if (dtAte && dataISO(r.data_prevista) > dtAte) return false;
     if (busca) {
       const hay = (r.cliente + ' ' + r.numOp + ' ' + r.familia).toLowerCase();
       if (!hay.includes(busca)) return false;
@@ -219,7 +242,7 @@ function render(){
   const vLabel = vendSel ? vendSel : 'Todos os vendedores';
   const eLabel = empSel ? empSel : 'Matriz + Papéis';
   document.getElementById('printTitle').textContent =
-    'Próximas tarefas (7 dias) — ' + vLabel + ' (' + eLabel + ') — extraído em 06/10/2026';
+    'Próximas tarefas (7 dias) — ' + vLabel + ' (' + eLabel + ')' + ((dtDe || dtAte) ? ' — data prevista ' + (dtDe ? 'de ' + dmyBr(dtDe) + ' ' : '') + (dtAte ? 'até ' + dmyBr(dtAte) : '') : '') + ' — extraído em 06/10/2026';
 
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
@@ -309,6 +332,12 @@ document.getElementById('filtroVendedor').addEventListener('change', () => {
 });
 document.getElementById('filtroEmpresa').addEventListener('change', render);
 document.getElementById('busca').addEventListener('input', render);
+['dtDe','dtAte'].forEach(id => document.getElementById(id).addEventListener('change', render));
+document.getElementById('dtAtalho').addEventListener('change', e => {
+  const r = atalhoPeriodo(e.target.value); if (r){ document.getElementById('dtDe').value = r[0]; document.getElementById('dtAte').value = r[1]; }
+  e.target.value = ''; render();
+});
+document.getElementById('dtLimpar').addEventListener('click', () => { document.getElementById('dtDe').value = ''; document.getElementById('dtAte').value = ''; render(); });
 
 function safeFileTag(){
   const v = document.getElementById('filtroVendedor').value;

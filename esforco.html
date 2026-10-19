@@ -65,6 +65,9 @@
   .ctrls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
   .ctrl{display:flex;flex-direction:column;gap:3px;font-size:10.5px;color:var(--muted);font-weight:600;}
   .ctrl select{font:500 12.5px 'Inter',sans-serif;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:150px;cursor:pointer;}
+  .ctrl input[type=date]{font:500 12.5px 'Inter',sans-serif;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px;cursor:pointer;min-height:35px;}
+  .rng{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
+  .mini{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font:600 12px 'Inter',sans-serif;cursor:pointer;color:var(--muted);min-height:35px;}
   .seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
   .seg button{border:none;background:none;font:600 12.5px 'Inter',sans-serif;color:var(--muted);padding:8px 16px;cursor:pointer;}
   .seg button.on{background:var(--navy);color:#fff;}
@@ -228,8 +231,10 @@
     </div>
 
     <div class="ctrls sticky" id="tvBar">
-      <div class="seg" id="tvModo"><button data-m="mes" class="on">Mês</button><button data-m="semana">Semana</button></div>
+      <div class="seg" id="tvModo"><button data-m="mes" class="on">Mês</button><button data-m="semana">Semana</button><button data-m="periodo">Período</button></div>
       <label class="ctrl" id="tvMesBox">Mês<select id="tvMes"></select></label>
+      <label class="ctrl" id="tvSemBox" style="display:none">Semana<select id="tvSem"></select></label>
+      <span class="rng" id="rngT" style="display:none"><label class="ctrl">De<input type="date" id="cDeT"></label><label class="ctrl">Até<input type="date" id="cAteT"></label><label class="ctrl">Atalhos<select id="cPreT"></select></label></span>
       <label class="ctrl">Família<select id="tvFam"></select></label>
       <div class="pace" id="tvPace"></div>
     </div>
@@ -298,7 +303,7 @@
 
     <!-- RESUMO -->
     <div class="sec on" id="sec-resumo">
-      <div class="ctrls"><label class="ctrl">Período dos indicadores<select id="rPer"></select></label></div>
+      <div class="ctrls"><label class="ctrl">Período dos indicadores<select id="rPer"></select></label><span class="rng" id="rngR" style="display:none"><label class="ctrl">De<input type="date" id="cDeR"></label><label class="ctrl">Até<input type="date" id="cAteR"></label><label class="ctrl">Atalhos<select id="cPreR"></select></label></span></div>
       <div class="cards" id="rCards"></div>
       <div class="panel">
         <h2>Números por dia, semana, mês, trimestre e ano</h2>
@@ -310,7 +315,7 @@
     <!-- MIX -->
     <div class="sec" id="sec-mix">
       <div class="ctrls">
-        <label class="ctrl">Período<select id="mPer"></select></label>
+        <label class="ctrl">Período<select id="mPer"></select></label><span class="rng" id="rngM" style="display:none"><label class="ctrl">De<input type="date" id="cDeM"></label><label class="ctrl">Até<input type="date" id="cAteM"></label><label class="ctrl">Atalhos<select id="cPreM"></select></label></span>
         <label class="ctrl">Comparar por<select id="mGrp"><option value="total">Total</option><option value="familia">Família</option><option value="vendedor">Vendedor</option></select></label>
         <label class="ctrl">Canais<select id="mCan"><option value="res">Resumido (contato / ligação / visita)</option><option value="det">Detalhado</option></select></label>
       </div>
@@ -326,6 +331,7 @@
     <div class="sec" id="sec-evol">
       <div class="ctrls">
         <label class="ctrl">Agrupar por<select id="eGran"><option value="dia">Dia</option><option value="semana" selected>Semana</option><option value="mes">Mês</option><option value="trimestre">Trimestre</option><option value="ano">Ano</option></select></label>
+        <label class="ctrl">De<input type="date" id="eDe"></label><label class="ctrl">Até<input type="date" id="eAte"></label><button class="mini" id="eLimpar" title="Volta a mostrar os últimos períodos">Limpar datas</button>
         <label class="ctrl">Indicador<select id="eMet"></select></label>
         <label class="ctrl">Dividir por<select id="eSplit"><option value="none">Nada (total)</option><option value="familia">Família</option><option value="vendedor">Vendedor</option><option value="canal">Canal</option><option value="tipo">Novo x carteira</option></select></label>
       </div>
@@ -335,7 +341,7 @@
 
     <!-- VENDEDORES -->
     <div class="sec" id="sec-vend">
-      <div class="ctrls"><label class="ctrl">Período<select id="vPer"></select></label></div>
+      <div class="ctrls"><label class="ctrl">Período<select id="vPer"></select></label><span class="rng" id="rngV" style="display:none"><label class="ctrl">De<input type="date" id="cDeV"></label><label class="ctrl">Até<input type="date" id="cAteV"></label><label class="ctrl">Atalhos<select id="cPreV"></select></label></span></div>
       <div class="panel"><h2>Comparativo de vendedores</h2><div class="desc">Volume, perfil de canais e resultado no período. Percentuais em relação ao total de cada vendedor.</div><div class="tb-wrap"><table class="mx" id="vTabela"></table></div><div class="nota-pe" id="vNota"></div></div>
     </div>
 
@@ -376,7 +382,7 @@
       <div><h1>Resultado da Semana — CRM</h1><div class="sub">Preenchimento do CRM e números em relação à meta, por família e por vendedor</div></div>
       <div class="status" id="smStatus"></div>
     </div>
-    <div class="ctrls"><label class="ctrl">Semana<select id="smSel"></select></label><div class="pace" id="smInfo"></div></div>
+    <div class="ctrls"><div class="seg" id="smModo"><button data-m="semana" class="on">Semana</button><button data-m="periodo">Período</button></div><label class="ctrl" id="smSemBox">Semana<select id="smSel"></select></label><span class="rng" id="rngS" style="display:none"><label class="ctrl">De<input type="date" id="cDeS"></label><label class="ctrl">Até<input type="date" id="cAteS"></label><label class="ctrl">Atalhos<select id="cPreS"></select></label></span><div class="pace" id="smInfo"></div></div>
     <div id="smResumo"></div>
     <div class="panel"><h2>Por família</h2><div class="desc">Meta da semana x realizado em cada tipo de ação, e se as vendas faturadas têm registro no CRM.</div><div class="tb-wrap"><table class="mx" id="smFam"></table></div></div>
     <div class="panel"><h2>Por vendedor</h2><div class="desc" id="smVendDesc"></div><div class="tb-wrap"><table class="mx" id="smVend"></table></div></div>
@@ -527,7 +533,8 @@ $('#menuHide').addEventListener('click',function(){menuOculto(true);});
 $('#menuShow').addEventListener('click',function(){menuOculto(false);});
 function abrirPorHash(){
   var partes=(location.hash||'').replace('#','').split('/'), id=partes[0]; if(!id) return;
-  if(id==='semana'&&/^\d{4}-\d{2}-\d{2}$/.test(partes[1]||'')) SEM.ini=partes[1];
+  if(id==='semana'&&/^\d{4}-\d{2}-\d{2}$/.test(partes[1]||'')){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(partes[2]||'')){ SEM.modo='periodo'; SEM.de=partes[1]; SEM.ate=partes[2]; } else { SEM.modo='semana'; SEM.ini=partes[1]; } }
   if(id==='chamados'&&/^CH-\d+$/.test(partes[1]||'')){   // link do e-mail: #chamados/CH-0001 abre direto o chamado
     var pc=todasPaginas().filter(function(p){return p.id==='chamados';})[0];
     if(pc){ if(pc.id!==ATUAL) abrir(pc); var f=document.querySelector('#view-chamados iframe'); if(f){ f.src='chamados.html#c='+partes[1]; carregadas.chamados=1; } }
@@ -561,18 +568,22 @@ function stampStatus(){
 }
 
 /* ============================ ABA 1 — TV ============================ */
-var TV={modo:'mes',mes:HOJE.slice(0,7),fam:'all'};
-/* a escolha de Mês/Semana (e de um mês específico) fica guardada neste navegador: a TV recarrega sozinha a cada 15 min e não volta pro padrão */
+var TV={modo:'mes',mes:HOJE.slice(0,7),sem:'',de:'',ate:'',fam:'all'};
+/* a escolha de Mês / Semana / Período fica guardada neste navegador: a TV recarrega sozinha a cada 15 min e não volta pro padrão */
 function lembrar(k,v){ try{localStorage.setItem(k,v);}catch(e){} }
-(function(){ try{ var m=localStorage.getItem('esf_tv_modo'); if(m==='semana'||m==='mes') TV.modo=m;
+(function(){ try{ var m=localStorage.getItem('esf_tv_modo'); if(m==='semana'||m==='mes'||m==='periodo') TV.modo=m;
   var x=localStorage.getItem('esf_tv_mes'); if(x&&x!=='atual'&&/^\d{4}-\d{2}$/.test(x)) TV.mes=x;
+  var w=localStorage.getItem('esf_tv_sem'); if(w&&w!=='atual'&&/^\d{4}-\d{2}-\d{2}$/.test(w)) TV.sem=w;
+  var d1=localStorage.getItem('esf_tv_de'), d2=localStorage.getItem('esf_tv_ate'); if(/^\d{4}-\d{2}-\d{2}$/.test(d1||'')&&/^\d{4}-\d{2}-\d{2}$/.test(d2||'')){ TV.de=d1; TV.ate=d2; }
   var fm=localStorage.getItem('esf_tv_fam'); if(fm) TV.fam=fm; }catch(e){} })();
 function mesesDisponiveis(){ var ini=(D.config.inicio||'2026-01-01').slice(0,7), out=[], y=+ini.slice(0,4), m=+ini.slice(5,7), fim=HOJE.slice(0,7);
   while(true){ var id=y+'-'+(m<10?'0':'')+m; out.push(id); if(id>=fim) break; m++; if(m>12){m=1;y++;} } return out; }
 function tvRange(){
-  if(TV.modo==='semana'){ var s=monStart(parse(HOJE)), e=addDays(s,6); return {from:iso(s),to:iso(e),upTo:HOJE<iso(e)?HOJE:iso(e),nome:'Semana de '+dm(iso(s))+' a '+dm(iso(addDays(s,4)))}; }
-  var y=+TV.mes.slice(0,4), m=+TV.mes.slice(5,7), a=new Date(Date.UTC(y,m-1,1)), b=new Date(Date.UTC(y,m,0));
-  return {from:iso(a),to:iso(b),upTo:HOJE<iso(b)?HOJE:iso(b),nome:MESES_LONGO[m-1]+' de '+y}; }
+  if(TV.modo==='periodo'){ var pd=TV.de&&TV.ate?{de:TV.de,ate:TV.ate}:rangePreset('ult30'), a=pd.de, b=pd.ate; if(a>b){ var t=a; a=b; b=t; }
+    return {from:a,to:b,upTo:HOJE<b?HOJE:b,nome:'Período de '+dmy(a)+' a '+dmy(b)}; }
+  if(TV.modo==='semana'){ var s=parse(TV.sem||iso(monStart(parse(HOJE)))), e=addDays(s,6); return {from:iso(s),to:iso(e),upTo:HOJE<iso(e)?HOJE:iso(e),nome:'Semana de '+dm(iso(s))+' a '+dm(iso(addDays(s,4)))}; }
+  var y=+TV.mes.slice(0,4), m=+TV.mes.slice(5,7), a2=new Date(Date.UTC(y,m-1,1)), b2=new Date(Date.UTC(y,m,0));
+  return {from:iso(a2),to:iso(b2),upTo:HOJE<iso(b2)?HOJE:iso(b2),nome:MESES_LONGO[m-1]+' de '+y}; }
 /* metas de uma família (ou do Hub) num mês: cada mês pode ter metas novas; vale a última definida até ele.
    Meses antes do início das metas não têm meta (aparece só o realizado). */
 var META_INICIO=D.config.metasDesde||'2026-10';
@@ -586,6 +597,28 @@ function barraProg(x){ // barra de progresso + caminhãozinho (a "corrida" compa
   if(x.prog==null) return '-';
   var p=Math.min(100,x.prog*100), c=x.f.cor, pos=Math.max(p,12);
   return '<div class="pg"><div class="pg-trk" style="background:'+hexA(c,.2)+'"><div class="pg-fill" style="width:'+p+'%;background:'+c+'"></div><img class="pg-truck" style="left:'+pos+'%" src="'+TRUCK+'" alt=""></div><span class="pg-pct">'+P(x.prog,1)+'</span></div>'; }
+/* ----- atalhos de período (valem para a TV, o Resultado da Semana e a Performance CRM) ----- */
+var PRESETS=[['','Atalhos…'],['esta_semana','Esta semana'],['semana_passada','Semana passada'],['ult7','Últimos 7 dias'],['ult14','Últimos 14 dias'],['ult30','Últimos 30 dias'],['este_mes','Este mês'],['mes_passado','Mês passado'],['este_trim','Este trimestre']];
+function rangePreset(p){
+  var h=parse(HOJE), y=h.getUTCFullYear(), m=h.getUTCMonth(), s=monStart(h), q=Math.floor(m/3)*3;
+  var R={esta_semana:[s,addDays(s,6)],semana_passada:[addDays(s,-7),addDays(s,-1)],ult7:[addDays(h,-6),h],ult14:[addDays(h,-13),h],ult30:[addDays(h,-29),h],
+    este_mes:[new Date(Date.UTC(y,m,1)),new Date(Date.UTC(y,m+1,0))],mes_passado:[new Date(Date.UTC(y,m-1,1)),new Date(Date.UTC(y,m,0))],
+    este_trim:[new Date(Date.UTC(y,q,1)),new Date(Date.UTC(y,q+3,0))]}[p];
+  return R?{de:iso(R[0]),ate:iso(R[1])}:null; }
+function dmy(s){ return s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4); }
+function iniRng(x,get,set){            // liga uma caixa "De / Até / Atalhos" (calendário do próprio navegador)
+  var de=$('#cDe'+x), ate=$('#cAte'+x), pre=$('#cPre'+x);
+  selHTML(pre,PRESETS,'');
+  function ler(){ var v=get(); de.value=v.de||''; ate.value=v.ate||''; }
+  ler();
+  de.addEventListener('change',function(){ if(!de.value) return; set(de.value,ate.value||de.value); ler(); });
+  ate.addEventListener('change',function(){ if(!ate.value) return; set(de.value||ate.value,ate.value); ler(); });
+  pre.addEventListener('change',function(){ var r=rangePreset(pre.value); if(r) set(r.de,r.ate); pre.value=''; ler(); });
+  return ler; }
+/* metas num intervalo qualquer: cada mês do intervalo usa as metas vigentes dele (meta semanal × dias úteis ÷ 5) */
+function mesesDoIntervalo(from,to){ var out=[], cur=from; while(cur<=to){ var mes=cur.slice(0,7), fim=iso(new Date(Date.UTC(+mes.slice(0,4),+mes.slice(5,7),0))); var f=fim<to?fim:to; out.push([mes,cur,f]); cur=iso(addDays(parse(f),1)); } return out; }
+function temMeta(ent,from,to){ return mesesDoIntervalo(from,to).some(function(x){return !!metasDe(ent,x[0]);}); }
+function metaIntervalo(ent,k,from,to){ var tot=null; mesesDoIntervalo(from,to).forEach(function(x){ var mt=metasDe(ent,x[0]); if(mt&&mt[k]!=null) tot=(tot||0)+metaPer(mt[k],x[1],x[2]); }); return tot; }
 function mesNome(id){ return MESES_LONGO[+id.slice(5,7)-1].toLowerCase()+'/'+id.slice(0,4); }
 function resumir(x){
   var ok=x.itens.filter(function(i){return i&&i.meta!=null;}), all=x.itens.filter(Boolean);
@@ -595,18 +628,17 @@ function resumir(x){
   x.sr=all.reduce(function(a,i){return a+i.real;},0);      // tudo que foi realizado (com ou sem meta)
   return x; }
 function tvCalc(){
-  var R=tvRange(), mesRef=(TV.modo==='semana'?HOJE:R.from).slice(0,7), semMeta=true;
-  function item(k,nome,realFn,mt){
-    if(mt==null) return {k:k,nome:nome,meta:null,real:realFn()};   // mês sem meta: mostra só o realizado
-    var sem=mt[k]; if(sem==null) return {k:k,nome:nome,meta:null,real:realFn(),semMetaFam:true};   // família sem essa meta: mostra '-' na meta e o realizado, com a cor da linha
-    return {k:k,nome:nome,meta:metaPer(sem,R.from,R.to),real:realFn()}; }
-  var fams=FAM.map(function(f,fi){
-    var mt=metasDe(f,mesRef); if(mt) semMeta=false;
-    return resumir({f:f,fi:fi,itens:METRICAS.map(function(m){return item(m.k,m.nome,function(){return realiz(fi,m.k,R.from,R.upTo);},mt);})}); });
-  var hmt=metasDe(D.hub,mesRef); if(hmt) semMeta=false;
-  var hub=resumir({f:D.hub,itens:[item('anuncio','Anúncio de produto',function(){return hubSoma('anuncio',R.from,R.upTo);},hmt),
-                                  item('licitacao','Licitações participadas',function(){return hubSoma('licitacao',R.from,R.upTo);},hmt)]});
-  return {R:R,mesRef:mesRef,semMeta:semMeta,fams:fams,hub:hub}; }
+  var R=tvRange(), semMeta=true;
+  function item(ent,k,nome,realFn){
+    if(!temMeta(ent,R.from,R.to)) return {k:k,nome:nome,meta:null,real:realFn()};   // período sem meta: mostra só o realizado
+    var m=metaIntervalo(ent,k,R.from,R.to); if(m==null) return {k:k,nome:nome,meta:null,real:realFn(),semMetaFam:true};   // família sem essa meta: mostra '-' e o realizado
+    return {k:k,nome:nome,meta:m,real:realFn()}; }
+  var fams=FAM.map(function(f,fi){ if(temMeta(f,R.from,R.to)) semMeta=false;
+    return resumir({f:f,fi:fi,itens:METRICAS.map(function(m){return item(f,m.k,m.nome,function(){return realiz(fi,m.k,R.from,R.upTo);});})}); });
+  if(temMeta(D.hub,R.from,R.to)) semMeta=false;
+  var hub=resumir({f:D.hub,itens:[item(D.hub,'anuncio','Anúncio de produto',function(){return hubSoma('anuncio',R.from,R.upTo);}),
+                                  item(D.hub,'licitacao','Licitações participadas',function(){return hubSoma('licitacao',R.from,R.upTo);})]});
+  return {R:R,mesRef:R.from.slice(0,7),semMeta:semMeta,fams:fams,hub:hub}; }
 
 function renderTV(){
   var C=tvCalc(), R=C.R, sel=TV.fam;
@@ -715,20 +747,33 @@ function renderTvChart(C){
   var ms=mesesDisponiveis(), sel=$('#tvMes'); ms.slice().reverse().forEach(function(id){ var o=document.createElement('option'); o.value=id; o.textContent=MESES_LONGO[+id.slice(5,7)-1]+' '+id.slice(0,4); sel.appendChild(o); }); if(ms.indexOf(TV.mes)<0) TV.mes=HOJE.slice(0,7);
   sel.value=TV.mes;
   sel.addEventListener('change',function(){ TV.mes=sel.value; lembrar('esf_tv_mes', TV.mes===HOJE.slice(0,7)?'atual':TV.mes); renderTV(); });
+  // semana: qualquer semana, passada ou a atual
+  var ws=semanasDisp(), atual=iso(monStart(parse(HOJE))), ss=$('#tvSem');
+  ss.innerHTML=ws.map(function(w){ var f=iso(addDays(parse(w),4)); return '<option value="'+w+'">'+dm(w)+' a '+dm(f)+(w===atual?' (atual)':'')+'</option>'; }).join('');
+  if(!TV.sem||ws.indexOf(TV.sem)<0) TV.sem=atual;
+  ss.value=TV.sem;
+  ss.addEventListener('change',function(){ TV.sem=ss.value; lembrar('esf_tv_sem', TV.sem===atual?'atual':TV.sem); renderTV(); });
+  // período livre (calendário)
+  if(!(TV.de&&TV.ate)){ var d0=rangePreset('ult30'); TV.de=d0.de; TV.ate=d0.ate; }
+  iniRng('T',function(){return {de:TV.de,ate:TV.ate};},function(a,b){ TV.de=a; TV.ate=b; lembrar('esf_tv_de',a); lembrar('esf_tv_ate',b); renderTV(); });
   var fsel=$('#tvFam'); fsel.innerHTML='<option value="all">Todas as famílias</option>'+FAM.concat([D.hub]).map(function(f){return '<option value="'+f.id+'">'+esc(f.nome)+'</option>';}).join('');
   if(TV.fam!=='all'&&!FAM.concat([D.hub]).some(function(f){return f.id===TV.fam;})) TV.fam='all';
   fsel.value=TV.fam; fsel.addEventListener('change',function(){ TV.fam=fsel.value; lembrar('esf_tv_fam',TV.fam); renderTV(); });
   window.addEventListener('scroll',function(){ $('#tvBar').classList.toggle('solto',window.scrollY>6); },{passive:true});
-  function sincModo(){ $$('#tvModo button').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-m')===TV.modo);}); $('#tvMesBox').style.display=TV.modo==='mes'?'':'none'; }
+  function sincModo(){ $$('#tvModo button').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-m')===TV.modo);});
+    $('#tvMesBox').style.display=TV.modo==='mes'?'':'none'; $('#tvSemBox').style.display=TV.modo==='semana'?'':'none'; $('#rngT').style.display=TV.modo==='periodo'?'flex':'none'; }
   sincModo();
   $$('#tvModo button').forEach(function(b){ b.addEventListener('click',function(){ TV.modo=b.getAttribute('data-m'); lembrar('esf_tv_modo',TV.modo); sincModo(); renderTV(); }); });
 })();
 
 /* ============================ ABA 2 — ANÁLISE ============================ */
-var A={fam:'all',vend:'all',sec:'resumo',rPer:'mes',mPer:'mes',vPer:'mes'};
-var PERNOME={dia:'Último dia',semana:'Semana atual',mes:'Mês atual',trimestre:'Trimestre atual',ano:'Ano atual'};
+var A={fam:'all',vend:'all',sec:'resumo',rPer:'mes',mPer:'mes',vPer:'mes',cDe:'',cAte:'',eDe:'',eAte:''};
+var PERNOME={dia:'Último dia',semana:'Semana atual',mes:'Mês atual',trimestre:'Trimestre atual',ano:'Ano atual',custom:'Período personalizado'};
 function filtros(){ return {f:A.fam==='all'?null:FAMID[A.fam], v:A.vend==='all'?null:VEND.indexOf(A.vend)}; }
 function periodo(gran){
+  if(gran==='custom'){ var de=A.cDe||iso(addDays(parse(LAST),-29)), ate=A.cAte||LAST; if(de>ate){ var t=de; de=ate; ate=t; }
+    var to=ate<LAST?ate:LAST; if(to<de) to=de; var len=Math.round((parse(to)-parse(de))/864e5)+1, pb2=addDays(parse(de),-1), pa2=addDays(pb2,-(len-1));
+    return {from:de,to:to,pfrom:iso(pa2),pto:iso(pb2)}; }
   var r=parse(LAST), a, pa, pb, off;
   if(gran==='dia'){ a=r; pa=addDays(r,-1); while(!isBiz(pa)) pa=addDays(pa,-1); pb=pa; }
   else if(gran==='semana'){ a=monStart(r); off=Math.round((r-a)/864e5); pa=addDays(a,-7); pb=addDays(pa,off); }
@@ -756,21 +801,21 @@ function oppsFiltradas(from,to,campo){ var F=filtros(); return (D.oportunidades|
 var CFGP=(function(){ var a=D.config.alertaPreenchimento||{}; return {minNfs:a.minNfsSemana!=null?a.minNfsSemana:3, acoesPorNf:a.acoesPorNf!=null?a.acoesPorNf:1, ritmoMin:a.ritmoMin!=null?a.ritmoMin:.6}; })();
 function calcPreench(){ var s=monStart(parse(HOJE)); return calcPreenchRange(iso(s),iso(addDays(s,6)),HOJE); }
 function calcPreenchRange(semFrom,semTo,ate){
-  var mesRef=semFrom.slice(0,7);
   var tot=bizDays(semFrom,semTo), dec=bizDays(semFrom,ate), esp=tot?dec/tot:0, motivos=[], avaliou=false, sem=[];
-  // (1) ritmo da semana: quanto da meta já foi feito x quanto da semana já passou
-  var itens=[]; FAM.forEach(function(f,fi){ var mt=metasDe(f,mesRef); if(!mt) return;
-    METRICAS.forEach(function(m){ if(mt[m.k]!=null) itens.push({meta:metaPer(mt[m.k],semFrom,semTo),real:realiz(fi,m.k,semFrom,ate)}); }); });
+  // (1) ritmo: quanto da meta já foi feito x quanto do período já passou
+  var itens=[]; FAM.forEach(function(f,fi){ if(!temMeta(f,semFrom,semTo)) return;
+    METRICAS.forEach(function(m){ var mm=metaIntervalo(f,m.k,semFrom,semTo); if(mm!=null) itens.push({meta:mm,real:realiz(fi,m.k,semFrom,ate)}); }); });
   if(itens.length&&esp>=.4){ avaliou=true; var prog=progresso(itens);
-    if(prog<esp*CFGP.ritmoMin) motivos.push('Ritmo da semana: '+P(prog,0)+' da meta (esperado '+P(esp,0)+')'); }
-  // (2) venda saindo no Omie Vendas sem registro no Omie CRM (por família, na semana)
+    if(prog<esp*CFGP.ritmoMin) motivos.push('Ritmo do período: '+P(prog,0)+' da meta (esperado '+P(esp,0)+')'); }
+  // (2) venda saindo no Omie Vendas sem registro no Omie CRM (por família)
   var dia=D.vendas&&D.vendas.diario;
   if(dia){ avaliou=true;
     FAM.forEach(function(f,fi){
       var nfs=dia.reduce(function(a,r){return a+(r[1]===f.id&&r[0]>=semFrom&&r[0]<=ate?r[2]:0);},0);
       if(nfs>=CFGP.minNfs){ var ac=soma({from:semFrom,to:ate,f:fi}); if(ac<nfs*CFGP.acoesPorNf) sem.push({f:f,nfs:nfs,ac:ac}); } });
     if(sem.length) motivos.push('Vendas sem registro no CRM: '+sem.map(function(x){return x.f.nome;}).join(', ')); }
-  return {nivel:!avaliou?'neutro':(motivos.length?'baixo':'bom'),motivos:motivos,sem:sem}; }
+  // início do período (menos de 40% dos dias úteis): sem problema achado ainda não quer dizer que está bom
+  return {nivel:(!avaliou||(esp<.4&&!motivos.length))?'neutro':(motivos.length?'baixo':'bom'),motivos:motivos,sem:sem}; }
 function preenchHTML(){
   var p=calcPreench(), t=p.nivel==='baixo'?'PREENCHIMENTO DO CRM ESTÁ BAIXO ⚠️':p.nivel==='bom'?'PREENCHIMENTO DO CRM ESTÁ BOM ✅':'PREENCHIMENTO DO CRM: sem dados suficientes na semana';
   return '<div class="preench '+p.nivel+'">'+t+p.motivos.map(function(m){return '<small>'+esc(m)+'</small>';}).join('')+'</div>'; }
@@ -818,7 +863,7 @@ function renderAlertas(){ var al=calcAlertas(), ic={aviso:'⚠️',ok:'✅',info
   $('#anAlertas').innerHTML=al.length?al.slice(0,10).map(function(a){return '<div class="alerta"><span class="ic">'+ic[a.n]+'</span><span>'+esc(a.t)+'</span><span class="q">'+esc(a.q||'hoje')+'</span></div>';}).join(''):'<div class="vazio">Nada fora do normal hoje.</div>'; }
 
 /* ---------- RESUMO ---------- */
-var PERS=[['dia','Último dia'],['semana','Semana atual'],['mes','Mês atual'],['trimestre','Trimestre atual'],['ano','Ano atual']];
+var PERS=[['dia','Último dia'],['semana','Semana atual'],['mes','Mês atual'],['trimestre','Trimestre atual'],['ano','Ano atual'],['custom','Personalizado (calendário)…']];
 function renderResumo(){
   var F=filtros(), p=periodo(A.rPer), cur=agreg({from:p.from,to:p.to,f:F.f,v:F.v}), prv=agreg({from:p.pfrom,to:p.pto,f:F.f,v:F.v});
   var du=Math.max(1,duDados(p.from,p.to)), duP=Math.max(1,duDados(p.pfrom,p.pto));
@@ -880,9 +925,9 @@ function renderEvol(){
   var pct=m.indexOf('p_')===0||m==='atend';
   var buckets={}, seriesSet={};
   function serieDe(r){ if(sp==='none') return 'Total'; if(sp==='familia') return FAM[r.f].nome; if(sp==='vendedor') return VEND[r.v]; if(sp==='canal') return CANAL_NOME[r.c]; return r.t==='novo'?'Cliente novo':'Carteira'; }
-  ROWS.forEach(function(r){ if(r.d>LAST) return; if(F.f!=null&&r.f!==F.f) return; if(F.v!=null&&r.v!==F.v) return;
+  ROWS.forEach(function(r){ if(r.d>LAST) return; if(A.eDe&&r.d<A.eDe) return; if(A.eAte&&r.d>A.eAte) return; if(F.f!=null&&r.f!==F.f) return; if(F.v!=null&&r.v!==F.v) return;
     var k=keyOf(r.d,g), s=serieDe(r); seriesSet[s]=1; var b=buckets[k]||(buckets[k]={}); var a=b[s]||(b[s]={total:0,c:{},t:{}}); a.total+=r.q; a.c[r.c]=(a.c[r.c]||0)+r.q; a.t[r.t]=(a.t[r.t]||0)+r.q; });
-  var keys=Object.keys(buckets).sort(), lim={dia:45,semana:20,mes:12,trimestre:8,ano:5}[g]; keys=keys.slice(-lim);
+  var keys=Object.keys(buckets).sort(), lim={dia:45,semana:20,mes:12,trimestre:8,ano:5}[g]; if(!(A.eDe||A.eAte)) keys=keys.slice(-lim);
   var series=Object.keys(seriesSet).sort(), pal=['#0B6FB8','#D64545','#1E9E5A','#8E44AD','#E8A733','#16A085','#2E75B6','#9AA7B1'];
   var ds=series.map(function(s,i){ return {label:s,borderColor:pal[i%pal.length],backgroundColor:pal[i%pal.length],tension:.3,pointRadius:3,segment:{borderDash:function(c){return (andamento&&c.p1DataIndex===keys.length-1)?[6,5]:undefined;}},
     data:keys.map(function(k){ var a=buckets[k][s]; if(!a) return pct?null:0; var r=keyRange(k,g); return metVal(m,a,duDados(r[0],r[1])); }).map(function(v){return v==null?null:(pct?Math.round(v*1000)/10:Math.round(v*10)/10);})}; });
@@ -975,16 +1020,22 @@ function renderAnalise(){ renderAlertas(); $('#anRef').innerHTML='Dados até <b>
   selHTML($('#rPer'),PERS,A.rPer); selHTML($('#mPer'),PERS,A.mPer); selHTML($('#vPer'),PERS,A.vPer); selHTML($('#eMet'),EMET,'total');
   $('#fFam').addEventListener('change',function(){A.fam=this.value;renderSec();});
   $('#fVend').addEventListener('change',function(){A.vend=this.value;renderSec();});
-  $('#rPer').addEventListener('change',function(){A.rPer=this.value;renderResumo();});
-  $('#mPer').addEventListener('change',function(){A.mPer=this.value;renderMix();});
-  $('#vPer').addEventListener('change',function(){A.vPer=this.value;renderVend();});
+  A.cAte=LAST; A.cDe=iso(addDays(parse(LAST),-29));
+  var RNG=['R','M','V'].map(function(x){ return iniRng(x,function(){return {de:A.cDe,ate:A.cAte};},function(a,b){ A.cDe=a; A.cAte=b; syncRng(); renderSec(); }); });
+  function syncRng(){ RNG.forEach(function(f){f();}); $('#rngR').style.display=A.rPer==='custom'?'flex':'none'; $('#rngM').style.display=A.mPer==='custom'?'flex':'none'; $('#rngV').style.display=A.vPer==='custom'?'flex':'none'; }
+  $('#rPer').addEventListener('change',function(){A.rPer=this.value;syncRng();renderResumo();});
+  $('#mPer').addEventListener('change',function(){A.mPer=this.value;syncRng();renderMix();});
+  $('#vPer').addEventListener('change',function(){A.vPer=this.value;syncRng();renderVend();});
+  $('#eDe').addEventListener('change',function(){A.eDe=this.value;renderEvol();});
+  $('#eAte').addEventListener('change',function(){A.eAte=this.value;renderEvol();});
+  $('#eLimpar').addEventListener('click',function(){A.eDe='';A.eAte='';$('#eDe').value='';$('#eAte').value='';renderEvol();});
   ['mGrp','mCan'].forEach(function(id){$('#'+id).addEventListener('change',renderMix);});
   ['eGran','eMet','eSplit'].forEach(function(id){$('#'+id).addEventListener('change',renderEvol);});
   $$('#anPills button').forEach(function(b){ b.addEventListener('click',function(){ A.sec=b.getAttribute('data-s'); $$('#anPills button').forEach(function(x){x.classList.toggle('on',x===b);}); $$('.sec').forEach(function(x){x.classList.toggle('on',x.id==='sec-'+A.sec);}); renderSec(); }); });
 })();
 
 /* ============================ ABA — RESULTADO DA SEMANA ============================ */
-var SEM={ini:null};
+var SEM={modo:'semana',ini:null,de:null,ate:null,sync:null};
 function tokNome(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z\s]/g,' ').split(/\s+/).filter(Boolean); }
 function mesmoNome(a,b){ var A=tokNome(a),B=tokNome(b); if(!A.length||!B.length) return false; var c=A.length<=B.length?[A,B]:[B,A]; return c[0].every(function(t){return c[1].indexOf(t)>=0;}); }
 function responsaveisDe(fi){
@@ -995,18 +1046,25 @@ function responsaveisDe(fi){
 function realizV(fi,vi,m,from,to){ return soma({from:from,to:to,f:fi,v:vi,canais:canaisDa(fi,m),tipo:m==='carteira'?'carteira':m==='novos'?'novo':null}); }
 function semanasDisp(){ var ini=monStart(parse(INICIO!=='0000-00-00'?INICIO:LAST)), fim=monStart(parse(HOJE)), out=[]; for(var d=new Date(fim); d>=ini; d=addDays(d,-7)) out.push(iso(d)); return out; }
 function semanaPadrao(){ var h=parse(HOJE), wd=(h.getUTCDay()+6)%7, seg=monStart(h); return iso(wd>=4?seg:addDays(seg,-7)); }   // sex/sáb/dom: a semana que está fechando; seg a qui: a anterior
-function fracao(real,meta){ return meta>0?real/meta:null; }
-function renderSemana(){
+function rangeSemana(){   // período mostrado: uma semana (seg a sex) ou um período livre escolhido no calendário
+  if(SEM.modo==='periodo'&&SEM.de&&SEM.ate){ var a=SEM.de, b=SEM.ate; if(a>b){ var t=a; a=b; b=t; } return {modo:'periodo',from:a,to:b,ate:b<LAST?b:LAST,parcial:b>LAST}; }
   var ws=semanasDisp(); if(!SEM.ini||ws.indexOf(SEM.ini)<0) SEM.ini=semanaPadrao(); if(ws.indexOf(SEM.ini)<0) SEM.ini=ws[0];
-  var from=SEM.ini, sex=iso(addDays(parse(from),4)), ate=sex<LAST?sex:LAST, parcial=sex>LAST, mes=from.slice(0,7), du=Math.max(1,bizDays(from,sex));
-  selHTML($('#smSel'),ws.map(function(w){var f=iso(addDays(parse(w),4)); return [w,'Semana '+dm(w)+' a '+dm(f)+(f>LAST?' (em andamento)':'')];}),SEM.ini);
+  var sex=iso(addDays(parse(SEM.ini),4)); return {modo:'semana',from:SEM.ini,to:sex,ate:sex<LAST?sex:LAST,parcial:sex>LAST}; }
+function renderSemana(){
+  var r=rangeSemana(), from=r.from, to=r.to, ate=r.ate, parcial=r.parcial, modo=r.modo, du=Math.max(1,bizDays(from,to));
+  var Wna=modo==='semana'?'na semana':'no período', Wda=modo==='semana'?'da semana':'do período', Wa=modo==='semana'?'a semana':'o período';
+  var ws=semanasDisp();
+  $$('#smModo button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-m')===modo); });
+  $('#smSemBox').style.display=modo==='semana'?'':'none'; $('#rngS').style.display=modo==='periodo'?'flex':'none';
+  selHTML($('#smSel'),ws.map(function(w){var f=iso(addDays(parse(w),4)); return [w,'Semana '+dm(w)+' a '+dm(f)+(f>LAST?' (em andamento)':'')];}),SEM.ini||from);
   $('#smSel').onchange=function(){ SEM.ini=this.value; renderSemana(); };
-  try{history.replaceState(null,'','#semana/'+SEM.ini);}catch(e){}
-  $('#smInfo').innerHTML='Semana de <b>'+dm(from)+' a '+dm(sex)+'/'+sex.slice(0,4)+'</b> · '+du+' dias úteis'+(parcial?' · <b>em andamento</b> (dados até '+dm(LAST)+')':'');
+  if(SEM.sync) SEM.sync();
+  try{history.replaceState(null,'',modo==='semana'?'#semana/'+from:'#semana/'+from+'/'+to);}catch(e){}
+  $('#smInfo').innerHTML=(modo==='semana'?'Semana':'Período')+' de <b>'+dmy(from)+' a '+dmy(to)+'</b> · '+du+' dias úteis'+(parcial?' · <b>em andamento</b> (dados até '+dm(LAST)+')':'');
   var temDiario=!!(D.vendas&&D.vendas.diario);
   // ---------- por família
-  var LF=FAM.map(function(f,fi){ var mt=metasDe(f,mes);
-    var itens=METRICAS.map(function(m){ var real=realiz(fi,m.k,from,ate); if(mt==null) return {k:m.k,meta:null,real:real}; var sem=mt[m.k]; if(sem==null) return null; return {k:m.k,meta:metaPer(sem,from,sex),real:real}; });
+  var LF=FAM.map(function(f,fi){ var tem=temMeta(f,from,to);
+    var itens=METRICAS.map(function(m){ var real=realiz(fi,m.k,from,ate); if(!tem) return {k:m.k,meta:null,real:real}; var mm=metaIntervalo(f,m.k,from,to); if(mm==null) return null; return {k:m.k,meta:mm,real:real}; });
     var ok=itens.filter(function(i){return i&&i.meta!=null;});
     var nfs=temDiario?D.vendas.diario.reduce(function(a,r){return a+(r[1]===f.id&&r[0]>=from&&r[0]<=ate?r[2]:0);},0):null, ac=soma({from:from,to:ate,f:fi});
     return {f:f,fi:fi,itens:itens,prog:ok.length?progresso(ok):null,nfs:nfs,ac:ac,semReg:temDiario&&nfs>=CFGP.minNfs&&ac<nfs*CFGP.acoesPorNf}; });
@@ -1017,12 +1075,12 @@ function renderSemana(){
   $('#smFam').innerHTML=h+'</tbody>';
   // ---------- por vendedor (meta = meta da família dividida entre os responsáveis)
   var LV=VEND.map(function(nome,vi){
-    var fams=[], metaTot=0, realCap=0, realTot=0, temMeta=false;
-    FAM.forEach(function(f,fi){ var resp=responsaveisDe(fi); if(resp.indexOf(vi)<0) return; fams.push(f); var mt=metasDe(f,mes); if(!mt) return;
-      METRICAS.forEach(function(m){ var sem=mt[m.k]; if(sem==null) return; var meta=metaPer(sem,from,sex)/resp.length, real=realizV(fi,vi,m.k,from,ate); metaTot+=meta; realCap+=Math.min(real,meta); realTot+=real; temMeta=true; }); });
+    var fams=[], metaTot=0, realCap=0, realTot=0, temMeta_=false;
+    FAM.forEach(function(f,fi){ var resp=responsaveisDe(fi); if(resp.indexOf(vi)<0) return; fams.push(f); if(!temMeta(f,from,to)) return;
+      METRICAS.forEach(function(m){ var mm=metaIntervalo(f,m.k,from,to); if(mm==null) return; var meta=mm/resp.length, real=realizV(fi,vi,m.k,from,ate); metaTot+=meta; realCap+=Math.min(real,meta); realTot+=real; temMeta_=true; }); });
     var a=agreg({from:from,to:ate,v:vi}), dias={}; ROWS.forEach(function(r){ if(r.v===vi&&r.d>=from&&r.d<=ate&&isBiz(parse(r.d))) dias[r.d]=1; });
     var ops=D.oportunidades||[], criadas=ops.filter(function(o){return o.v===vi&&o.c&&o.c>=from&&o.c<=ate;}).length, ganh=ops.filter(function(o){return o.v===vi&&o.s==='ganha'&&o.x&&o.x>=from&&o.x<=ate;}).length;
-    return {nome:nome,vi:vi,fams:fams,metaTot:metaTot,realTot:realTot,pct:temMeta&&metaTot>0?realCap/metaTot:null,a:a,dias:Object.keys(dias).length,criadas:criadas,ganh:ganh}; })
+    return {nome:nome,vi:vi,fams:fams,metaTot:metaTot,realTot:realTot,pct:temMeta_&&metaTot>0?realCap/metaTot:null,a:a,dias:Object.keys(dias).length,criadas:criadas,ganh:ganh}; })
     .filter(function(x){return x.fams.length||x.a.total>0;});
   LV.sort(function(a,b){return (b.pct==null?-1:b.pct)-(a.pct==null?-1:a.pct)||b.a.total-a.a.total;});
   $('#smVendDesc').textContent='Meta do vendedor = meta da família dividida igualmente entre os responsáveis (ajustável no esforco_config.json). “Dias com registro” = dias úteis em que registrou pelo menos 1 ação.';
@@ -1030,35 +1088,43 @@ function renderSemana(){
   LV.forEach(function(v){ var a=v.a, t=a.total, tag='';
     if(v.fams.length&&v.dias===0) tag=' <span class="tag bad">sem registro</span>'; else if(v.pct!=null&&v.pct>=1) tag=' <span class="tag ok">meta batida</span>';
     hv+='<tr><td class="fam-n">'+esc(v.nome)+tag+'</td><td style="text-align:left">'+(v.fams.length?v.fams.map(function(f){return esc(f.nome);}).join('<br>'):'—')+'</td><td>'+(v.metaTot?N(v.metaTot):'-')+'</td><td><b>'+N(v.realTot||t)+'</b></td><td><b>'+PP(v.pct)+'</b></td><td>'+v.dias+' de '+du+'</td><td>'+N(lig(a))+'</td><td>'+N(nC(a,'whatsapp')+nC(a,'email'))+'</td><td>'+N(nC(a,'visita'))+'</td><td>'+(t?P((a.t.novo||0)/t,0):'—')+'</td><td>'+N(v.criadas)+'</td><td>'+N(v.ganh)+'</td></tr>'; });
-  $('#smVend').innerHTML=LV.length?hv+'</tbody>':'<tbody><tr><td class="vazio">Sem registros na semana.</td></tr></tbody>';
+  $('#smVend').innerHTML=LV.length?hv+'</tbody>':'<tbody><tr><td class="vazio">Sem registros '+Wna+'.</td></tr></tbody>';
   // ---------- resumo
-  var pre=calcPreenchRange(from,sex,ate), todosItens=[].concat.apply([],LF.map(function(x){return x.itens.filter(function(i){return i&&i.meta!=null;});}));
-  var tot=todosItens.length?progresso(todosItens):null, cur=agreg({from:from,to:ate}), pf=iso(addDays(parse(from),-7)), prev=agreg({from:pf,to:iso(addDays(parse(pf),4))});
+  var pre=calcPreenchRange(from,to,ate), todosItens=[].concat.apply([],LF.map(function(x){return x.itens.filter(function(i){return i&&i.meta!=null;});}));
+  var tot=todosItens.length?progresso(todosItens):null, cur=agreg({from:from,to:ate});
+  var pf,pt; if(modo==='semana'){ pf=iso(addDays(parse(from),-7)); pt=iso(addDays(parse(pf),4)); } else { var len=Math.round((parse(to)-parse(from))/864e5)+1; pt=iso(addDays(parse(from),-1)); pf=iso(addDays(parse(pt),-(len-1))); }
+  var prev=agreg({from:pf,to:pt});
   var diasReg={}; ROWS.forEach(function(r){ if(r.d>=from&&r.d<=ate&&isBiz(parse(r.d))) diasReg[r.d]=1; });
   var ops=D.oportunidades||[], criadas=ops.filter(function(o){return o.c&&o.c>=from&&o.c<=ate;}).length, ganh=ops.filter(function(o){return o.s==='ganha'&&o.x&&o.x>=from&&o.x<=ate;}).length;
   var t={baixo:'PREENCHIMENTO DO CRM ESTÁ BAIXO ⚠️',bom:'PREENCHIMENTO DO CRM ESTÁ BOM ✅',neutro:'PREENCHIMENTO DO CRM: sem dados suficientes'}[pre.nivel];
   $('#smResumo').innerHTML='<div style="margin-bottom:16px"><div class="sm-chip '+pre.nivel+'">'+t+pre.motivos.map(function(m){return '<small>'+esc(m)+'</small>';}).join('')+'</div></div>'+
     '<div class="cards">'+[
-      ['Esforço vs meta da semana',PP(tot),tot==null?'sem meta neste período (antes de '+mesNome(META_INICIO)+' nenhuma família tinha meta)':'ações registradas ÷ meta (cada meta até 100%)'],
+      ['Esforço vs meta '+Wda,PP(tot),tot==null?'sem meta neste período (antes de '+mesNome(META_INICIO)+' nenhuma família tinha meta)':'ações registradas ÷ meta (cada meta até 100%)'],
       ['Ações registradas no CRM',N(cur.total),delta(cur.total,prev.total)],
       ['Dias úteis com registro',Object.keys(diasReg).length+' de '+du,'dias com pelo menos 1 ação'],
-      ['Oportunidades novas',N(criadas),N(ganh)+' ganhas na semana'],
+      ['Oportunidades novas',N(criadas),N(ganh)+' ganhas '+Wna],
       ['% das ações em cliente novo',P(cur.total?(cur.t.novo||0)/cur.total:null,0),'carteira: '+P(cur.total?(cur.t.carteira||0)/cur.total:null,0)]
     ].map(function(c){ return '<div class="card"><div class="l">'+c[0]+'</div><div class="v">'+c[1]+'</div><div class="d">'+(String(c[2]).indexOf('<small')===0?c[2]:esc(c[2]))+'</div></div>'; }).join('')+'</div>';
   // ---------- pontos de atenção
   var pts=[];
-  pre.sem.forEach(function(x){ pts.push({n:'aviso',t:x.f.nome+': '+N(x.nfs)+' notas faturadas na semana e só '+N(x.ac)+' ações no CRM — venda saindo sem registro.'}); });
+  pre.sem.forEach(function(x){ pts.push({n:'aviso',t:x.f.nome+': '+N(x.nfs)+' notas faturadas '+Wna+' e só '+N(x.ac)+' ações no CRM — venda saindo sem registro.'}); });
   LV.forEach(function(v){
-    if(v.fams.length&&v.dias===0) pts.push({n:'aviso',t:v.nome+': nenhum registro no CRM na semana.'});
+    if(v.fams.length&&v.dias===0) pts.push({n:'aviso',t:v.nome+': nenhum registro no CRM '+Wna+'.'});
     else if(v.fams.length&&v.dias<Math.ceil(du/2)) pts.push({n:'aviso',t:v.nome+': registrou em só '+v.dias+' de '+du+' dias úteis.'});
     if(v.a.total>=15&&lig(v.a)/v.a.total<.1) pts.push({n:'aviso',t:v.nome+': só '+P(lig(v.a)/v.a.total,0)+' das ações foram ligação (quase só mensagem).'});
-    if(v.pct!=null&&v.pct>=1) pts.push({n:'ok',t:v.nome+': bateu a meta da semana ('+P(v.pct,0)+').'}); });
-  LF.forEach(function(x){ if(x.prog!=null&&x.prog>=1) pts.push({n:'ok',t:x.f.nome+': bateu a meta da semana.'}); else if(x.prog!=null&&x.prog<.3&&!parcial) pts.push({n:'aviso',t:x.f.nome+': só '+P(x.prog,0)+' da meta da semana.'}); });
+    if(v.pct!=null&&v.pct>=1) pts.push({n:'ok',t:v.nome+': bateu a meta '+Wda+' ('+P(v.pct,0)+').'}); });
+  LF.forEach(function(x){ if(x.prog!=null&&x.prog>=1) pts.push({n:'ok',t:x.f.nome+': bateu a meta '+Wda+'.'}); else if(x.prog!=null&&x.prog<.3&&!parcial) pts.push({n:'aviso',t:x.f.nome+': só '+P(x.prog,0)+' da meta '+Wda+'.'}); });
   if(cur.total>=20&&(cur.t.novo||0)/cur.total>.9) pts.push({n:'aviso',t:P((cur.t.novo||0)/cur.total,0)+' das ações foram em “cliente novo” — conferir o campo Tipo das oportunidades (clientes antigos marcados como novos).'});
-  if(prev.total>=30&&cur.total<prev.total*.75) pts.push({n:'aviso',t:'O esforço total ficou '+P(1-cur.total/prev.total,0)+' abaixo da semana anterior ('+N(cur.total)+' x '+N(prev.total)+').'});
+  if(prev.total>=30&&cur.total<prev.total*.75) pts.push({n:'aviso',t:'O esforço total ficou '+P(1-cur.total/prev.total,0)+' abaixo '+(modo==='semana'?'da semana anterior':'do período anterior')+' ('+N(cur.total)+' x '+N(prev.total)+').'});
   var ord={aviso:0,ok:1}; pts.sort(function(a,b){return ord[a.n]-ord[b.n];});
   var ic={aviso:'⚠️',ok:'✅'};
-  $('#smPontos').innerHTML=pts.length?pts.slice(0,12).map(function(a){return '<div class="alerta" style="border-top:1px solid #E3EEF5"><span class="ic">'+ic[a.n]+'</span><span>'+esc(a.t)+'</span></div>';}).join(''):'<div class="vazio">Nada fora do normal nesta semana.</div>'; }
+  $('#smPontos').innerHTML=pts.length?pts.slice(0,12).map(function(a){return '<div class="alerta" style="border-top:1px solid #E3EEF5"><span class="ic">'+ic[a.n]+'</span><span>'+esc(a.t)+'</span></div>';}).join(''):'<div class="vazio">Nada fora do normal neste período.</div>'; }
+(function(){   // controles do Resultado da Semana: Semana | Período (calendário)
+  $$('#smModo button').forEach(function(b){ b.addEventListener('click',function(){ SEM.modo=this.getAttribute('data-m');
+    if(SEM.modo==='periodo'&&!(SEM.de&&SEM.ate)){ var d=rangePreset('semana_passada'); SEM.de=d.de; SEM.ate=d.ate; }
+    renderSemana(); }); });
+  SEM.sync=iniRng('S',function(){return {de:SEM.de,ate:SEM.ate};},function(a,b){ SEM.de=a; SEM.ate=b; SEM.modo='periodo'; renderSemana(); });
+})();
 
 /* ============================ início ============================ */
 stampStatus(); renderTV();

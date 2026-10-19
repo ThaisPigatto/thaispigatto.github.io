@@ -192,6 +192,7 @@ fieldset.prio label:has(input:checked){border-color:currentColor}
 .seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
 .fsel{display:grid;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600}
 .fsel select{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:600;color:var(--ink);min-width:190px}
+.fsel input[type=date]{padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:600;color:var(--ink);font-family:inherit;min-height:42px}
 .pace{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 16px;font-size:15px}
 .nfalert{border:3px solid var(--bad);background:#FFF5F5}
 .nfalert.ok{border-color:var(--ok);background:#F2FBF5}
@@ -341,10 +342,35 @@ const hubSoma = (k,from,to) => (D.hubRegistros||[]).reduce((t,h) => t + (h[1] ==
 /* períodos: semana atual ou um mês (igual ao filtro Mês/Semana do painel de esforço) */
 let MODO_CRM = (() => { try { return localStorage.getItem('portal_modo') || 'semana'; } catch(e){ return 'semana'; } })();
 let MES_CRM = null;
-function perSemana(){
-  const s = monStart(parse(HOJE)), e = addDays(s,6), to = iso(e);
-  return {tipo:'semana', from: iso(s), to, upTo: HOJE < to ? HOJE : to, mesRef: HOJE.slice(0,7), nome: `Semana de ${dm(iso(s))} a ${dm(iso(addDays(s,4)))}`};
+if (!['mes','semana','periodo'].includes(MODO_CRM)) MODO_CRM = 'semana';
+let SEM_CRM = null, DE_CRM = '', ATE_CRM = '';
+try { const sv = localStorage.getItem('portal_sem'); if (sv && sv !== 'atual') SEM_CRM = sv; DE_CRM = localStorage.getItem('portal_de') || ''; ATE_CRM = localStorage.getItem('portal_ate') || ''; } catch(e){}
+function perSemana(ini){   // sem argumento = semana atual; com argumento = a semana que começa naquela segunda-feira
+  const s = ini ? parse(ini) : monStart(parse(HOJE)), e = addDays(s,6), to = iso(e);
+  return {tipo:'semana', from: iso(s), to, upTo: HOJE < to ? HOJE : to, mesRef: ini ? iso(s).slice(0,7) : HOJE.slice(0,7), nome: `Semana de ${dm(iso(s))} a ${dm(iso(addDays(s,4)))}`};
 }
+const dmy = s => s.slice(8,10) + '/' + s.slice(5,7) + '/' + s.slice(0,4);
+function perPeriodo(de, ate){
+  let a = de, b = ate; if (a > b){ const t = a; a = b; b = t; }
+  return {tipo:'periodo', from: a, to: b, upTo: HOJE < b ? HOJE : b, mesRef: a.slice(0,7), nome: `Período de ${dmy(a)} a ${dmy(b)}`};
+}
+function semanasCRM(){ // da semana atual (primeira) até a primeira semana com dados
+  const out = [], ini = monStart(parse((D.config.inicio || HOJE).slice(0,10)));
+  for (let d = monStart(parse(HOJE)); d >= ini && out.length < 80; d = addDays(d,-7)) out.push(iso(d));
+  return out;
+}
+const PRESETS = [['','Atalhos…'],['esta_semana','Esta semana'],['semana_passada','Semana passada'],['ult7','Últimos 7 dias'],['ult14','Últimos 14 dias'],['ult30','Últimos 30 dias'],['este_mes','Este mês'],['mes_passado','Mês passado'],['este_trim','Este trimestre']];
+function rangePreset(p){
+  const h = parse(HOJE), y = h.getUTCFullYear(), m = h.getUTCMonth(), s = monStart(h), q = Math.floor(m/3)*3;
+  const R = { esta_semana:[s,addDays(s,6)], semana_passada:[addDays(s,-7),addDays(s,-1)], ult7:[addDays(h,-6),h], ult14:[addDays(h,-13),h], ult30:[addDays(h,-29),h],
+    este_mes:[new Date(Date.UTC(y,m,1)),new Date(Date.UTC(y,m+1,0))], mes_passado:[new Date(Date.UTC(y,m-1,1)),new Date(Date.UTC(y,m,0))],
+    este_trim:[new Date(Date.UTC(y,q,1)),new Date(Date.UTC(y,q+3,0))] }[p];
+  return R ? {de: iso(R[0]), ate: iso(R[1])} : null;
+}
+/* metas num intervalo qualquer: cada mês do intervalo usa as metas vigentes dele (meta semanal × dias úteis ÷ 5) */
+function mesesDoIntervalo(from, to){ const out = []; let cur = from; while (cur <= to){ const mes = cur.slice(0,7), fim = iso(new Date(Date.UTC(+mes.slice(0,4), +mes.slice(5,7), 0))), f = fim < to ? fim : to; out.push([mes, cur, f]); cur = iso(addDays(parse(f),1)); } return out; }
+const temMeta = (ent, from, to) => mesesDoIntervalo(from, to).some(x => !!metasDe(ent, x[0]));
+function metaIntervalo(ent, k, from, to){ let tot = null; mesesDoIntervalo(from, to).forEach(x => { const mt = metasDe(ent, x[0]); if (mt && mt[k] != null) tot = (tot || 0) + metaPer(mt[k], x[1], x[2]); }); return tot; }
 function perMes(id){
   const y = +id.slice(0,4), m = +id.slice(5,7), from = iso(new Date(Date.UTC(y,m-1,1))), to = iso(new Date(Date.UTC(y,m,0)));
   return {tipo:'mes', from, to, upTo: HOJE < to ? HOJE : to, mesRef: id, nome: `${MESES_LONGO[m-1]} de ${y}`};
@@ -356,17 +382,16 @@ function mesesCRM(){ // do início dos dados até o mês atual, mais recente pri
 }
 function blocoFamilia(fid, per){
   if (fid === 'hub'){
-    const h = D.hub, mt = metasDe(h, per.mesRef);
+    const h = D.hub, tem = temMeta(h, per.from, per.to);
     const its = [['anuncio','Anúncio de produto'],['licitacao','Licitações participadas']].map(([k,nome]) => {
-      const sem = mt ? mt[k] : null;
-      return { nome, meta: sem == null ? null : metaPer(sem, per.from, per.to), real: hubSoma(k, per.from, per.upTo) }; });
-    return { f: {id:'hub', nome: h.nome, cor: h.cor}, its, semMeta: !mt };
+      return { nome, meta: tem ? metaIntervalo(h, k, per.from, per.to) : null, real: hubSoma(k, per.from, per.upTo) }; });
+    return { f: {id:'hub', nome: h.nome, cor: h.cor}, its, semMeta: !tem };
   }
   const fi = FAMID[fid]; if (fi == null) return null;
-  const f = D.familias[fi], mt = metasDe(f, per.mesRef);
-  const its = METRICAS.map(m => { const sem = mt ? mt[m.k] : null;
-    return { nome: m.nome, meta: sem == null ? null : metaPer(sem, per.from, per.to), real: realiz(fi, m.k, per.from, per.upTo) }; });
-  return { f, fi, its, semMeta: !mt };
+  const f = D.familias[fi], tem = temMeta(f, per.from, per.to);
+  const its = METRICAS.map(m => {
+    return { nome: m.nome, meta: tem ? metaIntervalo(f, m.k, per.from, per.to) : null, real: realiz(fi, m.k, per.from, per.upTo) }; });
+  return { f, fi, its, semMeta: !tem };
 }
 const esperado = per => { const t = bizDays(per.from, per.to); return t ? bizDays(per.from, per.upTo) / t : 0; };
 const progBloco = b => progresso(b.its.filter(i => i.meta != null));
@@ -399,13 +424,17 @@ function renderCRM(){
   const el = $('tab-crm');
   if (!D){ el.innerHTML = '<div class="card loading">Não foi possível carregar os dados do CRM agora. Tente de novo em alguns minutos.</div>'; return; }
   const meses = mesesCRM(); if (!MES_CRM || !meses.includes(MES_CRM)) MES_CRM = meses[0];
-  const per = MODO_CRM === 'mes' ? perMes(MES_CRM) : perSemana();
+  const semanas = semanasCRM(); if (!SEM_CRM || !semanas.includes(SEM_CRM)) SEM_CRM = semanas[0];   // semanas[0] = semana atual
+  if (!DE_CRM || !ATE_CRM){ const d0 = rangePreset('ult30'); DE_CRM = d0.de; ATE_CRM = d0.ate; }
+  const per = MODO_CRM === 'mes' ? perMes(MES_CRM) : MODO_CRM === 'periodo' ? perPeriodo(DE_CRM, ATE_CRM) : perSemana(SEM_CRM === semanas[0] ? null : SEM_CRM);
   const esp = esperado(per), du = bizDays(per.from, per.upTo), dt = bizDays(per.from, per.to);
 
-  // filtro Mês / Semana
+  // filtro Mês / Semana (qualquer uma) / Período (calendário)
   const filtro = `<div class="filtro">
-    <div class="seg" role="group" aria-label="Período"><button data-modo="mes" aria-pressed="${MODO_CRM === 'mes'}">Mês</button><button data-modo="semana" aria-pressed="${MODO_CRM === 'semana'}">Semana</button></div>
+    <div class="seg" role="group" aria-label="Período"><button data-modo="mes" aria-pressed="${MODO_CRM === 'mes'}">Mês</button><button data-modo="semana" aria-pressed="${MODO_CRM === 'semana'}">Semana</button><button data-modo="periodo" aria-pressed="${MODO_CRM === 'periodo'}">Período</button></div>
     ${MODO_CRM === 'mes' ? `<label class="fsel"><span>Mês</span><select id="crmMes">${meses.map(id => `<option value="${id}" ${id === MES_CRM ? 'selected' : ''}>${MESES_LONGO[+id.slice(5,7)-1]} ${id.slice(0,4)}</option>`).join('')}</select></label>` : ''}
+    ${MODO_CRM === 'semana' ? `<label class="fsel"><span>Semana</span><select id="crmSem">${semanas.map(w => `<option value="${w}" ${w === SEM_CRM ? 'selected' : ''}>${dm(w)} a ${dm(iso(addDays(parse(w),4)))}${w === semanas[0] ? ' (atual)' : ''}</option>`).join('')}</select></label>` : ''}
+    ${MODO_CRM === 'periodo' ? `<label class="fsel"><span>De</span><input type="date" id="crmDe" value="${DE_CRM}"></label><label class="fsel"><span>Até</span><input type="date" id="crmAte" value="${ATE_CRM}"></label><label class="fsel"><span>Atalhos</span><select id="crmPre">${PRESETS.map(([v,t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>` : ''}
     <div class="pace">${esc(per.nome)} · dia útil <b>${du}</b> de <b>${dt}</b> · esperado até hoje <b>${P(esp)}</b></div></div>`;
 
   // números da família no período escolhido
@@ -447,6 +476,12 @@ function renderCRM(){
   el.innerHTML = filtro + fams + nfCard + att + feedCard;
   el.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { MODO_CRM = b.dataset.modo; try { localStorage.setItem('portal_modo', MODO_CRM); } catch(e){} renderCRM(); });
   const sm = $('crmMes'); if (sm) sm.onchange = e => { MES_CRM = e.target.value; renderCRM(); };
+  const ss = $('crmSem'); if (ss) ss.onchange = e => { SEM_CRM = e.target.value; try { localStorage.setItem('portal_sem', SEM_CRM === semanas[0] ? 'atual' : SEM_CRM); } catch(x){} renderCRM(); };
+  const salvarPer = () => { try { localStorage.setItem('portal_de', DE_CRM); localStorage.setItem('portal_ate', ATE_CRM); } catch(x){} renderCRM(); };
+  const dd = $('crmDe'), da = $('crmAte'), dp = $('crmPre');
+  if (dd) dd.onchange = e => { if (e.target.value){ DE_CRM = e.target.value; if (!ATE_CRM) ATE_CRM = DE_CRM; salvarPer(); } };
+  if (da) da.onchange = e => { if (e.target.value){ ATE_CRM = e.target.value; salvarPer(); } };
+  if (dp) dp.onchange = e => { const r = rangePreset(e.target.value); if (r){ DE_CRM = r.de; ATE_CRM = r.ate; salvarPer(); } };
   const bt = $('btNfs');
   if (bt) bt.onclick = () => { const l = $('nfLista'); l.classList.toggle('hidden'); bt.textContent = l.classList.contains('hidden') ? 'Ver quais são' : 'Esconder lista';
     l.innerHTML = `<div class="tw"><table><thead><tr><th>Nota fiscal</th><th>Pedido</th><th>Vendedor</th><th>Cliente</th><th>CNPJ / CPF</th><th>Data da venda</th><th>Empresa</th><th>Valor</th></tr></thead><tbody>${
