@@ -1,7 +1,13 @@
 name: Enviar Diagnóstico da Semana (CRM) por E-mail
 on:
   schedule:
-    - cron: '7 9 * * 6'          # todo sábado às 06:07 (horário de Brasília)
+    # Todo sábado, em 4 tentativas (06:07, 07:07, 08:07 e 10:07, horário de Brasília).
+    # O GitHub às vezes atrasa ou pula um horário, e o Gmail às vezes derruba a conexão; por isso há reservas.
+    # Quando uma tentativa já enviou o e-mail da semana, as seguintes se encerram sozinhas (não duplica).
+    - cron: '7 9 * * 6'
+    - cron: '7 10 * * 6'
+    - cron: '7 11 * * 6'
+    - cron: '7 13 * * 6'
   workflow_dispatch:
     inputs:
       destino:
@@ -19,7 +25,7 @@ concurrency:
 jobs:
   enviar:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v4
@@ -27,7 +33,29 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Precisa enviar agora? (liga/desliga e semana já enviada)
+        id: checar
+        env:
+          EVENTO: ${{ github.event_name }}
+        run: |
+          python - <<'PY'
+          import os, sys, datetime, zoneinfo
+          sys.path.insert(0, "automacao")
+          import enviar_resultado_semana as E
+          hoje = datetime.datetime.now(zoneinfo.ZoneInfo("America/Sao_Paulo")).date()
+          seg, _ = E.semana_de_referencia(hoje)
+          pular = False
+          if os.environ.get("EVENTO") == "schedule":
+              if not E.envio_ativo():
+                  pular = True
+                  print("Envio automático desligado (envio_semanal_ativo.txt != sim). Nada a fazer.")
+              elif E.ja_enviado(seg):
+                  pular = True
+                  print(f"A semana de {seg:%d/%m} já foi enviada. Nada a fazer.")
+          open(os.environ["GITHUB_OUTPUT"], "a").write("pular=%s\n" % ("true" if pular else "false"))
+          PY
       - name: Atualizar os dados do CRM antes de enviar (mesmo robô do painel)
+        if: steps.checar.outputs.pular != 'true'
         continue-on-error: true      # se o Omie falhar, ainda envia o link com os dados da última atualização
         env:
           OMIE_MATRIZ_APP_KEY: ${{ secrets.OMIE_MATRIZ_APP_KEY }}
@@ -38,6 +66,7 @@ jobs:
           set -o pipefail
           python automacao/esforco_crm.py 2>&1 | tee saida_esforco.log
       - name: Publicar os dados atualizados (commit + push)
+        if: steps.checar.outputs.pular != 'true'
         continue-on-error: true
         run: |
           git config user.name "Painel Pigatto (robô)"
@@ -55,25 +84,36 @@ jobs:
             done
           fi
       - name: Aguardar o GitHub Pages publicar os dados novos
+        if: steps.checar.outputs.pular != 'true'
         run: sleep 90
-      - name: Enviar o e-mail
+      - name: Enviar o e-mail (com novas tentativas se o Gmail derrubar a conexão)
+        id: enviar
+        if: steps.checar.outputs.pular != 'true'
         env:
           SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
           DESTINO: ${{ github.event.inputs.destino || 'gabriel' }}
           AGENDADO: ${{ github.event_name == 'schedule' && '--agendado' || '' }}
         run: python automacao/enviar_resultado_semana.py --destino "$DESTINO" $AGENDADO
+      - name: Registrar que a semana foi enviada (evita e-mail duplicado)
+        if: steps.checar.outputs.pular != 'true' && steps.enviar.outcome == 'success'
+        continue-on-error: true
+        run: |
+          git config user.name "Painel Pigatto (robô)"
+          git config user.email "actions@github.com"
+          git add automacao/ultimo_envio_semana.txt || true
+          if git diff --cached --quiet; then
+            echo "Nada a registrar."
+          else
+            git commit -m "Registro do envio semanal do Diagnóstico — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            for i in 1 2 3 4 5; do
+              if git push; then echo "Registrado."; break; fi
+              git pull --rebase origin main
+              sleep 5
+            done
+          fi
       - name: Avisar a Thais se o envio falhou
         if: failure()
         env:
           SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
           LINK_EXECUCAO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          python - <<'PY'
-          import os, smtplib
-          from email.mime.text import MIMEText
-          USER = "thais.brito@pigattodistribuidora.com.br"
-          msg = MIMEText("O e-mail semanal do Diagnóstico da Semana (CRM) NÃO foi enviado.\n\nDetalhes: " + os.environ["LINK_EXECUCAO"], "plain", "utf-8")
-          msg["Subject"], msg["From"], msg["To"] = "⚠️ E-mail semanal do CRM NÃO enviado", USER, USER
-          with smtplib.SMTP("smtp.gmail.com", 587) as s:
-              s.starttls(); s.login(USER, os.environ["SMTP_APP_PASSWORD"]); s.sendmail(USER, [USER], msg.as_string())
-          PY
+        run: python automacao/enviar_resultado_semana.py --aviso-falha
