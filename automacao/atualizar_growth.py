@@ -16,7 +16,7 @@ Secrets (GitHub > Settings > Secrets and variables > Actions):
   GADS_CSV_URL        (opcional)
 """
 import base64, csv, io, json, os, re, sys, time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import urllib.request, urllib.error
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -25,7 +25,7 @@ from cryptography.hazmat.primitives import hashes
 API = "https://app.omie.com.br/api/v1/"
 BRT = timezone(timedelta(hours=-3))
 HOJE = datetime.now(BRT).date()
-INICIO = (HOJE.replace(day=1) - timedelta(days=62)).replace(day=1)  # mês atual + 2 anteriores
+INICIO = date(2026, 6, 1)  # início do projeto Google Ads: histórico completo para recorrência e curva ABC
 ITER = 600000
 EMPRESAS = {
     "Matriz": (os.environ.get("OMIE_MATRIZ_APP_KEY"), os.environ.get("OMIE_MATRIZ_APP_SECRET")),
@@ -115,24 +115,28 @@ def achar_cliente(emp, conta, desc):
         if lst: return lst[0]["codigo_cliente"], "Média (nome)"
     return None, "Sem cadastro de cliente"
 
-def pedidos_cliente(emp, cod):
-    out = []
-    r = omie(emp, "produtos/pedido", "ListarPedidos", {"pagina": 1, "registros_por_pagina": 50, "filtrar_por_cliente": cod,
-                                                        "filtrar_por_data_de": INICIO.strftime("%d/%m/%Y")})
-    for p in r.get("pedido_venda_produto", []) or []:
-        cab, info, tot = p.get("cabecalho", {}), p.get("infoCadastro", {}), p.get("total_pedido", {})
-        itens = [{"produto": (i.get("produto") or {}).get("descricao", ""),
-                  "qtd": (i.get("produto") or {}).get("quantidade"),
-                  "unitario": (i.get("produto") or {}).get("valor_unitario"),
-                  "total": (i.get("produto") or {}).get("valor_total")} for i in p.get("det", []) or []]
-        faturado = info.get("faturado") == "S"
-        cancelado = info.get("cancelado") == "S"
-        out.append({"empresa": emp, "numero": cab.get("numero_pedido"), "data": (d(info.get("dInc", "")) or HOJE).isoformat(),
-                    "etapa": "Cancelado" if cancelado else ("Faturado" if faturado else ETAPAS.get(str(cab.get("etapa")), "Etapa " + str(cab.get("etapa")))),
-                    "faturado": faturado, "cancelado": cancelado,
-                    "valor": tot.get("valor_total_pedido"), "itens": itens,
-                    "obs": ((p.get("observacoes") or {}).get("obs_venda") or "")[:300]})
-    return out
+def pedidos_cliente(emp, cod, desde):
+    """Todos os pedidos do cliente a partir da data do lead (com paginação)."""
+    out, pag = [], 1
+    while True:
+        r = omie(emp, "produtos/pedido", "ListarPedidos", {"pagina": pag, "registros_por_pagina": 50, "filtrar_por_cliente": cod,
+                                                            "filtrar_por_data_de": desde.strftime("%d/%m/%Y")})
+        for p in r.get("pedido_venda_produto", []) or []:
+            cab, info, tot = p.get("cabecalho", {}), p.get("infoCadastro", {}), p.get("total_pedido", {})
+            itens = [{"produto": (i.get("produto") or {}).get("descricao", ""),
+                      "qtd": (i.get("produto") or {}).get("quantidade"),
+                      "unitario": (i.get("produto") or {}).get("valor_unitario"),
+                      "total": (i.get("produto") or {}).get("valor_total")} for i in p.get("det", []) or []]
+            faturado, cancelado = info.get("faturado") == "S", info.get("cancelado") == "S"
+            dfat = d(info.get("dFat", "")) if faturado else None
+            out.append({"empresa": emp, "numero": cab.get("numero_pedido"), "data": (d(info.get("dInc", "")) or HOJE).isoformat(),
+                        "data_faturamento": dfat.isoformat() if dfat else "",
+                        "etapa": "Cancelado" if cancelado else ("Faturado" if faturado else ETAPAS.get(str(cab.get("etapa")), "Etapa " + str(cab.get("etapa")))),
+                        "faturado": faturado, "cancelado": cancelado, "valor": tot.get("valor_total_pedido"), "itens": itens,
+                        "obs": ((p.get("observacoes") or {}).get("obs_venda") or "")[:300]})
+        if pag >= int(r.get("total_de_paginas", 1) or 1):
+            return out
+        pag += 1
 
 def coletar_omie():
     orcs = []
@@ -142,7 +146,7 @@ def coletar_omie():
         origens = listar_tudo(emp, "crm/origens", "ListarOrigens", "cadastros")
         ads = {o["nCodigo"] for o in origens if re.search(r"google ads|adwords", o.get("cDescricao", ""), re.I)}
         status = {x["nCodigo"]: x["cDescricao"] for x in listar_tudo(emp, "crm/status", "ListarStatus", "cadastros")}
-        cache, cli_cache = {}, {}
+        cache, cli_cache, ped_cache = {}, {}, {}
         for op in listar_tudo(emp, "crm/oportunidades", "ListarOportunidades", "cadastros"):
             ident, outras = op["identificacao"], op["outrasInf"]
             inc = d(outras["dInclusao"])
@@ -155,8 +159,10 @@ def coletar_omie():
             if ck not in cli_cache:
                 cli_cache[ck] = achar_cliente(emp, conta, ident["cDesOp"])
             cod_cli, vinculo = cli_cache[ck]
-            peds = pedidos_cliente(emp, cod_cli) if cod_cli else []
-            peds = [p for p in peds if p["data"] >= inc.isoformat()]  # só pedidos depois do lead
+            chave_ped = (cod_cli, inc)
+            if cod_cli and chave_ped not in ped_cache:
+                ped_cache[chave_ped] = pedidos_cliente(emp, cod_cli, inc)  # só pedidos a partir da data do lead
+            peds = ped_cache.get(chave_ped, []) if cod_cli else []
             valor = op.get("ticket", {}).get("nTicket") or None
             alt = d(outras["dAlteracao"])
             obs = []
@@ -165,7 +171,7 @@ def coletar_omie():
             if st == "Conquistado" and not any(p["faturado"] for p in peds): obs.append("Conquistado no CRM sem pedido faturado")
             if any(p["faturado"] for p in peds) and st != "Conquistado": obs.append("Tem pedido faturado mas o CRM não está como conquistado")
             doc = conta["doc"]
-            orcs.append({"empresa": emp, "n_op": ident["cNumOp"], "descricao": ident["cDesOp"],
+            orcs.append({"empresa": emp, "cod_cliente": cod_cli, "n_op": ident["cNumOp"], "descricao": ident["cDesOp"],
                          "cliente": conta["nome"] if not conta["nome"].lower().startswith("pessoa f") else (conta["contato"] or "Pessoa física"),
                          "cnpj": doc if len(doc) == 14 else "",  # CPF não é exibido
                          "contato": conta["contato"], "telefone": conta["contato_tel"] or conta["telefone"],
