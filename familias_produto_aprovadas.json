@@ -1,0 +1,15 @@
+[
+  {
+    "empresa": "matriz",
+    "cod_produto": "8629483166",
+    "descricao": "",
+    "familia": "Plásticos de Engenharia",
+    "valor": 620.0,
+    "notas": [
+      "00021570"
+    ],
+    "aprovado_por": "Thais Brito",
+    "aprovado_em": "21/10/2026",
+    "origem": "chat Claude — NF 00021570 (Matriz) sem família na OMIE; família confirmada pela Thais e ajustada também na OMIE"
+  }
+]

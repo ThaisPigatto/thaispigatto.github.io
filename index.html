@@ -811,6 +811,45 @@ const NOME_CANAL_ML = 'Pigatto HUB - Marketplace/Licitação';
     nota.textContent = 'Abre o GitHub já preenchido: confirme em "Submit new issue". O painel soma na próxima atualização (poucos minutos).';
     box.appendChild(nota);
   }
+  // Painel travado por produto sem família (20/10/2026): números congelados + aviso vermelho com
+  // seletor de família e botão. O botão abre uma issue pré-preenchida no GitHub (só a dona do
+  // repositório consegue aprovar — workflow aprovar-familia-produto.yml); o robô aplica e destrava.
+  const fpend = DATA.familia_pendentes || [];
+  if (DATA.trava) { box.style.borderColor = '#B3261E'; box.style.background = '#FDECEA'; titulo.style.color = '#B3261E'; }
+  function abrirFamiliaProduto(p, familia){
+    const corpo = { empresa: p.empresa, cod_produto: p.cod_produto, descricao: p.descricao, familia: familia,
+                    valor: p.valor, notas: p.notas };
+    const titulo = '[familia-produto] ' + familia + ' — produto ' + p.cod_produto + (p.descricao ? ' (' + p.descricao + ')' : '') +
+                   ' · ' + p.empresa + ' · NF ' + p.notas.join(', ') + ' · ' + brl(p.valor);
+    const body = 'Família informada pelo botão do Painel Comercial. Clique em **Submit new issue** para confirmar.\n\n' +
+                 '```json\n' + JSON.stringify(corpo, null, 2) + '\n```';
+    window.open(REPO + '?title=' + encodeURIComponent(titulo) + '&body=' + encodeURIComponent(body), '_blank', 'noopener');
+  }
+  fpend.forEach(p => {
+    const linha = document.createElement('div');
+    linha.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 2px 12px;';
+    const rot = document.createElement('span');
+    rot.style.cssText = 'font-weight:600;';
+    rot.textContent = (p.empresa === 'papeis' ? 'Papéis' : 'Matriz') + ' · produto ' + p.cod_produto +
+                      (p.descricao ? ' (' + p.descricao + ')' : '') + ' · NF ' + p.notas.join(', ') + ' · ' + brl(p.valor) +
+                      (p.familia_omie ? ' · OMIE diz: ' + p.familia_omie : '') + ' — qual a família?';
+    const sel = document.createElement('select');
+    sel.style.cssText = 'font-size:12px;padding:3px 6px;border:1px solid var(--amber);border-radius:6px;background:#fff;';
+    const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Família…'; sel.appendChild(o0);
+    fams.forEach(f => { const o = document.createElement('option'); o.value = f; o.textContent = f; sel.appendChild(o); });
+    const bOk = document.createElement('button');
+    bOk.textContent = 'Informar família e destravar';
+    bOk.style.cssText = 'font-size:12px;padding:4px 10px;border:0;border-radius:6px;background:#1B6B3D;color:#fff;cursor:pointer;';
+    bOk.onclick = () => { if (!sel.value) { sel.focus(); sel.style.borderColor = '#C0392B'; return; } abrirFamiliaProduto(p, sel.value); };
+    linha.append(rot, sel, bOk);
+    box.appendChild(linha);
+  });
+  if (fpend.length) {
+    const nota = document.createElement('div');
+    nota.style.cssText = 'font-size:11px;color:#6b6b6b;margin:6px 0 0 12px;';
+    nota.textContent = 'Abre o GitHub já preenchido: confirme em "Submit new issue". O painel destrava e atualiza em alguns minutos.';
+    box.appendChild(nota);
+  }
   kpis.parentNode.insertBefore(box, kpis);
 })();
 
