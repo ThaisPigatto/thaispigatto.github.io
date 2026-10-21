@@ -1,0 +1,85 @@
+name: Informar família de produto
+# Pedido da Thais, 20/10/2026: quando o painel trava por produto sem família, o aviso do painel tem
+# um botão que abre uma issue "[familia-produto] ..." já preenchida. Este workflow:
+#   1) só aceita issue aberta pela DONA do repositório (author_association = OWNER);
+#   2) valida (empresa, código do produto, família existente nos grupos do robô);
+#   3) grava em familias_produto_aprovadas.json com quem/quando (auditoria);
+#   4) dispara o robô (atualizar-painel.yml) e fecha a issue.
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: write
+  issues: write
+  actions: write
+concurrency:
+  group: atualizar-painel-aprovacao
+  cancel-in-progress: false
+jobs:
+  informar:
+    if: startsWith(github.event.issue.title, '[familia-produto]') && github.event.issue.author_association == 'OWNER'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar e gravar
+        id: gravar
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, ast, datetime
+          from zoneinfo import ZoneInfo
+          out = open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8")
+          def falha(msg):
+              out.write("ok=false\n"); out.write(f"msg={msg}\n"); raise SystemExit(0)
+          m = re.search(r"```json\s*(\{.*?\})\s*```", os.environ["ISSUE_BODY"] or "", re.S)
+          if not m: falha("Não encontrei o bloco JSON na issue.")
+          try: d = json.loads(m.group(1))
+          except Exception as e: falha(f"JSON inválido: {e}")
+          src = open("automacao/atualizar_painel.py", encoding="utf-8").read()
+          g = re.search(r"^GRUPOS = (\[.*?^\])", src, re.S | re.M)
+          familias = {f for grp in ast.literal_eval(g.group(1)) for f in grp["familias"]}
+          if d.get("empresa") not in ("matriz", "papeis"): falha("Empresa inválida.")
+          if not re.fullmatch(r"\d+", str(d.get("cod_produto", ""))): falha("Código de produto inválido.")
+          if d.get("familia") not in familias: falha(f"Família '{d.get('familia')}' não existe nos grupos do painel.")
+          agora = datetime.datetime.now(ZoneInfo("America/Sao_Paulo"))
+          reg = {"empresa": d["empresa"], "cod_produto": str(d["cod_produto"]), "descricao": d.get("descricao", ""),
+                 "familia": d["familia"], "valor": d.get("valor"), "notas": d.get("notas"),
+                 "aprovado_por": os.environ["ISSUE_USER"], "aprovado_em": agora.strftime("%d/%m/%Y %H:%M"),
+                 "origem": f"botão do painel — issue #{os.environ['ISSUE_NUM']}"}
+          p = "familias_produto_aprovadas.json"
+          lista = json.load(open(p, encoding="utf-8")) if os.path.exists(p) else []
+          lista.append(reg)
+          json.dump(lista, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+          out.write("ok=true\n")
+          out.write(f"msg=Produto {reg['cod_produto']} ({reg['empresa']}) = {reg['familia']}, por {reg['aprovado_por']} em {reg['aprovado_em']}. O painel destrava e atualiza em alguns minutos.\n")
+          PY
+      - name: Publicar e disparar o robô
+        if: steps.gravar.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "Painel Pigatto (robô)"
+          git config user.email "actions@github.com"
+          git add familias_produto_aprovadas.json
+          git commit -m "Família de produto informada (issue #${{ github.event.issue.number }})"
+          for i in 1 2 3 4 5; do
+            git push && break
+            git pull --rebase origin main; sleep 5
+          done
+          gh workflow run atualizar-painel.yml --ref main
+      - name: Responder e fechar a issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MSG: ${{ steps.gravar.outputs.msg }}
+          OK: ${{ steps.gravar.outputs.ok }}
+        run: |
+          if [ "$OK" = "true" ]; then
+            gh issue comment ${{ github.event.issue.number }} --body "✅ $MSG"
+            gh issue close ${{ github.event.issue.number }}
+          else
+            gh issue comment ${{ github.event.issue.number }} --body "⚠️ Não registrei: ${MSG:-erro inesperado, veja o log do Actions}. Nada foi alterado."
+          fi
