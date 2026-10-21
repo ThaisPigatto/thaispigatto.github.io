@@ -664,29 +664,43 @@ function renderLeads(){
   $("lBody").querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>abrirLead(+b.dataset.ed));
   $("lBody").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>excluirLead(+b.dataset.del));
 }
+const LINK_PRODUTO={"chapasdeacrilico":"Chapas de acrílico","chapaspsai":"Chapas de PSAI","chapaps":"Chapas de PS","petg":"Chapas de PETG","abs":"Chapas de ABS","parkerlord":"Parker Lord","bio-chem":"Biochem","biochem":"Biochem","chemlok":"Chemlok","06af8f50":"Chapas de acrílico","4d325f5e":"Chapas de PSAI","45182dee":"Chapas de PS","40d399ce":"Chapas de PETG","d9498c84":"Chapas de ABS","9460f29f":"Site (geral)"};
+function produtoDoLink(s){s=String(s||"").toLowerCase().trim();if(!s)return"";for(const k of Object.keys(LINK_PRODUTO))if(s.includes(k))return LINK_PRODUTO[k];
+  if(/^(https?:\/\/)?(www\.)?pigattodistribuidora\.com\.br\/?/.test(s))return"Site (geral)";return s;}
+function classeOrigem(c){const o=[c.origem,c.campanha,c.utm_source,c.link].join(" ").toLowerCase();
+  if(c.gclid||/google|adwords|gclid/.test(o)||c.campanha)return"Google Ads";
+  if(c.link||/link rastre|site|landing/.test(o))return"Site (sem campanha)";
+  return"Não rastreada";}
 function tintimConversas(){
+  let C;
   if(OMIE&&OMIE.tintim&&OMIE.tintim.conversas&&OMIE.tintim.conversas.length)
-    return OMIE.tintim.conversas.map(c=>({data:c.data_evento||c.recebido_em,nome:c.nome,telefone:c.telefone,origem:[c.origem,c.campanha,c.palavra_chave].filter(Boolean).join(" · ")||"Não rastreada",link:c.utm_source||"",estado:"",resposta_min:null,primeira:c.primeira_mensagem||""}));
-  return (D.tintim&&D.tintim.conversas)||[];
+    C=OMIE.tintim.conversas.map(c=>({data:c.data_evento||c.recebido_em,nome:c.nome,telefone:c.telefone,origem:c.origem||"",campanha:c.campanha||"",palavra:c.palavra_chave||"",gclid:c.gclid||"",utm_source:c.utm_source||"",link:c.link_rastreavel||"",pagina:c.pagina||"",estado:"",resposta_min:null}));
+  else C=((D.tintim&&D.tintim.conversas)||[]).map(c=>Object.assign({},c));
+  C.forEach(c=>{c.classe=classeOrigem(c);c.produto=produtoDoLink(c.link||c.pagina);});
+  return C;
 }
+const ORI_TAG={"Google Ads":"t-ok","Site (sem campanha)":"t-open","Não rastreada":"t-warn"};
 function renderTintim(){
   const T=D.tintim||{},el=$("tintimBox"),C=tintimConversas();
   if(!C.length&&!T.total){el.style.display="none";return;}el.style.display="";
   const viaRobo=!!(OMIE&&OMIE.tintim&&OMIE.tintim.conversas&&OMIE.tintim.conversas.length);
-  const q=(el.dataset.q||"").toLowerCase();
-  const lista=C.filter(c=>!q||JSON.stringify(c).toLowerCase().includes(q));
-  const semNome=C.filter(c=>!c.nome).length,ads=C.filter(c=>/google/i.test(c.origem||"")).length;
+  const q=(el.dataset.q||"").toLowerCase(),fo=el.dataset.o||"";
+  const n=k=>C.filter(c=>c.classe===k).length;
+  const porProd={};C.filter(c=>c.classe!=="Não rastreada").forEach(c=>{const k=(c.produto||"Sem link identificado")+"|"+c.classe;porProd[k]=(porProd[k]||0)+1;});
+  const lista=C.filter(c=>(!fo||c.classe===fo)&&(!q||JSON.stringify(c).toLowerCase().includes(q)));
   el.innerHTML=`<h3>WhatsApp da Jéssica (Tintim) · chapas</h3><p class="sub">${viaRobo?"Webhook do Tintim, atualizado pelo robô":esc(T.fonte||"")} · ${int(C.length)} conversas</p>
-  <div class="grid kpis">${[["Conversas",int(C.length),"Inclui carteira e fornecedores",true],["Origem Google Ads identificada",int(ads),int(C.length-ads)+" sem origem de anúncio"],["Resposta em horário comercial",(T.resposta_mediana_min_horario_comercial??"–")+" min",viaRobo?"Só no relatório exportado":"Mediana · "+int(T.acima_30min_horario_comercial)+" acima de 30 min"],["Sem nome salvo",int(semNome),"Candidatos a lead novo"]]
+  <div class="grid kpis">${[["Conversas",int(C.length),"Inclui carteira e fornecedores",true],["Vieram do Google Ads",int(n("Google Ads")),"Clique em anúncio (campanha identificada)"],["Vieram do site, sem campanha",int(n("Site (sem campanha)")),"Botão da LP ou do site, sem anúncio"],["Não rastreadas",int(n("Não rastreada")),"Chamaram direto, sem passar pelo site"],["Sem nome salvo",int(C.filter(c=>!c.nome).length),"Candidatos a lead novo"]]
    .map(([a,b,c,h])=>`<div class="kpi${h?" hero":""}"><div class="lb">${a}</div><div class="v num">${b}</div><div class="d">${c}</div></div>`).join("")}</div>
+  ${Object.keys(porProd).length?`<div class="tw" style="margin-top:14px"><table><thead><tr><th>Produto / link</th><th>Origem</th><th class="n">Conversas</th></tr></thead><tbody>${Object.entries(porProd).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{const[p,o]=k.split("|");return`<tr><td>${esc(p)}</td><td><span class="tag ${ORI_TAG[o]}">${esc(o)}</span></td><td class="n">${int(v)}</td></tr>`}).join("")}</tbody></table></div>`:""}
   ${!viaRobo&&T.semanas?`<div class="tw" style="margin-top:14px"><table><thead><tr><th>Semana</th><th class="n">Conversas</th><th class="n">Respondidas</th><th class="n">Sem resposta registrada</th></tr></thead><tbody>${T.semanas.map(s=>`<tr><td>${esc(s.semana)}</td><td class="n">${int(s.conversas)}</td><td class="n">${int(s.respondidas)}</td><td class="n">${int(s.sem_resposta)}</td></tr>`).join("")}</tbody></table></div>`:""}
-  ${(T.avisos||[]).slice(0,2).map(a=>`<div class="alert">${esc(a)}</div>`).join("")}
-  <div class="filters"><div><span class="flabel">Buscar conversa</span><input class="sel" id="tQ" value="${esc(el.dataset.q||"")}" placeholder="Nome, telefone, origem"></div></div>
-  <details ${q?"open":""}><summary class="btn" style="margin-top:6px">Ver as ${int(lista.length)} conversas</summary>
-  <div class="tw" style="margin-top:10px;max-height:520px;overflow:auto"><table><thead><tr><th>1ª mensagem</th><th>Nome</th><th>Telefone</th><th>Origem</th><th>Estado</th><th class="n">1ª resposta</th></tr></thead><tbody>
-  ${lista.map(c=>`<tr><td class="num">${esc(String(c.data||"").slice(0,16).replace("T"," "))}</td><td>${esc(c.nome||"—")}</td><td>${wa(c.telefone)}</td><td>${esc(c.origem)}${c.link?`<div class="note">${esc(c.link)}</div>`:""}</td><td>${esc(c.estado||"")}</td><td class="n">${c.resposta_min==null?"–":c.resposta_min+" min"}</td></tr>`).join("")}
+  <div class="filters"><div><span class="flabel">Buscar conversa</span><input class="sel" id="tQ" value="${esc(el.dataset.q||"")}" placeholder="Nome, telefone, produto"></div>
+  <div><span class="flabel">Origem</span><select class="sel" id="tO"><option value="">Todas</option>${["Google Ads","Site (sem campanha)","Não rastreada"].map(o=>`<option${o===fo?" selected":""}>${o}</option>`).join("")}</select></div></div>
+  <details ${q||fo?"open":""}><summary class="btn" style="margin-top:6px">Ver as ${int(lista.length)} conversas</summary>
+  <div class="tw" style="margin-top:10px;max-height:520px;overflow:auto"><table><thead><tr><th>1ª mensagem</th><th>Nome</th><th>Telefone</th><th>Origem</th><th>Produto / link</th><th>Campanha · palavra-chave</th><th class="n">1ª resposta</th></tr></thead><tbody>
+  ${lista.map(c=>`<tr><td class="num">${esc(String(c.data||"").slice(0,16).replace("T"," "))}</td><td>${esc(c.nome||"—")}</td><td>${wa(c.telefone)}</td><td><span class="tag ${ORI_TAG[c.classe]}">${esc(c.classe)}</span></td><td>${esc(c.produto||"—")}</td><td class="note">${esc([c.campanha,c.palavra].filter(Boolean).join(" · ")||"—")}</td><td class="n">${c.resposta_min==null?"–":c.resposta_min+" min"}</td></tr>`).join("")}
   </tbody></table></div></details>`;
-  const inp=$("tQ");inp.addEventListener("change",e=>{el.dataset.q=e.target.value;renderTintim();});
+  $("tQ").addEventListener("change",e=>{el.dataset.q=e.target.value;renderTintim();});
+  $("tO").addEventListener("change",e=>{el.dataset.o=e.target.value;renderTintim();});
 }
 function renderAds(){
   const ms=meses(),last=[...ms].reverse().find(m=>D.investimento[m])||ms[0];
