@@ -32,6 +32,10 @@ MESES_JSON_PATH = os.path.join(REPO_DIR, "meses.json")
 # família, quem pediu e quando. Gravado pelo botão do painel (workflow aprovar-venda-direta.yml)
 # ou manualmente. O robô puxa da OMIE data/valor/cliente da nota aprovada — nada é digitado à mão.
 APROVACOES_NFSE_PATH = os.path.join(REPO_DIR, "vendas_diretas_aprovadas.json")
+# Família de produto informada pela Thais quando a OMIE devolve o produto sem família (20/10/2026).
+# Gravado pelo botão do alerta de trava (workflow aprovar-familia-produto.yml). Só vale enquanto a
+# OMIE continuar sem família para o produto — se o cadastro for corrigido na OMIE, a OMIE manda.
+FAMILIAS_PRODUTO_MANUAIS_PATH = os.path.join(REPO_DIR, "familias_produto_aprovadas.json")
 
 CACHE_FAM_NOME = os.path.join(BASE_DIR, "fam_nome_cache.json")
 CACHE_VEND_NOME = os.path.join(BASE_DIR, "vend_nome_cache.json")
@@ -640,7 +644,10 @@ def atualizar_cache_familias(linhas_real, linhas_prev, produto_familia):
     distintos = set((l["empresa"], l["cod_produto"]) for l in linhas_real + linhas_prev)
     # 19/10/2026: produto gravado SEM família (None) é consultado de novo a cada rodada — assim,
     # quando o administrativo corrige o cadastro na OMIE, o painel pega sozinho.
-    faltando = [(e, c) for (e, c) in distintos if produto_familia.get(f"{e}|{c}") is None]
+    # 20/10/2026: a OMIE devolve família 0 quando o produto está sem família — tratar 0 igual a
+    # vazio. Antes o 0 ficava gravado e o robô nunca mais consultava, mesmo depois de corrigido
+    # na OMIE (travou o painel de 16/10 a 20/10: NFs Papéis 20374/20390).
+    faltando = [(e, c) for (e, c) in distintos if not produto_familia.get(f"{e}|{c}")]
     print(f"Produtos novos a resolver: {len(faltando)}")
     for empresa, cod_produto in faltando:
         app_key, app_secret = EMPRESAS[empresa]
@@ -648,9 +655,10 @@ def atualizar_cache_familias(linhas_real, linhas_prev, produto_familia):
             r = call("geral/produtos", "ConsultarProduto", {"codigo_produto": cod_produto}, app_key, app_secret)
             fam = r.get("codigo_familia") if r else None
             PRODUTO_DESC[f"{empresa}|{cod_produto}"] = (r or {}).get("descricao", "")
-        except Exception:
+        except Exception as e:
+            print(f"   ConsultarProduto falhou ({empresa} {cod_produto}): {e}")
             fam = None
-        produto_familia[f"{empresa}|{cod_produto}"] = fam
+        produto_familia[f"{empresa}|{cod_produto}"] = fam or None
         time.sleep(0.35)
     return produto_familia
 
@@ -699,11 +707,33 @@ def completar_nomes(linhas_real, linhas_prev, produto_familia, fam_nome_cache, v
                 print(f"{empresa}: não consegui atualizar vendedores ({e})")
 
 
+def carregar_familias_produto_manuais():
+    """{"empresa|cod_produto": "Nome da família"} — só famílias que existem nos GRUPOS."""
+    if not os.path.exists(FAMILIAS_PRODUTO_MANUAIS_PATH):
+        return {}
+    try:
+        lista = json.load(open(FAMILIAS_PRODUTO_MANUAIS_PATH, encoding="utf-8"))
+    except Exception as e:
+        ALERTAS.append(f"Não consegui ler familias_produto_aprovadas.json ({e}). Nenhuma família informada foi aplicada.")
+        return {}
+    validas = {f for g in GRUPOS for f in g["familias"]}
+    out = {}
+    for a in lista:  # a última decisão de cada produto vale
+        if a.get("familia") in validas and a.get("empresa") and a.get("cod_produto"):
+            out[f"{a['empresa']}|{a['cod_produto']}"] = a["familia"]
+        else:
+            ALERTAS.append(f"Família informada para o produto {a.get('cod_produto')} ({a.get('familia')}) não existe "
+                           f"nos grupos do painel — ignorada.")
+    return out
+
+
 def montar_parsed_rows(linhas_real, linhas_prev, fam_nome_cache, vend_nome_cache, produto_familia):
+    familias_manuais = carregar_familias_produto_manuais()
+
     def nome_familia(empresa, cod_produto):
         codfam = produto_familia.get(f"{empresa}|{cod_produto}")
-        if codfam is None:
-            return None
+        if not codfam:  # None ou 0 = produto sem família na OMIE
+            return familias_manuais.get(f"{empresa}|{cod_produto}")  # família informada pela Thais, se houver
         nome = fam_nome_cache.get(f"{empresa}|{codfam}")
         return FAMILIA_ALIAS.get(nome, nome)  # ver FAMILIA_ALIAS (30/09/2026)
 
@@ -1332,6 +1362,46 @@ def refazer_fechamento_do_mes(mes_id, caminho_arquivo, fam_nome_cache, vend_nome
     return produto_familia
 
 
+def publicar_aviso_de_trava(real_rows, familias_grupos, produto_familia):
+    """20/10/2026: quando a trava de validação segura o painel por venda sem família, o painel
+    continua com os NÚMEROS da última atualização boa (regra de 30/09 mantida: nunca publicar
+    número que não fecha), mas ganha um aviso vermelho + a lista dos produtos pendentes, com
+    seletor de família e botão para informar a família ali mesmo (workflow
+    aprovar-familia-produto.yml grava em familias_produto_aprovadas.json e dispara o robô)."""
+    pend = {}
+    for r in real_rows:
+        if r.get("is_ml") or r.get("is_lic") or r["familia"] in familias_grupos:
+            continue
+        chave = f"{r['empresa']}|{r.get('cod_produto')}"
+        e = pend.setdefault(chave, {"empresa": r["empresa"], "cod_produto": str(r.get("cod_produto")),
+                                    "descricao": PRODUTO_DESC.get(chave, ""),
+                                    "familia_omie": r["familia"] or "", "valor": 0.0, "notas": []})
+        e["valor"] = round(e["valor"] + r["total"], 2)
+        if r["nota_fiscal"] not in e["notas"]:
+            e["notas"].append(r["nota_fiscal"])
+    try:
+        html = open(INDEX_HTML_PATH, encoding="utf-8").read()
+        m = re.search(r"const DATA = (\{.*?\});\n", html, re.S)
+        data = json.loads(m.group(1))
+    except Exception as e:
+        print(f"Não consegui anexar o aviso ao painel ({e}). Falhando de verdade para o e-mail avisar.")
+        sys.exit(1)
+    total = round(sum(p["valor"] for p in pend.values()), 2)
+    agora = datetime.datetime.now(TZ_SP).strftime("%d/%m/%Y %H:%M")
+    data["alertas"] = [a for a in data.get("alertas", []) if not a.startswith("⛔")] + [
+        f"⛔ PAINEL TRAVADO desde {agora}: {fmt_brl(total)} em vendas de produto sem família na OMIE "
+        f"({len(pend)} produto{'s' if len(pend) != 1 else ''}). Os números abaixo são os da última "
+        f"atualização ({data.get('meta_info', {}).get('atualizado_em', '—')}). Informe a família abaixo "
+        f"ou peça ao administrativo para cadastrar na OMIE."]
+    data["trava"] = {"desde": agora, "total": total}
+    data["familia_pendentes"] = sorted(pend.values(), key=lambda x: -x["valor"])
+    data["familias_venda_direta"] = [f for g in GRUPOS for f in g["familias"]]
+    novo = json.dumps(data, ensure_ascii=False)
+    html = html[:m.start(1)] + novo + html[m.end(1):]
+    open(INDEX_HTML_PATH, "w", encoding="utf-8").write(html)
+    print(f"Aviso de trava anexado ao painel ({len(pend)} produto(s), {fmt_brl(total)}).")
+
+
 def main():
     fam_nome_cache = json.load(open(CACHE_FAM_NOME, encoding="utf-8"))
     vend_nome_cache = json.load(open(CACHE_VEND_NOME, encoding="utf-8"))
@@ -1394,7 +1464,8 @@ def main():
                            f"{' ' + desc if desc else ''}; cód. família OMIE: {codfam if codfam else 'NÃO CADASTRADA'})")
         for fam, e in sorted(fora.items(), key=lambda x: -abs(x[1]["valor"])):
             print(f"   -> família fora dos grupos: {fam} | R$ {e['valor']:.2f} | {', '.join(sorted(e['notas']))}")
-        sys.exit(1)
+        publicar_aviso_de_trava(real_rows, familias_grupos, produto_familia)
+        sys.exit(0)  # 0 de propósito: o aviso precisa ser publicado (passo seguinte do workflow)
 
     with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
         html = f.read()
