@@ -15,10 +15,12 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;}
-  body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;display:flex;min-height:100vh;}
+  :root{--topo:0px;}
+  body.com-setores{--topo:62px;}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;display:flex;flex-wrap:wrap;align-content:flex-start;min-height:100vh;}
 
   /* ---------- sidebar ---------- */
-  .sidebar{width:224px;min-height:100vh;background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;padding:22px 16px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto;}
+  .sidebar{width:224px;min-height:calc(100vh - var(--topo));background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;padding:22px 16px;flex-shrink:0;position:sticky;top:var(--topo);align-self:flex-start;height:calc(100vh - var(--topo));overflow:auto;}
   .logo{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:26px;display:flex;justify-content:center;}
   .logo img{width:100%;max-width:170px;height:auto;display:block;}
   .nav button{width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.72);font:500 13.5px 'Inter',sans-serif;padding:9px 12px;border-radius:10px;margin-bottom:4px;cursor:pointer;line-height:1.35;}
@@ -33,10 +35,21 @@
   .nav .sub button{font-size:12.5px;padding:8px 10px;}
   .side-hide{display:block;width:100%;text-align:right;background:none;border:none;color:rgba(255,255,255,.7);font:600 11.5px 'Inter',sans-serif;cursor:pointer;padding:0 2px 10px;}
   .side-hide:hover{color:#fff;}
-  .menu-open{display:none;position:fixed;top:12px;left:12px;z-index:60;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:9px 14px;font:700 12.5px 'Inter',sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(1,42,74,.3);}
+  .menu-open{display:none;position:fixed;top:calc(var(--topo) + 12px);left:12px;z-index:60;background:var(--navy);color:#fff;border:none;border-radius:10px;padding:9px 14px;font:700 12.5px 'Inter',sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(1,42,74,.3);}
   body.menu-oculto .sidebar{display:none;}
   body.menu-oculto .menu-open{display:block;}
   body.menu-oculto .main{padding-left:104px;}
+  /* ---------- barra de SETORES (topo) ---------- */
+  .setores{display:none;flex:0 0 100%;width:100%;height:var(--topo);position:sticky;top:0;z-index:70;background:linear-gradient(90deg,var(--navy),var(--navy2));align-items:center;gap:8px;padding:0 18px;overflow-x:auto;box-shadow:0 4px 16px rgba(1,42,74,.28);}
+  body.com-setores .setores{display:flex;}
+  .setores button{border:0;background:rgba(255,255,255,.1);color:#fff;font:800 13px 'Inter',sans-serif;letter-spacing:.7px;text-transform:uppercase;padding:11px 20px;border-radius:12px;cursor:pointer;white-space:nowrap;transition:.15s;flex:none;}
+  .setores button:hover{background:rgba(255,255,255,.22);}
+  .setores button.on{background:#F7941D;color:#fff;box-shadow:0 6px 16px rgba(247,148,29,.5);}
+  .setores .dir{margin-left:auto;display:flex;gap:8px;flex:none;}
+  .setores button.suave{background:transparent;border:1px solid rgba(255,255,255,.32);font-weight:700;}
+  .setores button.suave.on{background:#F7941D;border-color:#F7941D;}
+  .nav .nav-setor{font:800 11px 'Inter',sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#F7B955;margin:2px 4px 10px;}
+  .nav .nav-vazio{font-size:12px;color:rgba(255,255,255,.5);padding:6px 6px;line-height:1.5;}
   .side-foot{margin-top:40px;font-size:11px;color:rgba(255,255,255,.45);line-height:1.7;}
 
   .main{flex:1;min-width:0;padding:26px 32px 50px;}
@@ -71,7 +84,7 @@
   .seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
   .seg button{border:none;background:none;font:600 12.5px 'Inter',sans-serif;color:var(--muted);padding:8px 16px;cursor:pointer;}
   .seg button.on{background:var(--navy);color:#fff;}
-  .ctrls.sticky{position:sticky;top:0;z-index:30;background:#F3F8FC;padding:12px 32px;margin:0 -32px 14px;box-shadow:none;transition:box-shadow .15s;}
+  .ctrls.sticky{position:sticky;top:var(--topo);z-index:30;background:#F3F8FC;padding:12px 32px;margin:0 -32px 14px;box-shadow:none;transition:box-shadow .15s;}
   body.menu-oculto .ctrls.sticky{margin-left:-68px;padding-left:68px;}
   .ctrls.sticky.solto{box-shadow:0 8px 14px -10px rgba(1,42,74,.35);border-bottom:1px solid var(--line);}
   .pace{font-size:12.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;}
@@ -201,7 +214,7 @@
   .tag.warn{background:#FDF3DF;color:var(--warn);} .tag.ok{background:#E4F7EC;color:var(--good);} .tag.bad{background:#FCE8E8;color:var(--bad);} .tag.gray{background:#EEF1F3;color:#8B98A3;}
   .nota-pe{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;}
   .vazio{color:var(--muted);font-style:italic;font-size:12.5px;padding:10px 0;}
-  .ifr{width:100%;height:calc(100vh - 150px);min-height:640px;border:none;display:block;}
+  .ifr{width:100%;height:calc(100vh - 150px - var(--topo));min-height:640px;border:none;display:block;}
     .topbar.slim{margin-bottom:8px;align-items:center;}
   .topbar.slim h1{font:600 13px 'Inter',sans-serif;color:var(--muted);margin:0;}
   a.abrir{font-size:12px;color:var(--navy);text-decoration:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 14px;font-weight:600;align-self:flex-start;}
@@ -209,6 +222,7 @@
 </style>
 </head>
 <body>
+<header class="setores" id="setores" aria-label="Setores"></header>
 
 <button class="menu-open" id="menuShow" type="button" title="Mostrar o menu">☰ Menu</button>
 <aside class="sidebar">
@@ -390,6 +404,10 @@
   </section>
 
   <!-- páginas extras (faturamento, CRM, diagnóstico...) são criadas a partir do esforco_menu.js -->
+  <section id="view-setorvazio" class="view">
+    <div class="topbar"><div><h1 id="svTitulo"></h1><div class="sub" id="svSub"></div></div></div>
+    <div class="panel"><h2>Setor em estruturação</h2><div class="desc" id="svDesc"></div><div id="svLista"></div></div>
+  </section>
   <div id="paginasExtras"></div>
 
 </main>
@@ -473,13 +491,17 @@ var unlocked=false; try{unlocked=sessionStorage.getItem('esf_ok')==='1';}catch(e
 var ATUAL='tv', carregadas={}, MESES_CACHE={}, ABERTOS={};
 
 function temSrc(m){ return m.src&&String(m.src).trim(); }
+var SETORES=(window.ESFORCO_SETORES&&window.ESFORCO_SETORES.length)?window.ESFORCO_SETORES:null;
+var SETOR=SETORES?SETORES[0].id:'', ULTIMA={};
+function setorDe(m){ return m.setor||(SETORES?SETORES[0].id:''); }
+function setorObj(id){ return (SETORES||[]).filter(function(x){return x.id===id;})[0]; }
 function filhosDe(g){
   var lista=MESES_CACHE[g.id];
   if(lista&&lista.length){   // meses vindos do meses.json (o robô de faturamento acrescenta o mês novo sozinho)
     return lista.slice().sort(function(a,b){return a.id<b.id?1:-1;}).map(function(x){
-      return {id:g.id+'-'+x.id,nome:(x.arquivo==='index.html'?'Mês atual — ':'')+x.label,src:x.arquivo,restrito:g.restrito}; });
+      return {id:g.id+'-'+x.id,nome:(x.arquivo==='index.html'?'Mês atual — ':'')+x.label,src:x.arquivo,restrito:g.restrito,setor:g.setor}; });
   }
-  return (g.filhos||[]).filter(temSrc).map(function(f){return {id:f.id,nome:f.nome,src:f.src,restrito:f.restrito||g.restrito};});
+  return (g.filhos||[]).filter(temSrc).map(function(f){return {id:f.id,nome:f.nome,src:f.src,restrito:f.restrito||g.restrito,setor:g.setor};});
 }
 function todasPaginas(){ var out=[];
   MENU_CFG.forEach(function(m){
@@ -497,9 +519,10 @@ function abrir(p){
   if(p.restrito&&!unlocked){
     var s=window.prompt('Essa área é restrita. Digite a senha:');
     if(s!==SENHA){ if(s!==null) window.alert('Senha incorreta.'); return; }
-    unlocked=true; try{sessionStorage.setItem('esf_ok','1');}catch(e){} montarMenu();
+    unlocked=true; try{sessionStorage.setItem('esf_ok','1');}catch(e){} montarMenu(); montarSetores();
   }
   ATUAL=p.id;
+  if(SETORES){ var st=setorDe(p); ULTIMA[st]=p.id; if(st!==SETOR){ SETOR=st; montarSetores(); montarMenu(); } }
   if(p.tipo!=='painel'){ criarView(p); if(!carregadas[p.id]){ $('#view-'+p.id+' iframe').src=p.src; carregadas[p.id]=1; } }  // só carrega depois da senha
   $$('.view').forEach(function(x){x.classList.toggle('active',x.id==='view-'+p.id);});
   $$('.nav button[data-view]').forEach(function(x){x.classList.toggle('active',x.getAttribute('data-view')===p.id);});
@@ -508,8 +531,10 @@ function abrir(p){
   window.scrollTo(0,0);
 }
 function montarMenu(){
-  var nav=$('#nav'); nav.innerHTML='';
+  var nav=$('#nav'); nav.innerHTML=''; var qtd=0;
+  if(SETORES){ var so=setorObj(SETOR); var h=document.createElement('div'); h.className='nav-setor'; h.textContent=so?so.nome:''; nav.appendChild(h); }
   MENU_CFG.forEach(function(m){
+    if(SETORES&&setorDe(m)!==SETOR) return;
     if(m.tipo==='grupo'){
       var fs=filhosDe(m); if(!fs.length) return;
       var temAtual=fs.some(function(f){return f.id===ATUAL;});
@@ -519,13 +544,14 @@ function montarMenu(){
       gb.addEventListener('click',function(){
         var abrindo=box.style.display==='none'; box.style.display=abrindo?'block':'none'; gb.classList.toggle('aberto',abrindo); ABERTOS[m.id]=abrindo?1:0;
         if(abrindo&&!fs.some(function(f){return f.id===ATUAL;})) abrir(fs[0]); });
-      nav.appendChild(gb); nav.appendChild(box);
+      qtd++; nav.appendChild(gb); nav.appendChild(box);
       fs.forEach(function(f){ var b=document.createElement('button'); b.textContent=f.nome+(f.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',f.id); if(f.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(f);}); box.appendChild(b); });
     } else if(m.tipo==='painel'||temSrc(m)){
       if(m.oculto&&!unlocked) return;     // seção só por link (aparece no menu depois que a senha for digitada)
-      var b=document.createElement('button'); b.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',m.id); if(m.id===ATUAL) b.className='active'; if(m.destaque) b.classList.add('destaque'); b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b);
+      var b=document.createElement('button'); b.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',m.id); if(m.id===ATUAL) b.className='active'; if(m.destaque) b.classList.add('destaque'); b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b); if(!m.oculto) qtd++;
     }
   });
+  if(SETORES&&!qtd){ var vz=document.createElement('div'); vz.className='nav-vazio'; vz.textContent='Nenhum painel neste setor ainda.'; nav.appendChild(vz); }
 }
 function menuOculto(v){ document.body.classList.toggle('menu-oculto',v); lembrar('esf_menu',v?'oculto':'visivel'); }
 try{ if(localStorage.getItem('esf_menu')==='oculto') document.body.classList.add('menu-oculto'); }catch(e){}
@@ -539,9 +565,11 @@ function abrirPorHash(){
     var pc=todasPaginas().filter(function(p){return p.id==='chamados';})[0];
     if(pc){ if(pc.id!==ATUAL) abrir(pc); var f=document.querySelector('#view-chamados iframe'); if(f){ f.src='chamados.html#c='+partes[1]; carregadas.chamados=1; } }
     return; }
+  if(id.indexOf('setor-')===0){ if(('vazio-'+id.slice(6))!==ATUAL) entrarSetor(id.slice(6)); return; }
   var alvo=todasPaginas().filter(function(p){return p.id===id;})[0];
   if(!alvo){ var g=MENU_CFG.filter(function(m){return m.tipo==='grupo'&&m.id===id;})[0]; if(g) alvo=filhosDe(g)[0]; }
   if(alvo&&alvo.id!==ATUAL) abrir(alvo); }
+montarSetores();
 montarMenu();
 // meses do "Relatório de Vendas": lê meses.json (quando o robô de faturamento fecha o mês, o item novo aparece sozinho)
 MENU_CFG.forEach(function(m){ if(m.tipo==='grupo'&&m.filhosDeMeses){
@@ -551,12 +579,47 @@ window.addEventListener('hashchange',function(){ abrirPorHash(); garantirLiberad
 /* sem senha digitada, a tela nunca fica numa área restrita: vai para a primeira área aberta do menu (hoje: NÚMEROS PARA O TÁTICO) */
 function garantirLiberado(){
   if(unlocked) return;
+  if(String(ATUAL).indexOf('vazio-')===0){ var so=setorObj(ATUAL.slice(6)); if(so&&!so.restrito) return; }
   var paginas=todasPaginas(), atual=paginas.filter(function(p){return p.id===ATUAL;})[0];
   if(atual&&!atual.restrito) return;
   var livre=paginas.filter(function(p){return !p.restrito&&!p.oculto&&p.inicial!==false;})[0];   // inicial:false = nunca abre sozinha como página inicial
   if(livre){ abrir(livre); montarMenu(); }
   else { $$('.view').forEach(function(x){x.classList.remove('active');}); }
 }
+
+/* ============================ SETORES: barra superior ============================ */
+function liberar(){   // pede a senha uma vez (vale até fechar o navegador)
+  if(unlocked) return true;
+  var sn=window.prompt('Essa área é restrita. Digite a senha:');
+  if(sn!==SENHA){ if(sn!==null) window.alert('Senha incorreta.'); return false; }
+  unlocked=true; try{sessionStorage.setItem('esf_ok','1');}catch(e){} montarMenu(); montarSetores(); return true; }
+function montarSetores(){
+  var bar=$('#setores'); if(!SETORES){ bar.style.display='none'; return; }
+  document.body.classList.add('com-setores'); bar.innerHTML='';
+  var dir=document.createElement('div'); dir.className='dir';
+  SETORES.forEach(function(st){
+    var b=document.createElement('button'); b.type='button'; b.setAttribute('data-setor',st.id);
+    b.textContent=st.nome+(st.restrito&&!unlocked?' 🔒':'');
+    var ativo=(SETOR===st.id); if(ativo) b.className='on'; if(st.suave) b.classList.add('suave');
+    b.addEventListener('click',function(){ entrarSetor(st.id); });
+    (st.direita?dir:bar).appendChild(b); });
+  if(dir.children.length) bar.appendChild(dir); }
+function mostrarVazio(st){
+  ATUAL='vazio-'+st.id; SETOR=st.id; montarSetores(); montarMenu();
+  $('#svTitulo').textContent=st.nome; $('#svSub').textContent=st.sub||'';
+  $('#svDesc').textContent=st.descricao||'Este setor ainda não tem painéis. Quando tiver, eles aparecem no menu à esquerda.';
+  $$('.view').forEach(function(x){x.classList.toggle('active',x.id==='view-setorvazio');});
+  try{history.replaceState(null,'','#setor-'+st.id);}catch(e){}
+  window.scrollTo(0,0); }
+function entrarSetor(id){
+  var st=setorObj(id); if(!st) return;
+  if(st.restrito&&!liberar()) return;
+  var ps=todasPaginas().filter(function(p){return setorDe(p)===id&&!p.oculto;});
+  if(!ps.length){ mostrarVazio(st); return; }
+  var alvo=ps.filter(function(p){return p.id===ULTIMA[id];})[0];
+  if(!alvo){ var ini=ps.filter(function(p){return p.inicial!==false;}); alvo=(unlocked?ini:ini.filter(function(p){return !p.restrito;}))[0]||ini[0]||ps[0]; }
+  if(alvo.restrito&&!liberar()) return;     // se não digitar a senha, fica onde estava
+  SETOR=id; montarSetores(); montarMenu(); abrir(alvo); }
 
 function stampStatus(){
   var g=D.meta.geradoEm?new Date(D.meta.geradoEm):null;
