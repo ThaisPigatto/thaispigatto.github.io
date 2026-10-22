@@ -181,7 +181,7 @@ table.t td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:t
       <button class="btn sm" id="hojeReset" title="Volta para a data de hoje do computador" style="display:none">Voltar ao dia de hoje</button>
     </div>
   </header>
-  <div class="proto"><b>Protótipo visual.</b> Os projetos, tarefas e a ata de 05/10 vêm da planilha <i>Novos Produtos</i>. Tudo aqui pode ser clicado e editado, mas por enquanto as alterações ficam só neste navegador. As <b>etapas</b> de cada projeto, os <b>status</b> marcados como “inferido” e a <b>gravação de reunião</b> são demonstrações para você validar. <a href="#" id="restaurar" style="color:#8A5A00;font-weight:700">Restaurar os dados da planilha</a></div>
+  <div class="proto"><b>Protótipo visual.</b> Os projetos, tarefas e a ata de 05/10 vêm da planilha <i>Novos Produtos</i>. Tudo aqui pode ser clicado e editado, mas por enquanto as alterações ficam só neste navegador. As <b>etapas</b> de cada projeto e os <b>status</b> marcados como “inferido” são sugestões para você validar. A <b>gravação de reunião</b> transcreve a fala pelo navegador (Chrome ou Edge); o resumo e as tarefas saem com o Claude, pelo botão <b>Importar ata</b>. <a href="#" id="restaurar" style="color:#8A5A00;font-weight:700">Restaurar os dados da planilha</a></div>
 
   <nav class="nav" id="nav"></nav>
   <main id="tela"></main>
@@ -426,14 +426,16 @@ function telaAtas(){
   var det='<div class="vazio">Escolha uma ata.</div>';
   if(sel){ det=(sel.demo?'<div class="demo"><b>Ata de demonstração.</b> Foi gerada sem áudio real, só para mostrar o formato. Na versão final, o resumo, as decisões e as tarefas vêm da transcrição da reunião.</div>':'')+
    '<div class="sec-h"><div><h2 style="margin:0">'+esc(sel.titulo)+'</h2><div class="desc" style="margin:2px 0 0">'+dmy(sel.data)+' · origem: '+esc(sel.origem)+(sel.dur?' · duração '+esc(sel.dur):'')+'</div></div><button class="btn sm" data-act="delAta" data-id="'+sel.id+'">Excluir</button></div>'+
+   (sel.aguardaResumo?'<div class="demo" style="border-style:solid"><b>Falta gerar o resumo.</b> Esta ata guardou só a transcrição. Clique em <b>Copiar pedido pronto para o Claude</b>, cole no Claude e depois use <b>Importar ata</b> com a resposta dele.</div>':'')+
    '<div class="ata-sec"><h3>Participantes</h3>'+(sel.part.length?sel.part.map(chipP).join(''):'<span class="tag gray">não registrados na planilha</span>')+'</div>'+
    (sel.projs&&sel.projs.length?'<div class="ata-sec"><h3>Projetos discutidos</h3>'+sel.projs.map(function(id){var p=projeto(id);return p?'<span class="tag blue" style="margin-right:6px">'+esc(p.nome)+'</span>':'';}).join('')+'</div>':'')+
    '<div class="ata-sec"><h3>Resumo</h3><div style="font-size:13.5px;white-space:pre-wrap">'+esc(sel.resumo)+'</div></div>'+
    '<div class="ata-sec"><h3>Decisões</h3>'+(sel.decisoes.length?'<ul>'+sel.decisoes.map(function(d){return '<li>'+esc(d)+'</li>';}).join('')+'</ul>':'<div class="vazio">Nenhuma decisão registrada.</div>')+'</div>'+
    '<div class="ata-sec"><h3>Tarefas sugeridas pela ata</h3>'+(sel.sugestoes.length?sel.sugestoes.map(function(s,i){ return '<div class="mini"><span><b>'+esc(s.texto)+'</b> <small style="color:var(--muted)">'+(s.resp?esc(pessoa(s.resp).n):'sem responsável')+(s.prazo?' · '+dm(s.prazo):' · sem prazo')+'</small></span><span>'+(s.criada?'<span class="tag ok">tarefa criada</span>':'<button class="btn sm g" data-act="criarDeAta" data-id="'+sel.id+'" data-i="'+i+'">+ Criar tarefa</button>')+'</span></div>'; }).join(''):'<div class="vazio">Sem tarefas sugeridas.</div>')+'</div>'+
+   (sel.transcricao?'<div class="ata-sec"><h3>Transcrição</h3><textarea readonly style="width:100%;min-height:150px;font:500 13px Inter,sans-serif;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)">'+esc(sel.transcricao)+'</textarea><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="copiarTrx" data-id="'+sel.id+'">Copiar transcrição</button><button class="btn sm pri" data-act="copiarPedido" data-id="'+sel.id+'">Copiar pedido pronto para o Claude</button></div></div>':'')+
    (sel.pend.length?'<div class="ata-sec"><h3>Pendências</h3><ul>'+sel.pend.map(function(d){return '<li>'+esc(d)+'</li>';}).join('')+'</ul></div>':'');
   }
-  return '<div class="sec-h" style="margin-bottom:12px"><div><h2 style="margin:0;font:700 22px \'Space Grotesk\',sans-serif;color:var(--navy)">Atas de reunião</h2><div class="desc" style="margin:2px 0 0">Mini CRM dos projetos: cada reunião vira uma ata com resumo, decisões e tarefas.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="ataManual">✎ Escrever ata</button><button class="btn rec" data-act="gravar">🎙 Gravar reunião</button></div></div>'+
+  return '<div class="sec-h" style="margin-bottom:12px"><div><h2 style="margin:0;font:700 22px \'Space Grotesk\',sans-serif;color:var(--navy)">Atas de reunião</h2><div class="desc" style="margin:2px 0 0">Mini CRM dos projetos: cada reunião vira uma ata com resumo, decisões e tarefas.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="importarAta">⬇ Importar ata</button><button class="btn" data-act="ataManual">✎ Escrever ata</button><button class="btn rec" data-act="gravar">🎙 Gravar reunião</button></div></div>'+
    '<div class="atas"><div>'+lista+'</div><div class="card" style="margin:0">'+det+'</div></div>';
 }
 
@@ -492,7 +494,7 @@ function desenharGaveta(){
 
 /* ---------------- modais ---------------- */
 function abrirModal(html,largo){ $('#mdl').innerHTML=html; $('#mdl').classList.toggle('wide',!!largo); $('#mdl').classList.add('on'); $('#ov').classList.add('on'); }
-function fecharModal(){ $('#mdl').classList.remove('on'); clearInterval(REC.timer); clearTimeout(REC.to); if(!$('#drw').classList.contains('on')) $('#ov').classList.remove('on'); }
+function fecharModal(){ if(REC.rodando){ REC.rodando=false; try{ pararRec(); }catch(e){} return; } $('#mdl').classList.remove('on'); clearInterval(REC.timer); clearTimeout(REC.to); if(!$('#drw').classList.contains('on')) $('#ov').classList.remove('on'); }
 function respChecks(sel,prefix){ return '<div class="checks">'+TODOS.map(function(x){return '<label><input type="checkbox" data-'+prefix+'="'+x.id+'" '+(sel.indexOf(x.id)>=0?'checked':'')+'>'+esc(x.n)+'</label>';}).join('')+'</div>'; }
 function abrirQuem(){
   abrirModal('<h2>Quem é você?</h2><div class="desc">Clique na sua foto. Suas alterações passam a ficar registradas no histórico com o seu nome.</div><div class="equipe">'+
@@ -507,33 +509,125 @@ function modalTarefa(id,pid){
    '<label class="fld">Observação<input id="tNt" value="'+esc(t.nota||'')+'"></label><label class="checks"><label><input type="checkbox" id="tAp" '+(t.aprovaGP?'checked':'')+'>Precisa de aprovação do Gabriel Pigatto (contrato, investimento)</label></label>'+
    '<div style="display:flex;justify-content:space-between;margin-top:12px">'+(id?'<button class="btn sm" data-act="delT" data-id="'+id+'">Excluir</button>':'<span></span>')+'<span><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn pri" data-act="salvarT" data-id="'+(id||'')+'">Salvar</button></span></div>');
 }
-var REC={timer:null,to:null,seg:0,part:[],projs:[]};
+var REC={timer:null,to:null,seg:0,part:[],projs:[],voz:null,ativo:false,rodando:false};
+function temVoz(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
 function modalGravar(){
-  REC.seg=0; REC.part=PESSOAS.map(function(p){return p.id;}); REC.projs=[];
-  abrirModal('<h2>🎙 Gravar reunião</h2><div id="recSetup"><div class="desc">Marque quem está na reunião e os projetos que serão discutidos (opcional). Ao parar, a reunião vira uma ata com resumo, decisões e tarefas sugeridas.</div>'+
+  REC.seg=0; REC.ativo=false; REC.rodando=false; REC.part=PESSOAS.map(function(p){return p.id;}); REC.projs=[];
+  var voz=temVoz();
+  var aviso=voz
+   ? '<div class="demo" style="border-style:solid"><b>Transcrição ao vivo, para conversas presenciais.</b> Usa o microfone deste computador e o reconhecimento de voz do navegador, em português. O texto aparece enquanto vocês falam, e você pode corrigir ou digitar junto. <b>O áudio não é guardado.</b> Atenção: o Chrome envia a voz ao serviço de reconhecimento do Google para virar texto. Ele não identifica quem falou e pode errar palavras, então revise antes de usar.</div>'
+   : '<div class="demo"><b>Este navegador não tem transcrição de voz.</b> Use o Chrome ou o Edge para transcrever. Mesmo aqui você pode usar esta janela para <b>digitar as anotações</b> da reunião.</div>';
+  abrirModal('<h2>🎙 Gravar reunião</h2><div id="recSetup"><div class="desc">Marque quem está na reunião e os projetos que serão discutidos (opcional). Ao parar, o texto fica salvo numa ata, pronto para virar resumo e tarefas.</div>'+
    '<label class="fld">Participantes<div class="checks">'+PESSOAS.map(function(p){return '<label><input type="checkbox" data-rp="'+p.id+'" checked>'+esc(p.n)+'</label>';}).join('')+'</div></label>'+
    '<label class="fld">Projetos discutidos<div class="checks">'+S.projetos.filter(ativo).map(function(p){return '<label><input type="checkbox" data-rj="'+p.id+'">'+esc(p.nome)+'</label>';}).join('')+'</div></label>'+
-   '<div class="demo">Nesta versão visual a gravação é uma <b>demonstração</b>: o microfone não é usado e a ata sai com texto de exemplo. Na versão final: gravar, transcrever e resumir automaticamente.</div>'+
-   '<div style="text-align:right"><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn rec" data-act="iniciarRec">● Iniciar gravação</button></div></div><div id="recRun" class="hid"></div>');
+   aviso+
+   '<div style="text-align:right"><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn rec" data-act="iniciarRec">'+(voz?'● Iniciar transcrição':'✎ Abrir anotações')+'</button></div></div><div id="recRun" class="hid"></div>');
 }
 function iniciarRec(){
   REC.part=$$('[data-rp]:checked').map(function(c){return c.getAttribute('data-rp');}); REC.projs=$$('[data-rj]:checked').map(function(c){return c.getAttribute('data-rj');});
   $('#recSetup').classList.add('hid'); var r=$('#recRun'); r.classList.remove('hid');
-  r.innerHTML='<div class="recbox"><div><span class="recdot"></span><b>Gravando…</b></div><div class="timer" id="tmr">00:00</div><div class="desc">'+REC.part.length+' participante(s)'+(REC.projs.length?' · '+REC.projs.length+' projeto(s)':'')+'</div><button class="btn rec" data-act="pararRec">■ Parar e gerar ata</button></div>';
-  REC.seg=0; REC.timer=setInterval(function(){ REC.seg++; var t=$('#tmr'); if(t) t.textContent=pad(Math.floor(REC.seg/60))+':'+pad(REC.seg%60); },1000);
+  r.innerHTML='<div class="recbox"><div><span class="recdot"></span><b>'+(temVoz()?'Ouvindo e transcrevendo…':'Anotações da reunião')+'</b></div><div class="timer" id="tmr">00:00</div><div class="desc">'+REC.part.length+' participante(s)'+(REC.projs.length?' · '+REC.projs.length+' projeto(s)':'')+'</div>'+
+   '<label class="fld" style="text-align:left">Texto da reunião (você pode corrigir ou digitar junto)<textarea id="recTxt" style="min-height:190px" placeholder="'+(temVoz()?'O que for falado aparece aqui…':'Digite as anotações da reunião aqui…')+'"></textarea></label>'+
+   '<div id="recInt" class="desc" style="min-height:20px;text-align:left;font-style:italic"></div>'+
+   '<button class="btn rec" data-act="pararRec">■ Parar e salvar</button></div>';
+  REC.seg=0; REC.rodando=true; REC.timer=setInterval(function(){ REC.seg++; var t=$('#tmr'); if(t) t.textContent=pad(Math.floor(REC.seg/60))+':'+pad(REC.seg%60); },1000);
+  if(temVoz()) iniciarVoz();
+}
+function iniciarVoz(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition, r=new SR(); REC.voz=r; REC.ativo=true;
+  r.lang='pt-BR'; r.continuous=true; r.interimResults=true;
+  r.onresult=function(e){
+    var interim=''; for(var i=e.resultIndex;i<e.results.length;i++){ var t=e.results[i][0].transcript;
+      if(e.results[i].isFinal){ var ta=$('#recTxt'); if(ta){ ta.value+=(ta.value&&!/\s$/.test(ta.value)?' ':'')+t.trim(); ta.scrollTop=ta.scrollHeight; } } else interim+=t; }
+    var el=$('#recInt'); if(el) el.textContent=interim?('… '+interim):''; };
+  r.onerror=function(e){
+    var m={'not-allowed':'O navegador bloqueou o microfone. Clique no cadeado ao lado do endereço, permita o microfone e tente de novo (ou abra o painel em uma aba nova).','service-not-allowed':'O navegador bloqueou o reconhecimento de voz.','audio-capture':'Não encontrei um microfone neste computador.','network':'Sem internet para o reconhecimento de voz. Você ainda pode digitar.'}[e.error];
+    if(m){ var el=$('#recInt'); if(el) el.textContent='⚠️ '+m; }
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'||e.error==='audio-capture') REC.ativo=false; };
+  r.onend=function(){ if(REC.ativo){ setTimeout(function(){ if(REC.ativo){ try{ r.start(); }catch(x){} } },250); } };   // o navegador encerra sozinho após silêncios: reinicia
+  try{ r.start(); }catch(x){}
 }
 function pararRec(){
-  clearInterval(REC.timer); var passos=['Enviando o áudio','Transcrevendo a reunião','Resumindo os pontos principais','Extraindo decisões e tarefas'], r=$('#recRun');
-  r.innerHTML='<h2>Gerando a ata…</h2><ul class="proc" id="proc">'+passos.map(function(p,i){return '<li id="ps'+i+'">○ '+p+'</li>';}).join('')+'</ul>';
-  var i=0; (function passo(){ if(i>0){ var a=$('#ps'+(i-1)); if(a){ a.className='ok'; a.textContent='✓ '+passos[i-1]; } } if(i>=passos.length){ finalizarRec(); return; } var b=$('#ps'+i); if(b){ b.className='run'; b.textContent='⏳ '+passos[i]+'…'; } i++; REC.to=setTimeout(passo,900); })();
+  REC.ativo=false; REC.rodando=false; clearInterval(REC.timer); try{ if(REC.voz) REC.voz.stop(); }catch(e){}
+  var tx=$('#recTxt'), txt=(tx?tx.value:'').trim();
+  if(!txt){ fecharModal(); toast('Nenhum texto foi registrado, então nenhuma ata foi criada.'); return; }
+  var d=hojeISO(), ata={id:'a'+Date.now(),data:d,titulo:'Reunião P&D — '+dm(d),part:REC.part.slice(),projs:REC.projs.slice(),dur:pad(Math.floor(REC.seg/60))+':'+pad(REC.seg%60),demo:false,
+   origem:temVoz()?'Gravação ao vivo (transcrição do navegador)':'Anotações digitadas',transcricao:txt,aguardaResumo:true,
+   resumo:'Só a transcrição foi guardada. Para gerar o resumo, as decisões e as tarefas: clique em “Copiar pedido pronto para o Claude”, cole no Claude e depois use “Importar ata” com a resposta.',decisoes:[],sugestoes:[],pend:[]};
+  S.atas.push(ata); S.ataSel=ata.id; reg('Salvou a transcrição de uma reunião',ata.titulo+' · '+txt.length+' caracteres'); salvar(); fecharModal(); TAB='atas'; render(); toast('Transcrição salva na ata. Falta gerar o resumo com o Claude.');
 }
-function finalizarRec(){
-  var d=hojeISO(), nm=REC.projs.map(function(id){return projeto(id).nome;});
-  var ata={id:'a'+Date.now(),data:d,titulo:'Reunião P&D — '+dm(d),part:REC.part.slice(),projs:REC.projs.slice(),dur:pad(Math.floor(REC.seg/60))+':'+pad(REC.seg%60),demo:true,origem:'Gravação (demonstração)',
-   resumo:'[EXEMPLO] Aqui aparecerá o resumo da reunião, escrito a partir da transcrição.'+(nm.length?'\nProjetos discutidos: '+nm.join(', ')+'.':''),
-   decisoes:['[EXEMPLO] As decisões tomadas na reunião aparecem aqui, uma por linha.'],
-   sugestoes:[{texto:'[EXEMPLO] Tarefa extraída da conversa',resp:REC.part[0]||'',prazo:addDias(hojeISO(),3),criada:false}],pend:['[EXEMPLO] Pendências que ficaram em aberto.']};
-  S.atas.push(ata); S.ataSel=ata.id; reg('Gerou ata de demonstração',ata.titulo); salvar(); fecharModal(); TAB='atas'; render(); toast('Ata criada: '+ata.titulo+' (demonstração)');
+/* ---------------- pedido pronto para o Claude + importar ata ---------------- */
+function norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+function copiar(t,msg){
+  function ok(){ toast(msg||'Copiado!'); }
+  function fb(){ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); ok(); }catch(e){ toast('Não consegui copiar. Selecione o texto e use Ctrl+C.'); } document.body.removeChild(ta); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok,fb); } else fb(); }
+function pedidoClaude(texto,dataISO){
+  var dias=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'], dsem=dias[new Date(ms(dataISO)).getUTCDay()];
+  return 'Você é o assistente do P&D (novos produtos) do Grupo Pigatto. Abaixo está a transcrição ou as anotações de uma reunião feita em '+dmy(dataISO)+' ('+dsem+'). Organize em ata e responda SOMENTE com um bloco JSON, sem texto antes nem depois, neste formato:\n'+
+   '{"titulo":"Reunião P&D — dd/mm","data":"AAAA-MM-DD","participantes":["nome"],"projetos":["nome do projeto"],"resumo":"até 6 linhas","decisoes":["..."],"tarefas":[{"texto":"verbo no infinitivo + o que fazer","responsavel":"nome","prazo":"AAAA-MM-DD","projeto":"nome do projeto","criterio":"como saber que está pronto"}],"pendencias":["..."]}\n'+
+   'Regras: NÃO invente responsável nem prazo: se não foi dito, deixe "" (vazio). Prazos sempre em AAAA-MM-DD; para "sexta", "semana que vem" etc., calcule a partir de '+dataISO+'. Se um trecho parecer erro de transcrição, indique em "pendencias" para conferir. Participantes possíveis: '+PESSOAS.map(function(p){return p.n;}).join(', ')+'. Projetos em andamento: '+S.projetos.filter(ativo).map(function(p){return p.nome;}).join('; ')+'. Escreva em português do Brasil.\n\nTEXTO DA REUNIÃO:\n'+texto;
+}
+function lerJSON(txt){
+  var t=String(txt||''), a=t.indexOf('{'), b=t.lastIndexOf('}'); if(a<0||b<=a) return null; var s=t.slice(a,b+1);
+  try{ return JSON.parse(s); }catch(e){}
+  try{ return JSON.parse(s.replace(/[“”]/g,'"').replace(/,\s*([}\]])/g,'$1')); }catch(e2){ return null; } }
+function acharPessoa(nome){
+  var tk=norm(nome).split(/[\s.,;\/]+/).filter(Boolean); if(!tk.length) return {id:'',amb:false};
+  var c=TODOS.filter(function(p){ var pt=norm(p.n).replace(/[()?]/g,'').split(/\s+/); return tk.every(function(t){ return pt.indexOf(t)>=0; }); });
+  if(c.length===1) return {id:c[0].id,amb:!!c[0].amb};
+  if(c.length>1) return {id:'gab_x',amb:true};
+  return {id:'',amb:false,desconhecido:true}; }
+function acharProjeto(nome){
+  var n=norm(nome); if(!n) return ''; var melhor='',pts=0;
+  S.projetos.forEach(function(p){ var pn=norm(p.nome), v=0; if(pn===n) v=100; else if(pn.indexOf(n)>=0||n.indexOf(pn)>=0) v=Math.min(pn.length,n.length); if(v>pts){ pts=v; melhor=p.id; } });
+  return melhor; }
+function lerData(s,ref){
+  s=String(s||'').trim(); if(!s) return ''; var m, y, mo, d;
+  if((m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s))){ y=+m[1]; mo=+m[2]; d=+m[3]; }
+  else if((m=/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/.exec(s))){ d=+m[1]; mo=+m[2]; y=m[3]?(+m[3]<100?2000+(+m[3]):+m[3]):+ref.slice(0,4); }
+  else return '';
+  if(mo<1||mo>12||d<1||d>31) return '';
+  var iso=y+'-'+pad(mo)+'-'+pad(d); if(!m[3]&&m[0].indexOf('-')<0&&ms(iso)<ms(ref)-180*864e5) iso=(y+1)+'-'+pad(mo)+'-'+pad(d);
+  return iso; }
+var IMP=null;
+function modalImportar(){
+  var ag=S.atas.filter(function(a){return a.aguardaResumo;}), sel=S.atas.filter(function(a){return a.id===S.ataSel&&a.aguardaResumo;})[0];
+  abrirModal('<h2>⬇ Importar ata</h2><div class="desc">3 passos, sem custo: <b>1)</b> cole abaixo as anotações ou a transcrição e copie o pedido pronto; <b>2)</b> cole o pedido no Claude e espere a resposta; <b>3)</b> cole a resposta aqui e clique em Conferir. Nada é criado antes da sua conferência.</div>'+
+   '<label class="fld">1) Anotações ou transcrição da reunião<textarea id="imEnt" style="min-height:120px" placeholder="Cole aqui o texto da reunião…">'+(sel?esc(sel.transcricao||''):'')+'</textarea></label>'+
+   '<div style="margin:-2px 0 12px"><button class="btn sm pri" data-act="copiarPedidoIm">Copiar pedido pronto para o Claude</button></div>'+
+   '<label class="fld">3) Resposta do Claude (o bloco JSON)<textarea id="imSai" style="min-height:120px" placeholder="Cole aqui a resposta do Claude…"></textarea></label>'+
+   '<label class="fld">Salvar em<select id="imAta"><option value="">Uma ata nova</option>'+ag.map(function(a){return '<option value="'+a.id+'"'+(sel&&sel.id===a.id?' selected':'')+'>Completar: '+esc(a.titulo)+' ('+dmy(a.data)+')</option>';}).join('')+'</select></label>'+
+   '<div style="text-align:right"><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn pri" data-act="conferirIm">Conferir</button></div><div id="imPrev"></div>',true);
+}
+function conferirIm(){
+  var j=lerJSON($('#imSai').value), pv=$('#imPrev');
+  if(!j||typeof j!=='object'){ pv.innerHTML='<div class="demo" style="margin-top:12px;border-style:solid"><b>Não consegui ler a resposta.</b> Cole a resposta inteira do Claude, a que começa com { e termina com }. Se ele escreveu texto junto, peça: “responda só com o bloco JSON”.</div>'; return; }
+  var ref=hojeISO(), data=lerData(j.data,ref)||ref;
+  var part=[]; (j.participantes||[]).forEach(function(n){ var r=acharPessoa(n); if(r.id&&part.indexOf(r.id)<0) part.push(r.id); });
+  var projs=[]; (j.projetos||[]).forEach(function(n){ var id=acharProjeto(n); if(id&&projs.indexOf(id)<0) projs.push(id); });
+  var tar=(j.tarefas||[]).filter(function(t){return t&&String(t.texto||'').trim();}).map(function(t){
+    var r=acharPessoa(t.responsavel||''), pid=acharProjeto(t.projeto||''), prazo=lerData(t.prazo,ref);
+    return {texto:String(t.texto).trim(),resp:r.id,amb:r.amb,respTexto:String(t.responsavel||''),desc:!!r.desconhecido,prazo:prazo,prazoTexto:String(t.prazo||''),projeto:pid,projTexto:String(t.projeto||''),criterio:String(t.criterio||'')}; });
+  IMP={titulo:String(j.titulo||'Reunião P&D — '+dm(data)).trim(),data:data,part:part,projs:projs,resumo:String(j.resumo||'').trim(),decisoes:(j.decisoes||[]).map(String),pend:(j.pendencias||[]).map(String),tarefas:tar};
+  pv.innerHTML='<div class="card" style="margin:14px 0 0"><h3 style="margin-top:0">Confira antes de importar</h3><div class="desc"><b>'+esc(IMP.titulo)+'</b> · '+dmy(IMP.data)+' · '+part.length+' participante(s) · '+IMP.decisoes.length+' decisão(ões)</div>'+
+   (IMP.resumo?'<div style="font-size:13px;white-space:pre-wrap;margin-bottom:10px">'+esc(IMP.resumo)+'</div>':'')+
+   '<div class="desc" style="margin-bottom:4px"><b>Tarefas</b> (desmarque as que não quiser criar):</div>'+
+   (tar.length?tar.map(function(t,i){ return '<label class="mini" style="cursor:pointer;gap:10px"><span style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-it="'+i+'" checked style="margin-top:3px"><span><b>'+esc(t.texto)+'</b><br><small style="color:var(--muted)">'+
+     (t.resp?esc(pessoa(t.resp).n)+(t.amb?' <span class="tag warn">confirmar qual Gabriel</span>':''):(t.desc?'<span class="tag warn">responsável não reconhecido: '+esc(t.respTexto)+'</span>':'<span class="tag warn">sem responsável</span>'))+' · '+
+     (t.prazo?'prazo '+dmy(t.prazo):(t.prazoTexto?'<span class="tag warn">prazo ilegível: '+esc(t.prazoTexto)+'</span>':'<span class="tag warn">sem prazo</span>'))+' · '+(t.projeto?esc(projeto(t.projeto).nome):(t.projTexto?'<span class="tag warn">projeto não encontrado: '+esc(t.projTexto)+'</span>':'sem projeto'))+'</small></span></span></label>'; }).join(''):'<div class="vazio">Nenhuma tarefa na resposta.</div>')+
+   '<div style="text-align:right;margin-top:12px"><button class="btn pri" data-act="confirmarIm">Importar'+(tar.length?' ata e tarefas marcadas':' ata')+'</button></div></div>';
+}
+function confirmarIm(){
+  if(!IMP) return; var marc=$$('[data-it]:checked').map(function(c){return +c.getAttribute('data-it');}), d=IMP.data, destino=$('#imAta').value;
+  var sug=IMP.tarefas.map(function(t,i){ var criar=marc.indexOf(i)>=0;
+    if(criar) S.tarefas.push({id:'t'+Date.now()+'_'+i,projeto:t.projeto||null,texto:t.texto,resp:t.resp?[t.resp]:[],prazo:t.prazo||null,feita:false,nota:'',criterio:t.criterio,origem:'Ata '+dm(d)});
+    return {texto:t.texto,resp:t.resp,prazo:t.prazo,criada:criar}; });
+  var ata=destino?S.atas.filter(function(a){return a.id===destino;})[0]:null;
+  if(ata){ Object.assign(ata,{titulo:IMP.titulo,data:d,part:IMP.part.length?IMP.part:ata.part,projs:IMP.projs.length?IMP.projs:ata.projs,resumo:IMP.resumo||ata.resumo,decisoes:IMP.decisoes,pend:IMP.pend,sugestoes:sug,aguardaResumo:false,origem:ata.origem+' + resumo do Claude'}); }
+  else { ata={id:'a'+Date.now(),data:d,titulo:IMP.titulo,part:IMP.part,projs:IMP.projs,dur:'',demo:false,origem:'Importada (resumo feito pelo Claude)',resumo:IMP.resumo,decisoes:IMP.decisoes,sugestoes:sug,pend:IMP.pend}; S.atas.push(ata); }
+  S.ataSel=ata.id; reg('Importou a ata',ata.titulo+' · '+marc.length+' tarefa(s) criada(s)'); salvar(); IMP=null; fecharModal(); TAB='atas'; render();
+  toast('Ata importada'+(marc.length?' e '+marc.length+' tarefa(s) criada(s).':'.'));
 }
 function modalAtaManual(){
   abrirModal('<h2>Escrever ata</h2><div class="f2"><label class="fld">Data<input type="date" id="amD" value="'+hojeISO()+'"></label><label class="fld">Título<input id="amT" placeholder="Reunião P&D — ..."></label></div><label class="fld">Participantes'+respChecks(PESSOAS.map(function(p){return p.id;}),'am')+'</label>'+
@@ -563,6 +657,10 @@ var ACT={
   delT:function(e,d){ var t=tarefa(d.id); if(!confirm('Excluir a tarefa?')) return; S.tarefas=S.tarefas.filter(function(x){return x.id!==d.id;}); reg('Excluiu a tarefa',t.texto); fecharModal(); render(); if(PROJ_ABERTO) desenharGaveta(); },
   gravar:function(){ modalGravar(); }, iniciarRec:function(){ iniciarRec(); }, pararRec:function(){ pararRec(); },
   ataManual:function(){ modalAtaManual(); },
+  importarAta:function(){ modalImportar(); }, conferirIm:function(){ conferirIm(); }, confirmarIm:function(){ confirmarIm(); },
+  copiarPedidoIm:function(){ var t=($('#imEnt').value||'').trim(); if(!t){ toast('Cole primeiro o texto da reunião no passo 1.'); return; } copiar(pedidoClaude(t,hojeISO()),'Pedido copiado. Agora cole no Claude.'); },
+  copiarTrx:function(e,d){ var a=S.atas.filter(function(x){return x.id===d.id;})[0]; if(a) copiar(a.transcricao||'','Transcrição copiada.'); },
+  copiarPedido:function(e,d){ var a=S.atas.filter(function(x){return x.id===d.id;})[0]; if(a) copiar(pedidoClaude(a.transcricao||'',a.data),'Pedido copiado. Agora cole no Claude.'); },
   salvarAta:function(){ var ata={id:'a'+Date.now(),data:$('#amD').value||hojeISO(),titulo:$('#amT').value.trim()||'Reunião P&D — '+dm($('#amD').value||hojeISO()),part:$$('[data-am]:checked').map(function(c){return c.getAttribute('data-am');}),resumo:$('#amR').value.trim(),decisoes:$('#amDc').value.split('\n').map(function(s){return s.trim();}).filter(Boolean),sugestoes:[],pend:[],origem:'Escrita no painel',demo:false}; S.atas.push(ata); S.ataSel=ata.id; reg('Registrou a ata',ata.titulo); fecharModal(); render(); toast('Ata salva'); },
   selAta:function(e,d){ S.ataSel=d.id; salvar(); render(); },
   delAta:function(e,d){ if(!confirm('Excluir esta ata?')) return; var a=S.atas.filter(function(x){return x.id===d.id;})[0]; S.atas=S.atas.filter(function(x){return x.id!==d.id;}); S.ataSel=''; reg('Excluiu a ata',a.titulo); render(); },
