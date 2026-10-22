@@ -155,6 +155,10 @@ table.t td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:t
 .eq span{font-size:12.5px;color:var(--muted);display:block;margin-top:2px;line-height:1.3}
 .mdl.wide{width:min(1000px,96%)}
 .pcard .av.ph{color:transparent}
+.psel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 11px 3px 3px;margin:2px 3px 2px 0;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--ink);opacity:.6;user-select:none}
+.psel i{width:22px;height:22px;border-radius:50%;flex:none;font-size:10px;font-style:normal;display:flex;align-items:center;justify-content:center;color:#fff}
+.psel i.ph{color:transparent}
+.psel.on{opacity:1;border-color:#F7941D;background:#FFF6EA}
 .hid{display:none!important}
 .sec-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
 .who{display:flex;gap:14px;flex-wrap:wrap}
@@ -515,26 +519,21 @@ function urlGerador(){ var u=String(S.geradorUrl||(window.PD_CONFIG&&window.PD_C
 var REC={timer:null,to:null,seg:0,part:[],projs:[],voz:null,ativo:false,rodando:false};
 function temVoz(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
 function modalGravar(){
-  REC.seg=0; REC.ativo=false; REC.rodando=false; REC.part=PESSOAS.map(function(p){return p.id;}); REC.projs=[];
-  var voz=temVoz();
-  var aviso=voz
-   ? '<div class="demo" style="border-style:solid"><b>Transcrição ao vivo, para conversas presenciais.</b> Usa o microfone deste computador e o reconhecimento de voz do navegador, em português. O texto aparece enquanto vocês falam, e você pode corrigir ou digitar junto. <b>O áudio não é guardado.</b> Atenção: o Chrome envia a voz ao serviço de reconhecimento do Google para virar texto. Ele não identifica quem falou e pode errar palavras, então revise antes de usar.</div>'
-   : '<div class="demo"><b>Este navegador não tem transcrição de voz.</b> Use o Chrome ou o Edge para transcrever. Mesmo aqui você pode usar esta janela para <b>digitar as anotações</b> da reunião.</div>';
-  abrirModal('<h2>🎙 Gravar reunião</h2><div id="recSetup"><div class="desc">Marque quem está na reunião e os projetos que serão discutidos (opcional). Ao parar, o texto fica salvo numa ata, pronto para virar resumo e tarefas.</div>'+
-   '<label class="fld">Participantes<div class="checks">'+PESSOAS.map(function(p){return '<label><input type="checkbox" data-rp="'+p.id+'" checked>'+esc(p.n)+'</label>';}).join('')+'</div></label>'+
-   '<label class="fld">Projetos discutidos<div class="checks">'+S.projetos.filter(ativo).map(function(p){return '<label><input type="checkbox" data-rj="'+p.id+'">'+esc(p.nome)+'</label>';}).join('')+'</div></label>'+
-   aviso+
-   '<div style="text-align:right"><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn rec" data-act="iniciarRec">'+(voz?'● Iniciar transcrição':'✎ Abrir anotações')+'</button></div></div><div id="recRun" class="hid"></div>');
+  REC.seg=0; REC.ativo=false; REC.rodando=false; REC.part=[]; REC.projs=[];
+  abrirModal('<h2>🎙 Gravar reunião</h2><div id="recRun"></div>');
+  iniciarRec();   // começa na hora: sem tela de configuração
 }
 function iniciarRec(){
-  REC.part=$$('[data-rp]:checked').map(function(c){return c.getAttribute('data-rp');}); REC.projs=$$('[data-rj]:checked').map(function(c){return c.getAttribute('data-rj');});
-  $('#recSetup').classList.add('hid'); var r=$('#recRun'); r.classList.remove('hid');
-  r.innerHTML='<div class="recbox"><div><span class="recdot"></span><b>'+(temVoz()?'Ouvindo e transcrevendo…':'Anotações da reunião')+'</b></div><div class="timer" id="tmr">00:00</div><div class="desc">'+REC.part.length+' participante(s)'+(REC.projs.length?' · '+REC.projs.length+' projeto(s)':'')+'</div>'+
-   '<label class="fld" style="text-align:left">Texto da reunião (você pode corrigir ou digitar junto)<textarea id="recTxt" style="min-height:190px" placeholder="'+(temVoz()?'O que for falado aparece aqui…':'Digite as anotações da reunião aqui…')+'"></textarea></label>'+
+  var voz=temVoz(), r=$('#recRun');
+  r.innerHTML='<div class="recbox"><div><span class="recdot"></span><b>'+(voz?'Ouvindo e transcrevendo…':'Anotações da reunião')+'</b></div><div class="timer" id="tmr">00:00</div>'+
+   '<div class="desc" style="margin:0 0 4px;text-align:left">Quem está na reunião? <span style="opacity:.75">(opcional: a IA também descobre pelo que for falado)</span></div>'+
+   '<div id="recPart" style="text-align:left;margin-bottom:10px">'+PESSOAS.map(function(p){ return '<span class="psel" data-act="togP" data-id="'+p.id+'">'+avatar(p)+esc(curto(p))+'</span>'; }).join('')+'</div>'+
+   '<label class="fld" style="text-align:left">Texto da reunião (corrija ou digite junto)<textarea id="recTxt" style="min-height:170px" placeholder="'+(voz?'O que for falado aparece aqui…':'Digite as anotações da reunião aqui…')+'"></textarea></label>'+
    '<div id="recInt" class="desc" style="min-height:20px;text-align:left;font-style:italic"></div>'+
-   '<button class="btn rec" data-act="pararRec">■ Parar e salvar</button></div>';
+   '<div class="desc" style="font-size:11.5px;text-align:left;margin-bottom:10px">'+(voz?'O áudio não é guardado. O Chrome envia a voz ao Google só para virar texto, sem identificar quem falou. Revise antes de usar.':'<b>Este navegador não transcreve voz.</b> Use o Chrome ou o Edge para transcrever; aqui você pode digitar as anotações.')+'</div>'+
+   '<button class="btn rec" data-act="pararRec">■ Parar e gerar a ata</button></div>';
   REC.seg=0; REC.rodando=true; REC.timer=setInterval(function(){ REC.seg++; var t=$('#tmr'); if(t) t.textContent=pad(Math.floor(REC.seg/60))+':'+pad(REC.seg%60); },1000);
-  if(temVoz()) iniciarVoz();
+  if(voz) iniciarVoz();
 }
 function iniciarVoz(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition, r=new SR(); REC.voz=r; REC.ativo=true;
@@ -607,6 +606,7 @@ function modalImportar(){
    '<label class="fld">Salvar em<select id="imAta"><option value="">Uma ata nova</option>'+ag.map(function(a){return '<option value="'+a.id+'"'+(sel&&sel.id===a.id?' selected':'')+'>Completar: '+esc(a.titulo)+' ('+dmy(a.data)+')</option>';}).join('')+'</select></label>'+
    '<div style="text-align:right"><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn pri" data-act="conferirIm">Conferir</button></div><div id="imPrev"></div>',true);
 }
+var REFORCO='INSTRUÇÕES EXTRAS PARA ESTA ATA (siga à risca):\n1) Crie UMA TAREFA para cada compromisso ou combinado: sempre que alguém vai fazer, pedir, testar, cobrar, enviar, fechar, verificar, aprovar ou falar com alguém sobre algo, isso é uma tarefa. Também é tarefa quando o grupo "decide" que algo será feito (ex.: "decidimos testar X com a Thais").\n2) Quando o texto diz "X vai fazer Y" ou "X ficou de fazer Y", o responsável é X. Quando "precisa fazer Y, X tem que aprovar", crie a tarefa de aprovar para X.\n3) "resumo": 2 a 4 frases completas contando o que foi tratado. Nunca repita apenas os assuntos.\n4) "decisoes": só escolhas que o grupo tomou (ex.: "projeto fica parado até janeiro"). Ações a executar vão em "tarefas".\n5) "projetos": só os da lista que foram claramente citados. Se o texto diz só "selante" sem dizer qual, deixe vazio e escreva em "pendencias" qual selante é.\n6) Cada tarefa começa com letra maiúscula e verbo no infinitivo.\n\n';
 function gerarAutoCore(texto,dataISO,destId){
   var url=urlGerador(); texto=String(texto||'').trim();
   if(!texto){ toast('Cole ou grave o texto da reunião primeiro.'); return; }
@@ -615,13 +615,14 @@ function gerarAutoCore(texto,dataISO,destId){
   var meu=++GER.id, ctrl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctrl) ctrl.abort(); },90000);
   function voltar(msg){ if(meu!==GER.id) return; S.ataSel=destId||S.ataSel; modalImportar(); $('#imEnt').value=texto; if(destId&&$('#imAta')) $('#imAta').value=destId; if(msg) toast(msg); }
   fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl?ctrl.signal:undefined,
-    body:JSON.stringify({texto:texto,data:dataISO,pessoas:PESSOAS.map(function(p){return p.n;}),projetos:S.projetos.filter(ativo).map(function(p){return p.nome;})})})
+    body:JSON.stringify({texto:REFORCO+texto,data:dataISO,pessoas:PESSOAS.map(function(p){return p.n;}),projetos:S.projetos.filter(ativo).map(function(p){return p.nome;})})})
    .then(function(r){ return r.json().catch(function(){ return {ok:false,erro:'Resposta inesperada do gerador.'}; }); })
    .then(function(d){ clearTimeout(to); if(meu!==GER.id) return;
      if(!d||!d.ok||!d.json){ voltar('Não deu para gerar automaticamente: '+((d&&d.erro)||'o gerador não respondeu.')+' Use o plano B.'); return; }
      voltar(); $('#imSai').value=JSON.stringify(d.json,null,1); conferirIm(); toast('Ata gerada. Confira e importe.'); })
    .catch(function(e){ clearTimeout(to); voltar('Não deu para gerar automaticamente: '+(e&&e.name==='AbortError'?'demorou demais.':'sem conexão com o gerador.')+' Use o plano B.'); });
 }
+function maiuscula(t){ t=String(t||'').trim().replace(/[.;]+$/,''); return t.charAt(0).toUpperCase()+t.slice(1); }
 function conferirIm(){
   var j=lerJSON($('#imSai').value), pv=$('#imPrev');
   if(!j||typeof j!=='object'){ pv.innerHTML='<div class="demo" style="margin-top:12px;border-style:solid"><b>Não consegui ler a resposta.</b> Cole a resposta inteira do Claude, a que começa com { e termina com }. Se ele escreveu texto junto, peça: “responda só com o bloco JSON”.</div>'; return; }
@@ -630,24 +631,31 @@ function conferirIm(){
   var projs=[]; (j.projetos||[]).forEach(function(n){ var id=acharProjeto(n); if(id&&projs.indexOf(id)<0) projs.push(id); });
   var tar=(j.tarefas||[]).filter(function(t){return t&&String(t.texto||'').trim();}).map(function(t){
     var r=acharPessoa(t.responsavel||''), pid=acharProjeto(t.projeto||''), prazo=lerData(t.prazo,ref);
-    return {texto:String(t.texto).trim(),resp:r.id,amb:r.amb,respTexto:String(t.responsavel||''),desc:!!r.desconhecido,prazo:prazo,prazoTexto:String(t.prazo||''),projeto:pid,projTexto:String(t.projeto||''),criterio:String(t.criterio||'')}; });
+    return {texto:maiuscula(t.texto),resp:r.id,amb:r.amb,respTexto:String(t.responsavel||''),desc:!!r.desconhecido,prazo:prazo,prazoTexto:String(t.prazo||''),projeto:pid,projTexto:String(t.projeto||''),criterio:String(t.criterio||'')}; });
   IMP={titulo:String(j.titulo||'Reunião P&D — '+dm(data)).trim(),data:data,part:part,projs:projs,resumo:String(j.resumo||'').trim(),decisoes:(j.decisoes||[]).map(String),pend:(j.pendencias||[]).map(String),tarefas:tar};
+  var opcoes=function(sel){ return '<option value="">— sem responsável —</option>'+TODOS.map(function(x){return '<option value="'+x.id+'"'+(x.id===sel?' selected':'')+'>'+esc(x.n)+'</option>';}).join(''); };
   pv.innerHTML='<div class="card" style="margin:14px 0 0"><h3 style="margin-top:0">Confira antes de importar</h3><div class="desc"><b>'+esc(IMP.titulo)+'</b> · '+dmy(IMP.data)+' · '+part.length+' participante(s) · '+IMP.decisoes.length+' decisão(ões)</div>'+
    (IMP.resumo?'<div style="font-size:13px;white-space:pre-wrap;margin-bottom:10px">'+esc(IMP.resumo)+'</div>':'')+
-   '<div class="desc" style="margin-bottom:4px"><b>Tarefas</b> (desmarque as que não quiser criar):</div>'+
-   (tar.length?tar.map(function(t,i){ return '<label class="mini" style="cursor:pointer;gap:10px"><span style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-it="'+i+'" checked style="margin-top:3px"><span><b>'+esc(t.texto)+'</b><br><small style="color:var(--muted)">'+
-     (t.resp?esc(pessoa(t.resp).n)+(t.amb?' <span class="tag warn">confirmar qual Gabriel</span>':''):(t.desc?'<span class="tag warn">responsável não reconhecido: '+esc(t.respTexto)+'</span>':'<span class="tag warn">sem responsável</span>'))+' · '+
-     (t.prazo?'prazo '+dmy(t.prazo):(t.prazoTexto?'<span class="tag warn">prazo ilegível: '+esc(t.prazoTexto)+'</span>':'<span class="tag warn">sem prazo</span>'))+' · '+(t.projeto?esc(projeto(t.projeto).nome):(t.projTexto?'<span class="tag warn">projeto não encontrado: '+esc(t.projTexto)+'</span>':'sem projeto'))+'</small></span></span></label>'; }).join(''):'<div class="vazio">Nenhuma tarefa na resposta.</div>')+
+   (IMP.decisoes.length?'<div class="desc" style="margin-bottom:2px"><b>Decisões:</b> '+IMP.decisoes.map(esc).join(' · ')+'</div>':'')+
+   (IMP.pend.length?'<div class="desc" style="margin-bottom:6px"><b>Para conferir:</b> '+IMP.pend.map(esc).join(' · ')+'</div>':'')+
+   '<div class="desc" style="margin:8px 0 4px"><b>Tarefas</b>: desmarque as que não quiser. Dá para <b>trocar o responsável e a data</b> aqui mesmo.</div>'+
+   (tar.length?tar.map(function(t,i){ return '<div class="mini" style="gap:10px;align-items:flex-start"><span style="display:flex;gap:8px;align-items:flex-start;flex:1"><input type="checkbox" data-it="'+i+'" checked style="margin-top:4px"><span style="flex:1"><b>'+esc(t.texto)+'</b><br>'+
+     '<span style="display:inline-flex;gap:8px;flex-wrap:wrap;margin-top:4px"><select data-ir="'+i+'" style="font:500 12px Inter,sans-serif;padding:4px 6px;border:1px solid '+(t.resp&&!t.amb?'var(--line)':'#F7B955')+';border-radius:8px">'+opcoes(t.resp)+'</select>'+
+     '<input type="date" data-ip="'+i+'" value="'+esc(t.prazo||'')+'" style="font:500 12px Inter,sans-serif;padding:4px 6px;border:1px solid '+(t.prazo?'var(--line)':'#F7B955')+';border-radius:8px"></span><br>'+
+     '<small style="color:var(--muted)">'+(t.amb?'<span class="tag warn">confirmar qual Gabriel</span> ':'')+(t.desc?'<span class="tag warn">responsável não reconhecido: '+esc(t.respTexto)+'</span> ':'')+(!t.prazo&&t.prazoTexto?'<span class="tag warn">prazo ilegível: '+esc(t.prazoTexto)+'</span> ':'')+
+     (t.projeto?esc(projeto(t.projeto).nome):(t.projTexto?'<span class="tag warn">projeto não encontrado: '+esc(t.projTexto)+'</span>':'sem projeto'))+'</small></span></span></div>'; }).join(''):'<div class="vazio">Nenhuma tarefa na resposta.</div>')+
    '<div style="text-align:right;margin-top:12px"><button class="btn pri" data-act="confirmarIm">Importar'+(tar.length?' ata e tarefas marcadas':' ata')+'</button></div></div>';
+  try{ pv.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
 }
 function confirmarIm(){
   if(!IMP) return; var marc=$$('[data-it]:checked').map(function(c){return +c.getAttribute('data-it');}), d=IMP.data, destino=$('#imAta').value;
+  IMP.tarefas.forEach(function(t,i){ var rs=$('[data-ir="'+i+'"]'), pz=$('[data-ip="'+i+'"]'); if(rs) t.resp=rs.value; if(pz) t.prazo=pz.value||''; });   // vale o que foi ajustado na conferência
   var sug=IMP.tarefas.map(function(t,i){ var criar=marc.indexOf(i)>=0;
     if(criar) S.tarefas.push({id:'t'+Date.now()+'_'+i,projeto:t.projeto||null,texto:t.texto,resp:t.resp?[t.resp]:[],prazo:t.prazo||null,feita:false,nota:'',criterio:t.criterio,origem:'Ata '+dm(d)});
     return {texto:t.texto,resp:t.resp,prazo:t.prazo,criada:criar}; });
   var ata=destino?S.atas.filter(function(a){return a.id===destino;})[0]:null;
-  if(ata){ Object.assign(ata,{titulo:IMP.titulo,data:d,part:IMP.part.length?IMP.part:ata.part,projs:IMP.projs.length?IMP.projs:ata.projs,resumo:IMP.resumo||ata.resumo,decisoes:IMP.decisoes,pend:IMP.pend,sugestoes:sug,aguardaResumo:false,origem:ata.origem+' + resumo do Claude'}); }
-  else { ata={id:'a'+Date.now(),data:d,titulo:IMP.titulo,part:IMP.part,projs:IMP.projs,dur:'',demo:false,origem:'Importada (resumo feito pelo Claude)',resumo:IMP.resumo,decisoes:IMP.decisoes,sugestoes:sug,pend:IMP.pend}; S.atas.push(ata); }
+  if(ata){ Object.assign(ata,{titulo:IMP.titulo,data:d,part:IMP.part.length?IMP.part:ata.part,projs:IMP.projs.length?IMP.projs:ata.projs,resumo:IMP.resumo||ata.resumo,decisoes:IMP.decisoes,pend:IMP.pend,sugestoes:sug,aguardaResumo:false,origem:ata.origem+' + resumo da IA'}); }
+  else { ata={id:'a'+Date.now(),data:d,titulo:IMP.titulo,part:IMP.part,projs:IMP.projs,dur:'',demo:false,origem:'Importada (resumo feito pela IA)',resumo:IMP.resumo,decisoes:IMP.decisoes,sugestoes:sug,pend:IMP.pend}; S.atas.push(ata); }
   S.ataSel=ata.id; reg('Importou a ata',ata.titulo+' · '+marc.length+' tarefa(s) criada(s)'); salvar(); IMP=null; fecharModal(); TAB='atas'; render();
   toast('Ata importada'+(marc.length?' e '+marc.length+' tarefa(s) criada(s).':'.'));
 }
@@ -679,6 +687,7 @@ var ACT={
   delT:function(e,d){ var t=tarefa(d.id); if(!confirm('Excluir a tarefa?')) return; S.tarefas=S.tarefas.filter(function(x){return x.id!==d.id;}); reg('Excluiu a tarefa',t.texto); fecharModal(); render(); if(PROJ_ABERTO) desenharGaveta(); },
   gravar:function(){ modalGravar(); }, iniciarRec:function(){ iniciarRec(); }, pararRec:function(){ pararRec(); },
   ataManual:function(){ modalAtaManual(); },
+  togP:function(e,d){ var i=REC.part.indexOf(d.id); if(i>=0) REC.part.splice(i,1); else REC.part.push(d.id); var el=document.querySelector('.psel[data-id="'+d.id+'"]'); if(el) el.classList.toggle('on'); },
   importarAta:function(){ modalImportar(); },
   gerarAutoIm:function(){ var d=$('#imAta').value; gerarAutoCore($('#imEnt').value,(S.atas.filter(function(a){return a.id===d;})[0]||{}).data||hojeISO(),d); },
   gerarAutoAta:function(e,d){ var a=S.atas.filter(function(x){return x.id===d.id;})[0]; if(a) gerarAutoCore(a.transcricao,a.data,a.id); },
