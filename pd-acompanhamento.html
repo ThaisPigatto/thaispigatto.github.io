@@ -181,7 +181,7 @@ table.t td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:t
       <button class="btn sm" id="hojeReset" title="Volta para a data de hoje do computador" style="display:none">Voltar ao dia de hoje</button>
     </div>
   </header>
-  <div class="proto"><b>Protótipo visual.</b> Os projetos, tarefas e a ata de 05/10 vêm da planilha <i>Novos Produtos</i>. Tudo aqui pode ser clicado e editado, mas por enquanto as alterações ficam só neste navegador. As <b>etapas</b> de cada projeto e os <b>status</b> marcados como “inferido” são sugestões para você validar. A <b>gravação de reunião</b> transcreve a fala pelo navegador (Chrome ou Edge); o resumo e as tarefas saem com o Claude, pelo botão <b>Importar ata</b>. <a href="#" id="restaurar" style="color:#8A5A00;font-weight:700">Restaurar os dados da planilha</a></div>
+  <div class="proto"><b>Protótipo visual.</b> Os projetos, tarefas e a ata de 05/10 vêm da planilha <i>Novos Produtos</i>. Tudo aqui pode ser clicado e editado, mas por enquanto as alterações ficam só neste navegador. As <b>etapas</b> de cada projeto e os <b>status</b> marcados como “inferido” são sugestões para você validar. A <b>gravação de reunião</b> transcreve a fala pelo navegador (Chrome ou Edge); depois o resumo e as tarefas são gerados em <b>Gerar ata automaticamente</b> (ou, no plano B, com o Claude em <b>Importar ata</b>); você sempre confere antes de criar. <a href="#" id="restaurar" style="color:#8A5A00;font-weight:700">Restaurar os dados da planilha</a></div>
 
   <nav class="nav" id="nav"></nav>
   <main id="tela"></main>
@@ -192,6 +192,7 @@ table.t td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:t
 <div class="mdl" id="mdl"></div>
 <div class="toast" id="toast"></div>
 
+<script src="pd_config.js"></script>
 <script src="suporte.js"></script>
 <script src="vendedores.js"></script>
 <script>
@@ -426,7 +427,7 @@ function telaAtas(){
   var det='<div class="vazio">Escolha uma ata.</div>';
   if(sel){ det=(sel.demo?'<div class="demo"><b>Ata de demonstração.</b> Foi gerada sem áudio real, só para mostrar o formato. Na versão final, o resumo, as decisões e as tarefas vêm da transcrição da reunião.</div>':'')+
    '<div class="sec-h"><div><h2 style="margin:0">'+esc(sel.titulo)+'</h2><div class="desc" style="margin:2px 0 0">'+dmy(sel.data)+' · origem: '+esc(sel.origem)+(sel.dur?' · duração '+esc(sel.dur):'')+'</div></div><button class="btn sm" data-act="delAta" data-id="'+sel.id+'">Excluir</button></div>'+
-   (sel.aguardaResumo?'<div class="demo" style="border-style:solid"><b>Falta gerar o resumo.</b> Esta ata guardou só a transcrição. Clique em <b>Copiar pedido pronto para o Claude</b>, cole no Claude e depois use <b>Importar ata</b> com a resposta dele.</div>':'')+
+   (sel.aguardaResumo?'<div class="demo" style="border-style:solid"><b>Falta gerar o resumo.</b> Esta ata guardou só o texto da reunião. <button class="btn sm pri" data-act="gerarAutoAta" data-id="'+sel.id+'">⚡ Gerar ata automaticamente</button> <span style="font-size:11.5px">Sem o gerador, use o plano B: <b>Copiar pedido pronto para o Claude</b> abaixo e depois <b>Importar ata</b>.</span></div>':'')+
    '<div class="ata-sec"><h3>Participantes</h3>'+(sel.part.length?sel.part.map(chipP).join(''):'<span class="tag gray">não registrados na planilha</span>')+'</div>'+
    (sel.projs&&sel.projs.length?'<div class="ata-sec"><h3>Projetos discutidos</h3>'+sel.projs.map(function(id){var p=projeto(id);return p?'<span class="tag blue" style="margin-right:6px">'+esc(p.nome)+'</span>':'';}).join('')+'</div>':'')+
    '<div class="ata-sec"><h3>Resumo</h3><div style="font-size:13.5px;white-space:pre-wrap">'+esc(sel.resumo)+'</div></div>'+
@@ -494,7 +495,7 @@ function desenharGaveta(){
 
 /* ---------------- modais ---------------- */
 function abrirModal(html,largo){ $('#mdl').innerHTML=html; $('#mdl').classList.toggle('wide',!!largo); $('#mdl').classList.add('on'); $('#ov').classList.add('on'); }
-function fecharModal(){ if(REC.rodando){ REC.rodando=false; try{ pararRec(); }catch(e){} return; } $('#mdl').classList.remove('on'); clearInterval(REC.timer); clearTimeout(REC.to); if(!$('#drw').classList.contains('on')) $('#ov').classList.remove('on'); }
+function fecharModal(){ GER.id++; if(REC.rodando){ REC.rodando=false; try{ pararRec(); }catch(e){} return; } $('#mdl').classList.remove('on'); clearInterval(REC.timer); clearTimeout(REC.to); if(!$('#drw').classList.contains('on')) $('#ov').classList.remove('on'); }
 function respChecks(sel,prefix){ return '<div class="checks">'+TODOS.map(function(x){return '<label><input type="checkbox" data-'+prefix+'="'+x.id+'" '+(sel.indexOf(x.id)>=0?'checked':'')+'>'+esc(x.n)+'</label>';}).join('')+'</div>'; }
 function abrirQuem(){
   abrirModal('<h2>Quem é você?</h2><div class="desc">Clique na sua foto. Suas alterações passam a ficar registradas no histórico com o seu nome.</div><div class="equipe">'+
@@ -509,6 +510,8 @@ function modalTarefa(id,pid){
    '<label class="fld">Observação<input id="tNt" value="'+esc(t.nota||'')+'"></label><label class="checks"><label><input type="checkbox" id="tAp" '+(t.aprovaGP?'checked':'')+'>Precisa de aprovação do Gabriel Pigatto (contrato, investimento)</label></label>'+
    '<div style="display:flex;justify-content:space-between;margin-top:12px">'+(id?'<button class="btn sm" data-act="delT" data-id="'+id+'">Excluir</button>':'<span></span>')+'<span><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn pri" data-act="salvarT" data-id="'+(id||'')+'">Salvar</button></span></div>');
 }
+var GER={id:0};
+function urlGerador(){ var u=String(S.geradorUrl||(window.PD_CONFIG&&window.PD_CONFIG.geradorUrl)||'').trim(); return /^https:\/\//.test(u)?u:''; }
 var REC={timer:null,to:null,seg:0,part:[],projs:[],voz:null,ativo:false,rodando:false};
 function temVoz(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
 function modalGravar(){
@@ -554,7 +557,8 @@ function pararRec(){
   var d=hojeISO(), ata={id:'a'+Date.now(),data:d,titulo:'Reunião P&D — '+dm(d),part:REC.part.slice(),projs:REC.projs.slice(),dur:pad(Math.floor(REC.seg/60))+':'+pad(REC.seg%60),demo:false,
    origem:temVoz()?'Gravação ao vivo (transcrição do navegador)':'Anotações digitadas',transcricao:txt,aguardaResumo:true,
    resumo:'Só a transcrição foi guardada. Para gerar o resumo, as decisões e as tarefas: clique em “Copiar pedido pronto para o Claude”, cole no Claude e depois use “Importar ata” com a resposta.',decisoes:[],sugestoes:[],pend:[]};
-  S.atas.push(ata); S.ataSel=ata.id; reg('Salvou a transcrição de uma reunião',ata.titulo+' · '+txt.length+' caracteres'); salvar(); fecharModal(); TAB='atas'; render(); toast('Transcrição salva na ata. Falta gerar o resumo com o Claude.');
+  S.atas.push(ata); S.ataSel=ata.id; reg('Salvou a transcrição de uma reunião',ata.titulo+' · '+txt.length+' caracteres'); salvar(); fecharModal(); TAB='atas'; render(); toast(urlGerador()?'Texto salvo. Gerando a ata…':'Texto salvo. Falta gerar o resumo: use “Gerar ata” ou o plano B.');
+  if(urlGerador()) setTimeout(function(){ gerarAutoCore(txt,d,ata.id); },450);
 }
 /* ---------------- pedido pronto para o Claude + importar ata ---------------- */
 function norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
@@ -592,13 +596,31 @@ function lerData(s,ref){
   return iso; }
 var IMP=null;
 function modalImportar(){
-  var ag=S.atas.filter(function(a){return a.aguardaResumo;}), sel=S.atas.filter(function(a){return a.id===S.ataSel&&a.aguardaResumo;})[0];
-  abrirModal('<h2>⬇ Importar ata</h2><div class="desc">3 passos, sem custo: <b>1)</b> cole abaixo as anotações ou a transcrição e copie o pedido pronto; <b>2)</b> cole o pedido no Claude e espere a resposta; <b>3)</b> cole a resposta aqui e clique em Conferir. Nada é criado antes da sua conferência.</div>'+
-   '<label class="fld">1) Anotações ou transcrição da reunião<textarea id="imEnt" style="min-height:120px" placeholder="Cole aqui o texto da reunião…">'+(sel?esc(sel.transcricao||''):'')+'</textarea></label>'+
-   '<div style="margin:-2px 0 12px"><button class="btn sm pri" data-act="copiarPedidoIm">Copiar pedido pronto para o Claude</button></div>'+
-   '<label class="fld">3) Resposta do Claude (o bloco JSON)<textarea id="imSai" style="min-height:120px" placeholder="Cole aqui a resposta do Claude…"></textarea></label>'+
+  var ag=S.atas.filter(function(a){return a.aguardaResumo;}), sel=S.atas.filter(function(a){return a.id===S.ataSel&&a.aguardaResumo;})[0], temGer=!!urlGerador();
+  abrirModal('<h2>⬇ Importar ata</h2><div class="desc">Cole o texto da reunião, gere a ata e confira. <b>Nada é criado antes da sua conferência.</b></div>'+
+   '<label class="fld">1) Anotações ou transcrição da reunião<textarea id="imEnt" style="min-height:110px" placeholder="Cole aqui o texto da reunião…">'+(sel?esc(sel.transcricao||''):'')+'</textarea></label>'+
+   '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 14px">'+
+   (temGer?'<button class="btn pri" data-act="gerarAutoIm">⚡ Gerar ata automaticamente (grátis)</button>':'<button class="btn" data-act="configGerador">⚡ Gerar automaticamente: ainda não configurado</button>')+
+   '<button class="btn" data-act="abrirClaude">Plano B: copiar pedido e abrir o Claude</button></div>'+
+   '<label class="fld">2) Resposta pronta (bloco JSON) <span style="text-transform:none;font-weight:500">— aparece sozinha no automático; no plano B, copie a resposta do Claude e clique em “Colar e conferir”</span><textarea id="imSai" style="min-height:90px" placeholder="A resposta aparece aqui…"></textarea></label>'+
+   '<div style="margin:-2px 0 12px"><button class="btn sm" data-act="colarConferir">📋 Colar da área de transferência e conferir</button> <button class="btn sm" data-act="configGerador" title="Endereço do gerador automático">⚙</button></div>'+
    '<label class="fld">Salvar em<select id="imAta"><option value="">Uma ata nova</option>'+ag.map(function(a){return '<option value="'+a.id+'"'+(sel&&sel.id===a.id?' selected':'')+'>Completar: '+esc(a.titulo)+' ('+dmy(a.data)+')</option>';}).join('')+'</select></label>'+
    '<div style="text-align:right"><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn pri" data-act="conferirIm">Conferir</button></div><div id="imPrev"></div>',true);
+}
+function gerarAutoCore(texto,dataISO,destId){
+  var url=urlGerador(); texto=String(texto||'').trim();
+  if(!texto){ toast('Cole ou grave o texto da reunião primeiro.'); return; }
+  if(!url){ modalImportar(); toast('O gerador automático ainda não está configurado. Use o plano B (Claude).'); return; }
+  abrirModal('<h2>⚡ Gerando a ata…</h2><div class="desc">Lendo a reunião e separando resumo, decisões e tarefas. Costuma levar de 10 a 40 segundos.</div><ul class="proc"><li class="run">⏳ Analisando o texto…</li></ul><div style="text-align:right"><button class="btn" data-act="fecharM">Cancelar</button></div>');
+  var meu=++GER.id, ctrl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctrl) ctrl.abort(); },90000);
+  function voltar(msg){ if(meu!==GER.id) return; S.ataSel=destId||S.ataSel; modalImportar(); $('#imEnt').value=texto; if(destId&&$('#imAta')) $('#imAta').value=destId; if(msg) toast(msg); }
+  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},signal:ctrl?ctrl.signal:undefined,
+    body:JSON.stringify({texto:texto,data:dataISO,pessoas:PESSOAS.map(function(p){return p.n;}),projetos:S.projetos.filter(ativo).map(function(p){return p.nome;})})})
+   .then(function(r){ return r.json().catch(function(){ return {ok:false,erro:'Resposta inesperada do gerador.'}; }); })
+   .then(function(d){ clearTimeout(to); if(meu!==GER.id) return;
+     if(!d||!d.ok||!d.json){ voltar('Não deu para gerar automaticamente: '+((d&&d.erro)||'o gerador não respondeu.')+' Use o plano B.'); return; }
+     voltar(); $('#imSai').value=JSON.stringify(d.json,null,1); conferirIm(); toast('Ata gerada. Confira e importe.'); })
+   .catch(function(e){ clearTimeout(to); voltar('Não deu para gerar automaticamente: '+(e&&e.name==='AbortError'?'demorou demais.':'sem conexão com o gerador.')+' Use o plano B.'); });
 }
 function conferirIm(){
   var j=lerJSON($('#imSai').value), pv=$('#imPrev');
@@ -657,8 +679,13 @@ var ACT={
   delT:function(e,d){ var t=tarefa(d.id); if(!confirm('Excluir a tarefa?')) return; S.tarefas=S.tarefas.filter(function(x){return x.id!==d.id;}); reg('Excluiu a tarefa',t.texto); fecharModal(); render(); if(PROJ_ABERTO) desenharGaveta(); },
   gravar:function(){ modalGravar(); }, iniciarRec:function(){ iniciarRec(); }, pararRec:function(){ pararRec(); },
   ataManual:function(){ modalAtaManual(); },
-  importarAta:function(){ modalImportar(); }, conferirIm:function(){ conferirIm(); }, confirmarIm:function(){ confirmarIm(); },
-  copiarPedidoIm:function(){ var t=($('#imEnt').value||'').trim(); if(!t){ toast('Cole primeiro o texto da reunião no passo 1.'); return; } copiar(pedidoClaude(t,hojeISO()),'Pedido copiado. Agora cole no Claude.'); },
+  importarAta:function(){ modalImportar(); },
+  gerarAutoIm:function(){ var d=$('#imAta').value; gerarAutoCore($('#imEnt').value,(S.atas.filter(function(a){return a.id===d;})[0]||{}).data||hojeISO(),d); },
+  gerarAutoAta:function(e,d){ var a=S.atas.filter(function(x){return x.id===d.id;})[0]; if(a) gerarAutoCore(a.transcricao,a.data,a.id); },
+  abrirClaude:function(){ var t=($('#imEnt').value||'').trim(); if(!t){ toast('Cole primeiro o texto da reunião no passo 1.'); return; } copiar(pedidoClaude(t,hojeISO()),'Pedido copiado. No Claude: Ctrl+V e Enter. Depois copie a resposta e volte aqui.'); window.open('https://claude.ai/new','_blank'); },
+  colarConferir:function(){ if(navigator.clipboard&&navigator.clipboard.readText){ navigator.clipboard.readText().then(function(t){ $('#imSai').value=t; conferirIm(); },function(){ toast('O navegador não deixou ler a área de transferência. Cole com Ctrl+V na caixa 2.'); }); } else toast('Cole com Ctrl+V na caixa 2.'); },
+  configGerador:function(){ var u=window.prompt('Endereço do gerador automático de atas (começa com https:// e termina com .workers.dev).\nDeixe vazio para desativar.',urlGerador()); if(u===null) return; u=u.trim(); S.geradorUrl=u; salvar(); modalImportar(); toast(u?'Gerador configurado neste navegador.':'Gerador automático desativado neste navegador.'); }, conferirIm:function(){ conferirIm(); }, confirmarIm:function(){ confirmarIm(); },
+  
   copiarTrx:function(e,d){ var a=S.atas.filter(function(x){return x.id===d.id;})[0]; if(a) copiar(a.transcricao||'','Transcrição copiada.'); },
   copiarPedido:function(e,d){ var a=S.atas.filter(function(x){return x.id===d.id;})[0]; if(a) copiar(pedidoClaude(a.transcricao||'',a.data),'Pedido copiado. Agora cole no Claude.'); },
   salvarAta:function(){ var ata={id:'a'+Date.now(),data:$('#amD').value||hojeISO(),titulo:$('#amT').value.trim()||'Reunião P&D — '+dm($('#amD').value||hojeISO()),part:$$('[data-am]:checked').map(function(c){return c.getAttribute('data-am');}),resumo:$('#amR').value.trim(),decisoes:$('#amDc').value.split('\n').map(function(s){return s.trim();}).filter(Boolean),sugestoes:[],pend:[],origem:'Escrita no painel',demo:false}; S.atas.push(ata); S.ataSel=ata.id; reg('Registrou a ata',ata.titulo); fecharModal(); render(); toast('Ata salva'); },
