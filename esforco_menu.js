@@ -4,7 +4,7 @@
    1) A BARRA DE CIMA mostra os SETORES (lista ESFORCO_SETORES, logo abaixo). A ordem dos botões = a ordem das linhas.
       restrito:true -> o setor inteiro pede a senha (0201).   direita:true -> o botão fica no canto direito da barra.
    2) O MENU DA ESQUERDA mostra só os itens do setor escolhido (lista ESFORCO_MENU, mais embaixo).
-      Cada item tem  setor:'comercial'  (ou 'operacao', 'rh', 'qualidade', 'compras', 'ceo', 'geral').
+      Cada item tem  setor:'comercial'  (ou 'growthads', 'operacao', 'rh', 'qualidade', 'compras', 'ceo', 'geral', 'suporte', 'claude').
    3) Para ACRESCENTAR UM PAINEL: copie uma linha da lista ESFORCO_MENU, mude id, nome, src e o setor.
       Para ACRESCENTAR UM SETOR NOVO: copie uma linha da lista ESFORCO_SETORES (id novo) e use esse id no campo setor dos itens.
    4) Setor sem nenhum item aparece como "em estruturação" (texto da linha descricao).
@@ -23,12 +23,15 @@
 
 window.ESFORCO_SETORES = [
   {id:'comercial', nome:'COMERCIAL'},
+  {id:'growthads', nome:'GROWTH / GOOGLE ADS'},
   {id:'operacao',  nome:'OPERAÇÃO',  restrito:true, sal:'pigatto-operacao-v1:', senhaHash:'0daa92fa188e7fe8ea006c0e9ef1b8f5cf32a48ea46e1583d6b1a81ab5765ef3', descricao:'Aqui vão entrar os painéis da operação. Os que a operação já criou serão integrados por aqui, um a um.'},
   {id:'rh',        nome:'RH',        restrito:true, sal:'pigatto-rh-v1:', senhaHash:'0c70788e4a5eb5a5abb3c96bc8da6415fc145de98e0e22f83e00103080424f49', descricao:'Setor em estruturação. Por conter dados pessoais de colaboradores (LGPD), a entrada é restrita.'},
   {id:'qualidade', nome:'QUALIDADE', restrito:true, sal:'pigatto-qualidade-v1:', senhaHash:'ceb9398b5297a71c9514e4a8e9c58734fbaef0653dad9d2396e445dab98ac907', descricao:'Setor em estruturação. Quando houver painéis da qualidade, eles aparecem no menu à esquerda.'},
   {id:'compras',   nome:'COMPRAS',   restrito:true, sal:'pigatto-compras-v1:', senhaHash:'e39a1ac59964321d3b9ef9570865fcb0fc37b734625dff68df82fc354cfb3251', descricao:'Setor em estruturação. O dash Gestão de Compras já está ligado aqui; os próximos painéis entram ao lado dele.'},
   {id:'ceo',       nome:'PAINEL CEO', descricao:'Área do Gabriel Pigatto. Ele entra com a senha que ele mesmo criou no primeiro acesso.'},
-  {id:'geral',     nome:'GERAL',     direita:true, suave:true}
+  {id:'geral',     nome:'GERAL',     direita:true, suave:true},
+  {id:'suporte',   nome:'SUPORTE',   direita:true, suave:true},
+  {id:'claude',    nome:'CLAUDE - PROJETOS', direita:true, suave:true}
 ];
 
 window.ESFORCO_MENU = [
@@ -60,20 +63,7 @@ window.ESFORCO_MENU = [
 
   // ANÚNCIOS DO HUB: saiu do menu lateral. Agora fica na aba "Anúncios do Hub" do link individual da Jéssica Sant'Anna (vendedor.html); a página é a anuncios-hub.html.
 
-  // GROWTH - GOOGLE ADS: sem cadeado no menu, fundo laranja. A própria página pede a senha dela. inicial:false = o dash continua abrindo no NÚMEROS PARA O TÁTICO.
-  {id:'growth', setor:'comercial', nome:'GROWTH - GOOGLE ADS', titulo:'Growth — Google Ads', tipo:'pagina', src:'growth-google-ads.html', restrito:false, destaque:true, inicial:false},
-
-  // NÚMEROS PARA O TÁTICO: única área do COMERCIAL aberta SEM senha. Todas as famílias usam o mesmo arquivo numeros-tatico.html (?f=família).
-  {id:'tatico', setor:'comercial', nome:'NÚMEROS PARA O TÁTICO', tipo:'grupo', restrito:false, filhos:[
-    {id:'tatico-plasticos',      nome:'Plásticos de Engenharia', src:'numeros-tatico.html?f=plasticos'},
-    {id:'tatico-adesivos',       nome:'Adesivos Estruturais',    src:'numeros-tatico.html?f=adesivos'},
-    {id:'tatico-hub',            nome:'Pigatto Hub + Licitação', src:'numeros-tatico.html?f=hub'},
-    {id:'tatico-especialidades', nome:'Especialidades',          src:'numeros-tatico.html?f=especialidades'},
-    {id:'tatico-papeis',         nome:'Papéis + Etiquetas',      src:'numeros-tatico.html?f=papeis'}
-  ]},
-
-  // PAINEL COMERCIAL - VISÃO CSC: resultado geral de vendas do mês (sem família), aberto SEM senha
-  {id:'csc', setor:'comercial', nome:'Painel Comercial - Visão CSC', tipo:'pagina', src:'painel-csc.html', restrito:false},
+  // NÚMEROS PARA O TÁTICO: saiu do menu (pedido de 23/10/2026). Fica só nos links individuais dos vendedores (vendedor.html, aba "Números para o Tático").
 
   // PRECIFICAÇÃO COMERCIAL: painel feito no Claude (abre em nova aba; precisa da conta do Claude da empresa)
   {id:'precificacao', setor:'comercial', nome:'Precificação', titulo:'Comercial — Precificação', tipo:'pagina', src:'https://claude.ai/artifact/PD4u6xfBuD9kAHrr1zLifQ?open_in_browser=1&via=user_open&org=2a25c44d-3cc5-4c1b-9451-bea2c2c2fc54', novaAba:true, restrito:true},
@@ -88,14 +78,23 @@ window.ESFORCO_MENU = [
 
   // ============================== PAINEL CEO ==============================
   // A página tem login próprio (a senha é criada pelo Gabriel no primeiro acesso, pelo link do e-mail).
-  {id:'painel-ceo', setor:'ceo', nome:'Painel do CEO', titulo:'Painel CEO — Gabriel Pigatto', tipo:'pagina', src:'painel-ceo.html', restrito:false},
+  {id:'painel-ceo', setor:'ceo', nome:'Painel do CEO', titulo:'Painel CEO — Gabriel Pigatto', tipo:'pagina', src:'painel-ceo.html', restrito:false, inicial:false},   // inicial:false: o dash nunca abre sozinho no painel do CEO
 
-  // ============================== GERAL (todos) ==============================
+  // ============================== GROWTH / GOOGLE ADS ==============================
+  // A própria página pede a senha dela. inicial:false = o dash nunca abre sozinho nesta página (a entrada padrão é a Visão CSC).
+  {id:'growth', setor:'growthads', nome:'GROWTH - GOOGLE ADS', titulo:'Growth — Google Ads', tipo:'pagina', src:'growth-google-ads.html', restrito:false, inicial:false},
+
+  // ============================== GERAL (por enquanto só a Visão CSC) ==============================
+  // PAINEL COMERCIAL - VISÃO CSC: resultado geral de vendas do mês (sem família), aberto SEM senha. É a página de entrada do dash.
+  {id:'csc', setor:'geral', nome:'Painel Comercial - Visão CSC', tipo:'pagina', src:'painel-csc.html', restrito:false},
+
+  // ============================== SUPORTE ==============================
   // CHAMADOS/SUPORTE: abre SEM a senha 0201 — cada pessoa da equipe entra com o próprio usuário e senha (criada no 1º acesso)
-  {id:'chamados', setor:'geral', nome:'CHAMADOS/SUPORTE', tipo:'pagina', src:'chamados.html', restrito:false},
+  {id:'chamados', setor:'suporte', nome:'CHAMADOS/SUPORTE', tipo:'pagina', src:'chamados.html', restrito:false},
 
-  // PROJETOS CLAUDE: aberto para todos; cadastrar/editar pede o usuário e senha do CHAMADOS/SUPORTE. destaque:true = fundo laranja no menu
-  {id:'projetos', setor:'geral', nome:'PROJETOS CLAUDE', tipo:'pagina', src:'projetos-claude.html', restrito:false, destaque:true}
+  // ============================== CLAUDE - PROJETOS ==============================
+  // PROJETOS CLAUDE: aberto para todos; cadastrar/editar pede o usuário e senha do CHAMADOS/SUPORTE
+  {id:'projetos', setor:'claude', nome:'PROJETOS CLAUDE', tipo:'pagina', src:'projetos-claude.html', restrito:false}
 ];
 
 /* Quem aparece na tela INÍCIO. Fotos e cargos vêm do suporte.js (equipe) e do vendedores.js (vendedores). */
