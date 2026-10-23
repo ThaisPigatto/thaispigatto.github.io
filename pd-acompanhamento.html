@@ -159,6 +159,10 @@ table.t td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:t
 .psel i{width:22px;height:22px;border-radius:50%;flex:none;font-size:10px;font-style:normal;display:flex;align-items:center;justify-content:center;color:#fff}
 .psel i.ph{color:transparent}
 .psel.on{opacity:1;border-color:#F7941D;background:#FFF6EA}
+.sync{display:none;align-items:center;font:600 11.5px Inter,sans-serif;padding:5px 10px;border-radius:999px;background:#E9F6EF;color:#177A4B;white-space:nowrap}
+.sync.wait{background:#EEF3FA;color:#355C8A}.sync.off{background:#FDECEC;color:#A32A2A}
+.entrar{display:none;position:fixed;inset:0;z-index:300;background:#F3F8FC;align-items:center;justify-content:center;padding:20px}.entrar.on{display:flex}
+.ctab{width:100%;border-collapse:collapse;font-size:13px}.ctab th{text-align:left;font:700 11px Inter,sans-serif;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--line);white-space:nowrap}.ctab td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}.ctab tr:hover td{background:#F7FAFD}
 .hid{display:none!important}
 .sec-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
 .who{display:flex;gap:14px;flex-wrap:wrap}
@@ -181,6 +185,7 @@ table.t td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:t
     </div>
     <div class="ctl">
       <label>Você é<button class="vb" id="voceBtn" data-act="quem" title="Trocar de pessoa"></button></label>
+      <span class="sync" id="syncChip" style="display:none"></span>
       <label>Hoje<input type="date" id="hoje"></label>
       <button class="btn sm" id="hojeReset" title="Volta para a data de hoje do computador" style="display:none">Voltar ao dia de hoje</button>
     </div>
@@ -195,6 +200,7 @@ table.t td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:t
 <aside class="drw" id="drw"></aside>
 <div class="mdl" id="mdl"></div>
 <div class="toast" id="toast"></div>
+<div class="entrar" id="entrar"></div>
 
 <script src="pd_config.js"></script>
 <script src="suporte.js"></script>
@@ -276,10 +282,112 @@ function semente(){
   ];
   var marcos=[{id:'m1',data:'2026-10-25',texto:'Chegada prevista do container (3 selantes)',projeto:'p4'}];
   var atas=[{id:'a1',data:'2026-10-05',titulo:'Reunião P&D — 05/10',part:[],resumo:'Rodando. Os atrasados não estão na nossa mão.',decisoes:[],sugestoes:[],pend:[],origem:'Planilha · aba Diagnóstico',demo:false}];
-  return {versao:1,projetos:projetos,tarefas:tarefas,marcos:marcos,atas:atas,log:[{ts:new Date().toISOString(),quem:'Importação',acao:'Importou a planilha “Novos Produtos”',det:projetos.length+' projetos, '+tarefas.length+' tarefas e 1 ata (05/10).'}],voce:'thais',hojeSim:'',sync:{},ataSel:'a1'};
+  return {versao:1,projetos:projetos,tarefas:tarefas,marcos:marcos,atas:atas,custos:[],log:[{ts:new Date().toISOString(),quem:'Importação',acao:'Importou a planilha “Novos Produtos”',det:projetos.length+' projetos, '+tarefas.length+' tarefas e 1 ata (05/10).'}],voce:'thais',hojeSim:'',sync:{},ataSel:'a1'};
 }
-var S; try{ S=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){ S=null; } if(!S||!S.versao) S=semente();
-function salvar(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+var S; try{ S=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){ S=null; } if(!S||!S.versao) S=semente(); if(!S.custos) S.custos=[];
+function salvar(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} if(typeof NUVEM!=='undefined'&&NUVEM.on) agendarSync(); }
+/* ---------------- BASE COMPARTILHADA (nuvem) ----------------
+   Só liga quando o pd_config.js tem apiUrl e loginUrl. Sem isso, o painel continua local (como antes). */
+var NUVEM={on:false,token:'',user:null,seq:0,logMax:'',base:{},ver:{},logEnv:{},timer:null,poll:null,busy:false,pendente:false,pendRender:false,iniciando:false};
+var COLS=['projetos','tarefas','marcos','atas','custos'];
+function pcfg(){ return window.PD_CONFIG||{}; }
+function nuvemConfigurada(){ var a=String(pcfg().apiUrl||''), l=String(pcfg().loginUrl||''); var ok=function(u){ return /^https:\/\//.test(u)||/^http:\/\/localhost/.test(u); }; return ok(a)&&ok(l); }
+function chaveLog(l){ return l.ts+'|'+l.acao+'|'+l.det; }
+function guardarLocal(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+function chipSync(estado,txt){ var c=$('#syncChip'); if(!c) return; c.style.display=NUVEM.on?'inline-flex':'none'; c.className='sync '+estado; var h=new Date(); c.textContent=txt||({ok:'● Sincronizado '+pad(h.getHours())+':'+pad(h.getMinutes()),wait:'↻ Salvando…',off:'⚠ Sem conexão'}[estado]||''); }
+function nApi(acao,dados){
+  var ctrl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctrl) ctrl.abort(); },45000);
+  return fetch(pcfg().apiUrl,{method:'POST',body:JSON.stringify(Object.assign({t:NUVEM.token,a:acao},dados||{})),redirect:'follow',signal:ctrl?ctrl.signal:undefined})
+    .then(function(r){ clearTimeout(to); return r.json(); },function(e){ clearTimeout(to); throw e; });
+}
+function urlLogin(){ var l=String(pcfg().loginUrl), volta=pcfg().voltaUrl||(location.origin+location.pathname); return l+(l.indexOf('?')>=0?'&':'?')+'acao=login&volta='+encodeURIComponent(volta); }
+function telaEntrar(msg,tentar){
+  NUVEM.user=null; var e=$('#entrar'); e.classList.add('on');
+  e.innerHTML='<div class="card" style="max-width:460px;text-align:center;margin:0"><h2 style="margin:0 0 6px">P&amp;D — Acompanhamento</h2><div class="desc">'+(msg?esc(msg):'Entre com a sua conta da empresa para ver e editar o painel.')+'</div>'+
+   '<a class="btn pri" id="btnEntrar" href="'+esc(urlLogin())+'" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;margin:6px 0">Entrar com a conta da empresa</a>'+
+   (tentar?' <button class="btn" data-act="tentarNuvem">Tentar de novo</button>':'')+
+   '<div class="desc" style="font-size:11.5px;margin-top:10px">Abre uma janela do Google. Use o e-mail @pigattodistribuidora.com.br. Depois de clicar em “Continuar para o painel”, esta tela entra sozinha.</div></div>';
+}
+function expira(msg){ try{ localStorage.removeItem('pd_token'); }catch(e){} clearInterval(NUVEM.poll); telaEntrar(msg||'Sua entrada expirou. Entre de novo.'); }
+function lerTokenDaUrl(){ var m=/[#&]pdtoken=([^&]+)/.exec(location.hash||''); if(m){ try{ localStorage.setItem('pd_token',decodeURIComponent(m[1])); }catch(e){} try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } }
+function iniciarNuvem(){
+  if(NUVEM.iniciando) return; NUVEM.on=true; lerTokenDaUrl(); NUVEM.token=''; try{ NUVEM.token=localStorage.getItem('pd_token')||''; }catch(e){}
+  if(!NUVEM.token){ telaEntrar(''); return; }
+  NUVEM.iniciando=true; chipSync('wait','Conectando…');
+  nApi('carregar').then(function(d){
+    NUVEM.iniciando=false;
+    if(!d.ok){ if(d.erro==='acesso') expira('O seu e-mail não está liberado para o painel. Peça à Thais para incluir.'); else if(d.erro==='token') expira(); else telaEntrar('Erro da base compartilhada: '+d.erro,true); return; }
+    aplicarCarga(d);
+  }).catch(function(){ NUVEM.iniciando=false; telaEntrar('Não consegui falar com a base compartilhada. Confira a internet.',true); });
+}
+function aplicarCarga(d){
+  NUVEM.user=d.usuario; COLS.forEach(function(c){ NUVEM.base[c]={}; NUVEM.ver[c]={}; }); NUVEM.logEnv={}; NUVEM.logMax='';
+  var vazio=COLS.every(function(c){ return !(d.itens[c]||[]).length; });
+  if(vazio){
+    if(d.usuario.perfil!=='admin'){ telaEntrar('A base compartilhada ainda está vazia. A administradora precisa fazer a primeira entrada.',true); return; }
+    var local=null; try{ local=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){}
+    var base=semente(), alterado=local&&local.versao&&JSON.stringify([local.projetos,local.tarefas,local.atas])!==JSON.stringify([base.projetos,base.tarefas,base.atas]);
+    if(alterado&&confirm('A base compartilhada está vazia.\n\nOK = usar os dados que já estão neste navegador ('+local.tarefas.length+' tarefas, '+local.atas.length+' atas).\nCancelar = começar pelos dados da planilha original.')) S=local; else S=base;
+    S.log=[{ts:new Date().toISOString(),quem:d.usuario.nome,acao:'Criou a base compartilhada',det:S.projetos.length+' projetos, '+S.tarefas.length+' tarefas, '+S.atas.length+' atas'}].concat(S.log||[]);
+  } else {
+    COLS.forEach(function(c){ S[c]=(d.itens[c]||[]).map(function(x){ var it=JSON.parse(x.json); NUVEM.base[c][it.id]=JSON.stringify(it); NUVEM.ver[c][it.id]=x.v; return it; }); });
+    S.log=d.historico.slice(); d.historico.forEach(function(l){ NUVEM.logEnv[chaveLog(l)]=1; if(l.ts>NUVEM.logMax) NUVEM.logMax=l.ts; });
+  }
+  S.voce=d.usuario.id||S.voce; S.escolheu=true; NUVEM.seq=d.seq; if(!S.atas.some(function(a){return a.id===S.ataSel;})) S.ataSel=(S.atas[0]||{}).id||'';
+  guardarLocal(); $('#entrar').classList.remove('on'); $('#entrar').innerHTML='';
+  var pr=$('.proto'); if(pr) pr.innerHTML='<b>Base compartilhada.</b> Tudo o que você altera aparece para os outros participantes em até 1 minuto, e cada ação fica registrada no histórico com o nome de quem fez.';
+  renderVoce(); render(); chipSync('ok');
+  clearInterval(NUVEM.poll); NUVEM.poll=setInterval(function(){ if(!document.hidden) buscar(); },40000);
+  if(vazio) agendarSync();   // primeira entrada: envia a base inicial
+}
+function agendarSync(){ if(!NUVEM.on||!NUVEM.user) return; clearTimeout(NUVEM.timer); chipSync('wait'); NUVEM.timer=setTimeout(sincronizar,700); }
+function sincronizar(){
+  if(!NUVEM.on||!NUVEM.user) return; if(NUVEM.busy){ NUVEM.pendente=true; return; }
+  var ops=[], enviados={};
+  COLS.forEach(function(c){ var atuais={};
+    (S[c]||[]).forEach(function(it){ atuais[it.id]=1; var j=JSON.stringify(it); if(NUVEM.base[c][it.id]!==j){ ops.push({c:c,id:it.id,base:NUVEM.ver[c][it.id]||0,json:j}); enviados[c+'|'+it.id]=j; } });
+    Object.keys(NUVEM.base[c]).forEach(function(id){ if(!atuais[id]) ops.push({c:c,id:id,base:NUVEM.ver[c][id]||0,apagar:true}); }); });
+  var novosLog=(S.log||[]).filter(function(l){ return !NUVEM.logEnv[chaveLog(l)]; }).slice().reverse();
+  if(!ops.length&&!novosLog.length){ chipSync('ok'); return; }
+  NUVEM.busy=true;
+  nApi('salvar',{ops:ops,log:novosLog}).then(function(d){
+    NUVEM.busy=false;
+    if(!d.ok){ if(d.erro==='token'||d.erro==='acesso'){ expira(); return; } throw new Error(d.erro); }
+    var conflitos=0, recusados=0;
+    d.resultados.forEach(function(r){
+      var c=r.c, id=r.id;
+      if(r.ok){ if(r.apagado){ delete NUVEM.base[c][id]; delete NUVEM.ver[c][id]; } else { NUVEM.base[c][id]=enviados[c+'|'+id]; NUVEM.ver[c][id]=r.v; } }
+      else if(r.conflito){ conflitos++; var lista=S[c], i=lista.findIndex(function(x){return x.id===id;});
+        if(r.apagado||!r.json){ if(i>=0) lista.splice(i,1); delete NUVEM.base[c][id]; delete NUVEM.ver[c][id]; }
+        else { var it=JSON.parse(r.json); if(i>=0) lista[i]=it; else lista.push(it); NUVEM.base[c][id]=JSON.stringify(it); NUVEM.ver[c][id]=r.v; } }
+      else recusados++; });
+    novosLog.forEach(function(l){ NUVEM.logEnv[chaveLog(l)]=1; });
+    guardarLocal(); chipSync('ok');
+    if(conflitos){ toast(conflitos+' item(ns) foram alterados por outra pessoa ao mesmo tempo. Mostrei a versão mais recente.'); render(); }
+    if(recusados) toast('A base recusou '+recusados+' item(ns) (grande demais ou inválido).');
+    if(NUVEM.pendente){ NUVEM.pendente=false; agendarSync(); }
+  }).catch(function(){ NUVEM.busy=false; chipSync('off','⚠ Sem conexão: guardado neste navegador'); setTimeout(agendarSync,15000); });
+}
+function buscar(){
+  if(!NUVEM.on||!NUVEM.user||NUVEM.busy) return;
+  nApi('mudancas',{desde:NUVEM.seq,desdeLog:NUVEM.logMax}).then(function(d){
+    if(!d.ok){ if(d.erro==='token'||d.erro==='acesso') expira(); return; }
+    var mudou=false;
+    d.itens.forEach(function(x){
+      var c=x.c; if(COLS.indexOf(c)<0) return; var lista=S[c], i=lista.findIndex(function(it){return it.id===x.id;}), local=i>=0?JSON.stringify(lista[i]):null, sujo=local!==null&&local!==NUVEM.base[c][x.id];
+      if(x.apagado){ if(i>=0&&!sujo){ lista.splice(i,1); mudou=true; } if(!sujo){ delete NUVEM.base[c][x.id]; delete NUVEM.ver[c][x.id]; } return; }
+      var it=JSON.parse(x.json), j=JSON.stringify(it);
+      if(sujo&&local!==j) return;                      // tem alteração local ainda não enviada: resolve na hora de salvar
+      if(i>=0){ if(local!==j){ lista[i]=it; mudou=true; } } else { lista.push(it); mudou=true; }
+      NUVEM.base[c][x.id]=j; NUVEM.ver[c][x.id]=x.v; });
+    d.historico.slice().reverse().forEach(function(l){ if(l.ts>NUVEM.logMax) NUVEM.logMax=l.ts; var k=chaveLog(l); if(!NUVEM.logEnv[k]){ NUVEM.logEnv[k]=1; S.log.unshift(l); mudou=true; } });
+    NUVEM.seq=Math.max(NUVEM.seq,d.seq); guardarLocal(); chipSync('ok');
+    if(mudou||NUVEM.pendRender){ if($('#mdl.on')||$('#drw.on')) NUVEM.pendRender=true; else { NUVEM.pendRender=false; render(); } }
+  }).catch(function(){ chipSync('off'); });
+}
+document.addEventListener('visibilitychange',function(){ if(!document.hidden&&NUVEM.on&&NUVEM.user) buscar(); });
+window.addEventListener('storage',function(e){ if(e.key==='pd_token'&&e.newValue&&NUVEM.on&&!NUVEM.user) iniciarNuvem(); });
+
 function reg(acao,det){ S.log.unshift({ts:new Date().toISOString(),quem:pessoa(S.voce).n,acao:acao,det:det||''}); salvar(); }
 
 /* ---------------- datas ---------------- */
@@ -357,7 +465,7 @@ function listaAlertas(A,grupo){
 /* ---------------- telas ---------------- */
 var TAB='geral', F={st:'todos',pr:'todos',pe:'todos',q:'',tkv:'pessoa',tkp:'todos',tks:'abertas'};
 var TABS=[['geral','Visão geral'],['projetos','Projetos'],['tarefas','Tarefas'],['atas','Atas de reunião'],['alertas','Alertas e prazos'],['pessoas','Pessoas'],['hist','Histórico']];
-function navHTML(){ var n=alertas().filter(function(a){return a.g==='venc'||a.g==='hoje';}).length; return TABS.map(function(t){ return '<button data-tab="'+t[0]+'" class="'+(TAB===t[0]?'on':'')+'">'+t[1]+(t[0]==='alertas'&&n?' <span class="bd">'+n+'</span>':'')+'</button>'; }).join(''); }
+function navHTML(){ var n=alertas().filter(function(a){return a.g==='venc'||a.g==='hoje';}).length; return tabsAtuais().map(function(t){ return '<button data-tab="'+t[0]+'" class="'+(TAB===t[0]?'on':'')+'">'+t[1]+(t[0]==='alertas'&&n?' <span class="bd">'+n+'</span>':'')+'</button>'; }).join(''); }
 
 function telaGeral(){
   var A=alertas(), venc=A.filter(function(a){return a.g==='venc';}).length, hoje=A.filter(function(a){return a.g==='hoje';}).length;
@@ -469,9 +577,54 @@ function telaHist(){
    S.log.slice(0,150).map(function(l){ var d=new Date(l.ts); return '<tr><td>'+pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes())+'</td><td>'+esc(l.quem)+'</td><td><b>'+esc(l.acao)+'</b>'+(l.det?'<br><small style="color:var(--muted)">'+esc(l.det)+'</small>':'')+'</td></tr>'; }).join('')+'</tbody></table></div>';
 }
 
+/* ---------------- CUSTOS (cotações do comprador) ---------------- */
+var FC={proj:'todos',q:''}, MOEDAS={BRL:'R$',USD:'US$',EUR:'€',CNY:'¥'};
+function nivelCustos(){
+  if(typeof NUVEM!=='undefined'&&NUVEM.on&&NUVEM.user) return NUVEM.user.custos||'';   // com login: quem manda é o servidor
+  var v=S.voce; return (v==='adrian'||v==='thais')?'editar':(v==='gpigatto'||v==='saenz')?'ver':'';
+}
+function tabsAtuais(){ var t=TABS.slice(); if(nivelCustos()) t.splice(t.length-1,0,['custos','CUSTOS']); return t; }
+function fmtValor(c){ var n=Number(c.valor); if(isNaN(n)) return '—'; return (MOEDAS[c.moeda]||'R$')+' '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4}); }
+function prazoCusto(c){ var p=c.temPrazo==='sim'?(c.prazo?esc(c.prazo):'tem prazo'):(c.temPrazo==='nao'?'sem prazo':'—'); if(c.validade) p+='<br><small style="color:var(--muted)">cotação vale até '+dm(c.validade)+'</small>'; return p; }
+function telaCustos(){
+  var nv=nivelCustos(); if(!nv) return '<div class="card"><div class="vazio">Você não tem acesso a esta aba.</div></div>';
+  var lista=(S.custos||[]).slice().sort(function(a,b){ return (b.data||'')<(a.data||'')?-1:(b.data||'')>(a.data||'')?1:0; }), total=lista.length;
+  if(FC.proj==='sem') lista=lista.filter(function(c){return !c.projeto;}); else if(FC.proj!=='todos') lista=lista.filter(function(c){return c.projeto===FC.proj;});
+  if(FC.q){ var q=norm(FC.q); lista=lista.filter(function(c){ return norm([c.produto,c.fornecedor,c.condicoes,c.obs,c.prazo].join(' ')).indexOf(q)>=0; }); }
+  var edita=nv==='editar';
+  return '<div class="card"><div class="sec-h"><div><h2 style="margin:0">Custos dos projetos</h2><div class="desc" style="margin:2px 0 0">Cotações que o comprador vai orçando: produto ou serviço, valor, data, prazo e condições. '+(edita?'Só quem tem permissão lança; os outros participantes não veem esta aba.':'Você pode ver, mas não lançar.')+'</div></div>'+
+   '<div style="display:flex;gap:8px;flex-wrap:wrap">'+(lista.length?'<button class="btn sm" data-act="csvCustos">⬇ Baixar planilha (CSV)</button>':'')+(edita?'<button class="btn pri" data-act="novoCusto">+ Novo custo</button>':'')+'</div></div>'+
+   '<div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><select data-fc="proj" style="font:500 13px Inter,sans-serif;padding:7px 10px;border:1px solid var(--line);border-radius:10px"><option value="todos">Projeto: todos</option><option value="sem"'+(FC.proj==='sem'?' selected':'')+'>Sem projeto</option>'+S.projetos.map(function(p){return '<option value="'+p.id+'"'+(FC.proj===p.id?' selected':'')+'>'+esc(p.nome)+'</option>';}).join('')+'</select>'+
+   '<input data-fc="q" value="'+esc(FC.q)+'" placeholder="Buscar produto, fornecedor, condição…" style="font:500 13px Inter,sans-serif;padding:7px 10px;border:1px solid var(--line);border-radius:10px;min-width:260px"></div>'+
+   (lista.length?'<div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Orçado em</th><th>Projeto</th><th>Produto / serviço</th><th>Fornecedor</th><th>Valor</th><th>Prazo</th><th>Condições</th><th>Lançado por</th>'+(edita?'<th></th>':'')+'</tr></thead><tbody>'+
+     lista.map(function(c){ var p=c.projeto?projeto(c.projeto):null; return '<tr><td>'+dmy(c.data)+'</td><td>'+(p?esc(p.nome):'<span class="tag gray">sem projeto</span>')+'</td><td><b>'+esc(c.produto)+'</b>'+(c.obs?'<br><small style="color:var(--muted)">'+esc(c.obs)+'</small>':'')+'</td><td>'+esc(c.fornecedor||'—')+'</td><td style="white-space:nowrap"><b>'+fmtValor(c)+'</b></td><td>'+prazoCusto(c)+'</td><td style="max-width:260px">'+esc(c.condicoes||'—')+'</td><td><small>'+esc(c.quem||'—')+'</small></td>'+(edita?'<td><button class="btn sm" data-act="editarCusto" data-id="'+c.id+'">Editar</button></td>':'')+'</tr>'; }).join('')+'</tbody></table></div><div class="desc" style="margin-top:8px">'+lista.length+' de '+total+' lançamento(s). Os valores de moedas diferentes não são somados.</div>'
+     :'<div class="vazio">'+(total?'Nenhum lançamento com esse filtro.':'Ainda não há custos lançados.'+(edita?' Clique em “+ Novo custo”.':''))+'</div>')+'</div>';
+}
+function modalCusto(id){
+  var c=id?(S.custos||[]).filter(function(x){return x.id===id;})[0]:null; c=c||{};
+  var o=function(v,t,sel){ return '<option value="'+v+'"'+(sel===v?' selected':'')+'>'+t+'</option>'; };
+  abrirModal('<h2>'+(id?'Editar custo':'Novo custo')+'</h2>'+
+   '<div class="f2"><label class="fld">Projeto (opcional)<select id="cuP"><option value="">— sem projeto —</option>'+S.projetos.map(function(p){return o(p.id,esc(p.nome),c.projeto);}).join('')+'</select></label><label class="fld">Data orçada<input type="date" id="cuD" value="'+esc(c.data||hojeISO())+'"></label></div>'+
+   '<div class="f2"><label class="fld">Produto ou serviço<input id="cuN" value="'+esc(c.produto||'')+'" placeholder="Ex.: Espuma PU, frete Navegantes > Pinhais"></label><label class="fld">Fornecedor<input id="cuF" value="'+esc(c.fornecedor||'')+'"></label></div>'+
+   '<div class="f2"><label class="fld">Valor<input type="number" step="0.01" min="0" id="cuV" value="'+(c.valor===undefined?'':esc(c.valor))+'"></label><label class="fld">Moeda<select id="cuM">'+Object.keys(MOEDAS).map(function(k){return o(k,MOEDAS[k]+' ('+k+')',c.moeda||'BRL');}).join('')+'</select></label></div>'+
+   '<div class="f2"><label class="fld">Tem prazo?<select id="cuT">'+o('','Não informado',c.temPrazo||'')+o('sim','Sim',c.temPrazo)+o('nao','Não',c.temPrazo)+'</select></label><label class="fld">Prazo (entrega ou execução)<input id="cuZ" value="'+esc(c.prazo||'')+'" placeholder="Ex.: 30 dias, 15/11"></label></div>'+
+   '<label class="fld">A cotação vale até (opcional)<input type="date" id="cuL" value="'+esc(c.validade||'')+'"></label>'+
+   '<label class="fld">Condições (pagamento, frete, quantidade mínima…)<textarea id="cuC">'+esc(c.condicoes||'')+'</textarea></label>'+
+   '<label class="fld">Observações<textarea id="cuO" style="min-height:60px">'+esc(c.obs||'')+'</textarea></label>'+
+   '<div style="display:flex;justify-content:space-between;margin-top:12px">'+(id?'<button class="btn sm" data-act="excluirCusto" data-id="'+id+'">Excluir</button>':'<span></span>')+'<span><button class="btn" data-act="fecharM">Cancelar</button> <button class="btn pri" data-act="salvarCusto" data-id="'+(id||'')+'">Salvar</button></span></div>');
+}
+function csvCustos(){
+  var L=[['Orçado em','Projeto','Produto/serviço','Fornecedor','Valor','Moeda','Tem prazo','Prazo','Cotação vale até','Condições','Observações','Lançado por']];
+  (S.custos||[]).slice().sort(function(a,b){return (a.data||'')<(b.data||'')?-1:1;}).forEach(function(c){ var p=c.projeto?projeto(c.projeto):null; L.push([c.data||'',p?p.nome:'',c.produto||'',c.fornecedor||'',String(c.valor===undefined?'':c.valor).replace('.',','),c.moeda||'BRL',c.temPrazo==='sim'?'sim':c.temPrazo==='nao'?'não':'',c.prazo||'',c.validade||'',c.condicoes||'',c.obs||'',c.quem||'']); });
+  var txt='\uFEFF'+L.map(function(l){ return l.map(function(x){ x=String(x).replace(/"/g,'""'); return /[;"\n]/.test(x)?'"'+x+'"':x; }).join(';'); }).join('\r\n');
+  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'})); a.download='custos-pd-'+hojeISO()+'.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+}
+document.addEventListener('change',function(e){ var t=e.target.closest&&e.target.closest('[data-fc]'); if(!t) return; FC[t.getAttribute('data-fc')]=t.value; render(); });
+
 function render(){
+  if(TAB==='custos'&&!nivelCustos()) TAB='geral';
   $('#nav').innerHTML=navHTML();
-  $('#tela').innerHTML=({geral:telaGeral,projetos:telaProjetos,tarefas:telaTarefas,atas:telaAtas,alertas:telaAlertas,pessoas:telaPessoas,hist:telaHist})[TAB]();
+  $('#tela').innerHTML=({geral:telaGeral,projetos:telaProjetos,tarefas:telaTarefas,atas:telaAtas,alertas:telaAlertas,pessoas:telaPessoas,custos:telaCustos,hist:telaHist})[TAB]();
   if(TAB==='projetos'){ var s=$('select[data-f=pr]'); if(s) s.value=F.pr; s=$('select[data-f=pe]'); if(s) s.value=F.pe; }
   $('#hoje').value=hojeISO(); $('#hojeReset').style.display=S.hojeSim?'':'none';
 }
@@ -505,7 +658,7 @@ function abrirQuem(){
   abrirModal('<h2>Quem é você?</h2><div class="desc">Clique na sua foto. Suas alterações passam a ficar registradas no histórico com o seu nome.</div><div class="equipe">'+
     PESSOAS.map(function(p){ return '<div class="eq '+(S.escolheu&&S.voce===p.id?'sel':'')+'" data-act="souEu" data-id="'+p.id+'"><div class="ph ph-'+p.id+'"></div><b>'+esc(p.n)+'</b><span>'+esc(cargoPessoa(p))+'</span></div>'; }).join('')+'</div>',true);
 }
-function renderVoce(){ var p=pessoa(S.voce); $('#voceBtn').innerHTML=avatar(p)+'<span><b>'+esc(p.n)+'</b><small>'+esc(cargoPessoa(p))+'</small></span><em>trocar</em>'; }
+function renderVoce(){ var p=pessoa(S.voce); $('#voceBtn').innerHTML=avatar(p)+'<span><b>'+esc(p.n)+'</b><small>'+esc(cargoPessoa(p))+'</small></span><em>'+(NUVEM.on?'sair':'trocar')+'</em>'; }
 function modalTarefa(id,pid){
   var t=id?S.tarefas.filter(function(x){return x.id===id;})[0]:{texto:'',projeto:pid||'',resp:[],prazo:'',nota:'',criterio:'',aprovaGP:0};
   abrirModal('<h2>'+(id?'Editar tarefa':'Nova tarefa')+'</h2><label class="fld">O que precisa ser feito<input id="tTx" value="'+esc(t.texto)+'"></label>'+
@@ -670,8 +823,9 @@ function toast(m){ var t=$('#toast'); t.textContent=m; t.style.display='block'; 
 function tarefa(id){ return S.tarefas.filter(function(t){return t.id===id;})[0]; }
 var ACT={
   fechar:function(){ fecharGaveta(); }, fecharM:function(){ fecharModal(); },
-  quem:function(){ abrirQuem(); },
-  souEu:function(e,d){ S.voce=d.id; S.escolheu=true; salvar(); fecharModal(); renderVoce(); toast('Olá, '+pessoa(d.id).n.split(' ')[0]+'! Suas alterações ficam registradas no seu nome.'); },
+  quem:function(){ if(NUVEM.on){ if(NUVEM.user&&confirm('Sair da conta '+NUVEM.user.email+'?')){ try{ localStorage.removeItem('pd_token'); }catch(e){} location.reload(); } return; } abrirQuem(); },
+  tentarNuvem:function(){ iniciarNuvem(); },
+  souEu:function(e,d){ S.voce=d.id; S.escolheu=true; salvar(); fecharModal(); renderVoce(); render(); toast('Olá, '+pessoa(d.id).n.split(' ')[0]+'! Suas alterações ficam registradas no seu nome.'); },
   abrirP:function(e,d){ if(e) e.preventDefault(); fecharModal(); abrirGaveta(d.id); },
   novoP:function(){ var n=prompt('Nome do novo projeto:'); if(!n||!n.trim()) return; var id='p'+Date.now(); S.projetos.push({id:id,nome:n.trim(),prio:null,status:'dev',statusInf:false,resp:[],apoio:[],feitas:0,etapaSug:false,obs:'',atualizadoEm:hojeISO(),pot:{icp:'',mercado:'',margem:'',esforco:''},ficha:{descricao:'',ncm:'',materia:''},extra:''}); reg('Criou o projeto',n.trim()); render(); abrirGaveta(id); },
   delP:function(e,d){ var p=projeto(d.id); if(!confirm('Excluir o projeto “'+p.nome+'” e as tarefas dele?')) return; S.projetos=S.projetos.filter(function(x){return x.id!==d.id;}); S.tarefas=S.tarefas.filter(function(t){return t.projeto!==d.id;}); reg('Excluiu o projeto',p.nome); fecharGaveta(); render(); },
@@ -688,6 +842,14 @@ var ACT={
   gravar:function(){ modalGravar(); }, iniciarRec:function(){ iniciarRec(); }, pararRec:function(){ pararRec(); },
   ataManual:function(){ modalAtaManual(); },
   togP:function(e,d){ var i=REC.part.indexOf(d.id); if(i>=0) REC.part.splice(i,1); else REC.part.push(d.id); var el=document.querySelector('.psel[data-id="'+d.id+'"]'); if(el) el.classList.toggle('on'); },
+  novoCusto:function(){ modalCusto(null); }, editarCusto:function(e,d){ modalCusto(d.id); }, csvCustos:function(){ csvCustos(); },
+  salvarCusto:function(e,d){
+    var prod=$('#cuN').value.trim(), v=parseFloat(String($('#cuV').value).replace(',','.')); if(!prod){ toast('Informe o produto ou serviço.'); return; } if(isNaN(v)||v<0){ toast('Informe o valor.'); return; }
+    var dados={projeto:$('#cuP').value||null,data:$('#cuD').value||hojeISO(),produto:prod,fornecedor:$('#cuF').value.trim(),valor:v,moeda:$('#cuM').value,temPrazo:$('#cuT').value,prazo:$('#cuZ').value.trim(),validade:$('#cuL').value||'',condicoes:$('#cuC').value.trim(),obs:$('#cuO').value.trim(),quem:pessoa(S.voce).n};
+    if(d.id){ var c=S.custos.filter(function(x){return x.id===d.id;})[0]; Object.assign(c,dados); } else S.custos.push(Object.assign({id:'c'+Date.now(),criadoEm:new Date().toISOString()},dados));
+    reg('Atualizou os custos',dados.projeto?projeto(dados.projeto).nome:'sem projeto'); fecharModal(); render(); toast('Custo salvo');   // o histórico não mostra valores nem fornecedores
+  },
+  excluirCusto:function(e,d){ if(!confirm('Excluir este lançamento de custo?')) return; S.custos=S.custos.filter(function(x){return x.id!==d.id;}); reg('Atualizou os custos','exclusão'); fecharModal(); render(); toast('Custo excluído'); },
   importarAta:function(){ modalImportar(); },
   gerarAutoIm:function(){ var d=$('#imAta').value; gerarAutoCore($('#imEnt').value,(S.atas.filter(function(a){return a.id===d;})[0]||{}).data||hojeISO(),d); },
   gerarAutoAta:function(e,d){ var a=S.atas.filter(function(x){return x.id===d.id;})[0]; if(a) gerarAutoCore(a.transcricao,a.data,a.id); },
@@ -737,9 +899,8 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ fecharMod
 estiloFotos(); renderVoce();
 $('#hoje').addEventListener('change',function(){ var hoje=new Date(); var real=hoje.getFullYear()+'-'+pad(hoje.getMonth()+1)+'-'+pad(hoje.getDate()); S.hojeSim=(this.value&&this.value!==real)?this.value:''; salvar(); render(); });
 $('#hojeReset').addEventListener('click',function(){ S.hojeSim=''; salvar(); render(); });
-$('#restaurar').addEventListener('click',function(e){ e.preventDefault(); if(!confirm('Apagar as alterações feitas aqui e voltar aos dados da planilha?')) return; try{localStorage.removeItem(KEY);}catch(x){} S=semente(); fecharGaveta(); fecharModal(); render(); toast('Dados da planilha restaurados'); });
-render();
-if(!S.escolheu) setTimeout(abrirQuem,350);   // primeiro acesso: pergunta quem é
+$('#restaurar').addEventListener('click',function(e){ e.preventDefault(); if(NUVEM.on){ if(!NUVEM.user||NUVEM.user.perfil!=='admin'){ toast('Só a administradora pode restaurar a base.'); return; } if(!confirm('ATENÇÃO: isto apaga os dados COMPARTILHADOS de todos e volta à planilha original. Continuar?')) return; var vv=S.voce; S=semente(); S.voce=vv; S.escolheu=true; guardarLocal(); fecharGaveta(); fecharModal(); render(); agendarSync(); toast('Base restaurada com os dados da planilha'); return; } if(!confirm('Apagar as alterações feitas aqui e voltar aos dados da planilha?')) return; try{localStorage.removeItem(KEY);}catch(x){} S=semente(); fecharGaveta(); fecharModal(); render(); toast('Dados da planilha restaurados'); });
+if(nuvemConfigurada()){ iniciarNuvem(); } else { render(); if(!S.escolheu) setTimeout(abrirQuem,350); }   // com base compartilhada: entra pelo login; sem ela: modo local
 })();
 </script>
 </body>

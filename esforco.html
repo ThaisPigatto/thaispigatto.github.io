@@ -50,6 +50,24 @@
   .setores button.suave.on{background:#F7941D;border-color:#F7941D;}
   .nav .nav-setor{font:800 11px 'Inter',sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#F7B955;margin:2px 4px 10px;}
   .nav .nav-vazio{font-size:12px;color:rgba(255,255,255,.5);padding:6px 6px;line-height:1.5;}
+  /* ---------- INÍCIO (quem é você?) e usuário no topo ---------- */
+  .inicio{display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow:auto;padding:36px 20px;}
+  .inicio.on{display:block;}
+  .inicio .caixa{max-width:1000px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px 26px 34px;text-align:center;}
+  .inicio h1{margin:0 0 4px;font-size:26px;color:var(--navy);} .inicio p.sub{margin:0 0 6px;color:var(--muted);font-size:14px;}
+  .inicio .equipe{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;margin-top:24px;}
+  .inicio .pessoa{background:none;border:0;cursor:pointer;text-align:center;font:inherit;color:inherit;padding:8px;border-radius:16px;width:150px;}
+  .inicio .pessoa .ft{width:118px;height:118px;border-radius:50%;margin:0 auto;border:4px solid #fff;box-shadow:0 8px 22px rgba(15,45,92,.22);background:#DDE7F0 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font:800 34px 'Inter',sans-serif;color:#fff;animation:flutuaI 4s ease-in-out infinite;}
+  .inicio .pessoa:nth-child(2n) .ft{animation-delay:-1.3s} .inicio .pessoa:nth-child(3n) .ft{animation-delay:-2.6s}
+  @keyframes flutuaI{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .inicio .pessoa:hover .ft{outline:4px solid #F7941D;}
+  .inicio .pessoa strong{display:block;margin-top:10px;font-size:15px;color:var(--navy);} .inicio .pessoa small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px;line-height:1.3;}
+  .inicio .outro{margin-top:26px;background:none;border:0;color:var(--blue);cursor:pointer;font:600 13px 'Inter',sans-serif;text-decoration:underline;}
+  .setores button.inicio-btn{background:rgba(255,255,255,.16);margin-right:6px;}
+  .setores button.chip-user{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;text-transform:none;letter-spacing:0;font-weight:700;background:rgba(255,255,255,.1);}
+  .setores button.chip-user .ft{width:30px;height:30px;border-radius:50%;background:#7C93AB center/cover no-repeat;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;}
+  .setores button.chip-user em{font-style:normal;font-weight:500;font-size:11px;opacity:.75;}
+  .nova-aba{text-align:center;padding:48px 20px;} .nova-aba a.btn-abrir{display:inline-block;background:var(--navy);color:#fff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:12px;} .nova-aba a.btn-abrir:hover{background:#133C63;}
   .side-foot{margin-top:40px;font-size:11px;color:rgba(255,255,255,.45);line-height:1.7;}
 
   .main{flex:1;min-width:0;padding:26px 32px 50px;}
@@ -223,6 +241,7 @@
 </head>
 <body>
 <header class="setores" id="setores" aria-label="Setores"></header>
+<div class="inicio" id="inicio" aria-label="Início"></div>
 
 <button class="menu-open" id="menuShow" type="button" title="Mostrar o menu">☰ Menu</button>
 <aside class="sidebar">
@@ -414,7 +433,7 @@
 
 <script>
 /* carrega dados e menu sempre na versão mais nova (evita o navegador mostrar um arquivo antigo guardado) */
-(function(){var v=Date.now();['esforco_data.js','esforco_menu.js'].forEach(function(f){document.write('<script src="'+f+'?v='+v+'"><\/script>');});})();
+(function(){var v=Date.now();['esforco_data.js','esforco_menu.js','suporte.js','vendedores.js'].forEach(function(f){document.write('<script src="'+f+'?v='+v+'"><\/script>');});})();
 </script>
 <script>
 (function(){
@@ -492,6 +511,8 @@ var ATUAL='tv', carregadas={}, MESES_CACHE={}, ABERTOS={};
 
 function temSrc(m){ return m.src&&String(m.src).trim(); }
 var SETORES=(window.ESFORCO_SETORES&&window.ESFORCO_SETORES.length)?window.ESFORCO_SETORES:null;
+var SET_OK={}; try{ SET_OK=JSON.parse(sessionStorage.getItem('esf_set')||'{}'); }catch(e){}   // setores já liberados nesta sessão
+var USUARIOS=[];
 var SETOR=SETORES?SETORES[0].id:'', ULTIMA={};
 function setorDe(m){ return m.setor||(SETORES?SETORES[0].id:''); }
 function setorObj(id){ return (SETORES||[]).filter(function(x){return x.id===id;})[0]; }
@@ -511,11 +532,14 @@ function todasPaginas(){ var out=[];
 function criarView(p){
   if(document.getElementById('view-'+p.id)) return;
   var sec=document.createElement('section'); sec.id='view-'+p.id; sec.className='view';
+  if(p.novaAba){ sec.innerHTML='<div class="topbar slim"><div><h1></h1><div class="sub"></div></div></div><div class="panel nova-aba"><div class="desc" style="margin-bottom:18px">Este painel abre em uma nova aba e usa o login da sua conta do Claude da empresa.</div><a class="btn-abrir" target="_blank" rel="noopener"></a></div>';
+    sec.querySelector('h1').textContent=p.titulo||p.nome; sec.querySelector('.sub').textContent=p.descricao||''; var ab=sec.querySelector('a.btn-abrir'); ab.href=p.src; ab.textContent='Abrir '+(p.titulo||p.nome)+' ↗'; $('#paginasExtras').appendChild(sec); return; }
   sec.innerHTML='<div class="topbar slim"><div><h1></h1><div class="sub"></div></div><a class="abrir" target="_blank" rel="noopener">Abrir em nova aba ↗</a></div><div class="panel" style="padding:0;overflow:hidden"><iframe class="ifr"></iframe></div>';
   sec.querySelector('h1').textContent=p.titulo||p.nome; sec.querySelector('.sub').textContent=p.descricao||'';   // titulo: opcional (título da página diferente do nome no menu)
   sec.querySelector('a.abrir').href=p.src; sec.querySelector('iframe').title=p.titulo||p.nome;
   $('#paginasExtras').appendChild(sec); }
 function abrir(p){
+  if(SETORES){ var sg=setorObj(setorDe(p)); if(setorTrancado(sg)){ gateSetor(sg).then(function(ok){ if(ok) abrir(p); }); return; } }
   if(p.restrito&&!unlocked){
     var s=window.prompt('Essa área é restrita. Digite a senha:');
     if(s!==SENHA){ if(s!==null) window.alert('Senha incorreta.'); return; }
@@ -523,7 +547,7 @@ function abrir(p){
   }
   ATUAL=p.id;
   if(SETORES){ var st=setorDe(p); ULTIMA[st]=p.id; if(st!==SETOR){ SETOR=st; montarSetores(); montarMenu(); } }
-  if(p.tipo!=='painel'){ criarView(p); if(!carregadas[p.id]){ $('#view-'+p.id+' iframe').src=p.src; carregadas[p.id]=1; } }  // só carrega depois da senha
+  if(p.tipo!=='painel'){ criarView(p); if(!p.novaAba&&!carregadas[p.id]){ $('#view-'+p.id+' iframe').src=p.src; carregadas[p.id]=1; } }  // só carrega depois da senha
   $$('.view').forEach(function(x){x.classList.toggle('active',x.id==='view-'+p.id);});
   $$('.nav button[data-view]').forEach(function(x){x.classList.toggle('active',x.getAttribute('data-view')===p.id);});
   if(p.id==='analise') renderAnalise();
@@ -569,8 +593,10 @@ function abrirPorHash(){
   var alvo=todasPaginas().filter(function(p){return p.id===id;})[0];
   if(!alvo){ var g=MENU_CFG.filter(function(m){return m.tipo==='grupo'&&m.id===id;})[0]; if(g) alvo=filhosDe(g)[0]; }
   if(alvo&&alvo.id!==ATUAL) abrir(alvo); }
+montarUsuarios();
 montarSetores();
 montarMenu();
+if(!/^semana/.test((location.hash||'').slice(1))&&!usuarioAtual()) mostrarInicio();   // 1ª visita: quem é você? (só o link do e-mail do Gabriel, #semana, pula essa tela)
 // meses do "Relatório de Vendas": lê meses.json (quando o robô de faturamento fecha o mês, o item novo aparece sozinho)
 MENU_CFG.forEach(function(m){ if(m.tipo==='grupo'&&m.filhosDeMeses){
   fetch(m.filhosDeMeses,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(l){
@@ -582,7 +608,7 @@ function garantirLiberado(){
   if(String(ATUAL).indexOf('vazio-')===0){ var so=setorObj(ATUAL.slice(6)); if(so&&!so.restrito) return; }
   var paginas=todasPaginas(), atual=paginas.filter(function(p){return p.id===ATUAL;})[0];
   if(atual&&!atual.restrito) return;
-  var livre=paginas.filter(function(p){return !p.restrito&&!p.oculto&&p.inicial!==false;})[0];   // inicial:false = nunca abre sozinha como página inicial
+  var livre=paginas.filter(function(p){return !p.restrito&&!p.oculto&&p.inicial!==false&&!setorTrancado(setorObj(setorDe(p)));})[0];   // inicial:false = nunca abre sozinha como página inicial
   if(livre){ abrir(livre); montarMenu(); }
   else { $$('.view').forEach(function(x){x.classList.remove('active');}); }
 }
@@ -593,16 +619,45 @@ function liberar(){   // pede a senha uma vez (vale até fechar o navegador)
   var sn=window.prompt('Essa área é restrita. Digite a senha:');
   if(sn!==SENHA){ if(sn!==null) window.alert('Senha incorreta.'); return false; }
   unlocked=true; try{sessionStorage.setItem('esf_ok','1');}catch(e){} montarMenu(); montarSetores(); return true; }
+/* ---------- senha própria de cada setor (guardada só como código embaralhado) ---------- */
+function normSenha(x){ return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+function sha256hex(t){ if(!(window.crypto&&crypto.subtle)) return Promise.resolve(''); return crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)).then(function(b){ return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2);}).join(''); }); }
+function setorTrancado(st){ return !!(st&&st.senhaHash&&!SET_OK[st.id]); }
+function gateSetor(st){
+  var sn=window.prompt('O setor '+st.nome+' é restrito. Digite a senha do setor:'); if(sn===null) return Promise.resolve(false);
+  return sha256hex(st.sal+normSenha(sn)).then(function(h){
+    if(h&&h===st.senhaHash){ SET_OK[st.id]=1; try{ sessionStorage.setItem('esf_set',JSON.stringify(SET_OK)); }catch(e){} montarSetores(); return true; }
+    window.alert('Senha incorreta.'); return false; }); }
+
+/* ---------- INÍCIO: quem é você? ---------- */
+function montarUsuarios(){
+  USUARIOS=(window.ESFORCO_USUARIOS||[]).map(function(u){
+    var lista=u.fonte==='S'?window.SUPORTE:u.fonte==='V'?window.VENDEDORES:null, f=lista?lista.filter(function(x){return x.id===u.ref;})[0]:null;
+    return {id:u.id,nome:(f&&f.nome)||u.nome||u.id,cargo:(f&&(f.cargo||f.setor))||u.cargo||'',foto:(f&&f.foto)||u.foto||''}; }); }
+function usuarioAtual(){ var id=''; try{ id=localStorage.getItem('esf_usuario')||''; }catch(e){} return USUARIOS.filter(function(u){return u.id===id;})[0]||null; }
+function fotoHTML(u,cls){ return '<span class="'+cls+'"'+(u.foto?' style="background-image:url('+u.foto+')"':'')+'>'+(u.foto?'':esc2(u.nome.charAt(0)))+'</span>'; }
+function esc2(t){ return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function mostrarInicio(){
+  var el=$('#inicio'); montarUsuarios();
+  el.innerHTML='<div class="caixa"><h1>Quem é você?</h1><p class="sub">Clique na sua foto para abrir o painel central.</p><div class="equipe">'+
+    USUARIOS.map(function(u){ return '<button class="pessoa" type="button" data-u="'+u.id+'">'+fotoHTML(u,'ft')+'<strong>'+esc2(u.nome)+'</strong><small>'+esc2(u.cargo)+'</small></button>'; }).join('')+
+    '</div><button class="outro" type="button" data-u="">Não estou na lista: entrar mesmo assim</button></div>';
+  el.classList.add('on'); window.scrollTo(0,0); }
+function escolherUsuario(id){ try{ if(id) localStorage.setItem('esf_usuario',id); else localStorage.removeItem('esf_usuario'); }catch(e){} $('#inicio').classList.remove('on'); montarSetores(); }
+document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('#inicio [data-u]'); if(b) escolherUsuario(b.getAttribute('data-u')); });
+
 function montarSetores(){
   var bar=$('#setores'); if(!SETORES){ bar.style.display='none'; return; }
   document.body.classList.add('com-setores'); bar.innerHTML='';
   var dir=document.createElement('div'); dir.className='dir';
+  var bi=document.createElement('button'); bi.type='button'; bi.className='inicio-btn'; bi.textContent='⌂ INÍCIO'; bi.addEventListener('click',mostrarInicio); bar.appendChild(bi);
   SETORES.forEach(function(st){
     var b=document.createElement('button'); b.type='button'; b.setAttribute('data-setor',st.id);
-    b.textContent=st.nome+(st.restrito&&!unlocked?' 🔒':'');
+    b.textContent=st.nome+((st.senhaHash?setorTrancado(st):(st.restrito&&!unlocked))?' 🔒':'');
     var ativo=(SETOR===st.id); if(ativo) b.className='on'; if(st.suave) b.classList.add('suave');
     b.addEventListener('click',function(){ entrarSetor(st.id); });
     (st.direita?dir:bar).appendChild(b); });
+  var ua=usuarioAtual(); if(ua){ var cu=document.createElement('button'); cu.type='button'; cu.className='chip-user suave'; cu.title='Trocar de usuário'; cu.innerHTML=fotoHTML(ua,'ft')+'<span>'+esc2(ua.nome.split(' ')[0])+'</span><em>trocar</em>'; cu.addEventListener('click',mostrarInicio); dir.appendChild(cu); }
   if(dir.children.length) bar.appendChild(dir); }
 function mostrarVazio(st){
   ATUAL='vazio-'+st.id; SETOR=st.id; montarSetores(); montarMenu();
@@ -613,12 +668,13 @@ function mostrarVazio(st){
   window.scrollTo(0,0); }
 function entrarSetor(id){
   var st=setorObj(id); if(!st) return;
-  if(st.restrito&&!liberar()) return;
+  if(setorTrancado(st)){ gateSetor(st).then(function(ok){ if(ok) entrarSetor(id); }); return; }
+  if(st.restrito&&!st.senhaHash&&!liberar()) return;
   var ps=todasPaginas().filter(function(p){return setorDe(p)===id&&!p.oculto;});
   if(!ps.length){ mostrarVazio(st); return; }
   var alvo=ps.filter(function(p){return p.id===ULTIMA[id];})[0];
   if(!alvo){ var ini=ps.filter(function(p){return p.inicial!==false;}); alvo=(unlocked?ini:ini.filter(function(p){return !p.restrito;}))[0]||ini[0]||ps[0]; }
-  if(alvo.restrito&&!liberar()) return;     // se não digitar a senha, fica onde estava
+  if(alvo.restrito&&!st.senhaHash&&!liberar()) return;     // se não digitar a senha, fica onde estava
   SETOR=id; montarSetores(); montarMenu(); abrir(alvo); }
 
 function stampStatus(){

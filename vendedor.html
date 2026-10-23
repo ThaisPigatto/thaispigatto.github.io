@@ -226,6 +226,7 @@ iframe.tat{width:100%;height:calc(100vh - 120px);min-height:900px;border:0;borde
       <button role="tab" data-tab="vendas" aria-selected="false">Vendas</button>
       <button role="tab" data-tab="meu" aria-selected="false">Meu resultado</button>
       <button role="tab" data-tab="tatico" aria-selected="false">Números para o Tático</button>
+      <button role="tab" data-tab="anuncios" aria-selected="false" id="btnAnuncios" class="hidden">Anúncios do Hub</button>
       <button role="tab" data-tab="ajuste" aria-selected="false">Suporte/Ajuda</button>
     </nav>
     <main>
@@ -233,6 +234,7 @@ iframe.tat{width:100%;height:calc(100vh - 120px);min-height:900px;border:0;borde
       <section id="tab-vendas" class="hidden"></section>
       <section id="tab-meu" class="hidden"></section>
       <section id="tab-tatico" class="hidden"></section>
+      <section id="tab-anuncios" class="hidden"></section>
       <section id="tab-ajuste" class="hidden"></section>
     </main>
   </div>
@@ -692,11 +694,20 @@ async function minhasSolicitacoes(){
 }
 
 /* ---------------- navegação e início ---------------- */
+/* ---------------- ANÚNCIOS DO HUB (só para quem é do Hub: a Jéssica Sant'Anna) ---------------- */
+function ehDoHub(v){ return !!(v && (v.famCrm || []).includes('hub')); }
+function renderAnuncios(){
+  const el = $('tab-anuncios'); if (el.dataset.ok) return; el.dataset.ok = '1';
+  el.innerHTML = '<div class="card" style="padding:0;overflow:hidden"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #DDE7F0"><b>Registrar anúncios do Hub</b><a href="anuncios-hub.html" target="_blank" rel="noopener" style="font-size:13px">Abrir em tela cheia ↗</a></div>' +
+    '<iframe src="anuncios-hub.html" title="Anúncios do Hub" style="width:100%;height:calc(100vh - 230px);min-height:640px;border:0;display:block"></iframe></div>';
+  const ifr = el.querySelector('iframe'); ifr.addEventListener('load', () => { try { const h = ifr.contentDocument.querySelector('header'); if (h) h.style.display = 'none'; } catch(e){} });   // o portal já mostra logo e nome: esconde a repetição
+}
 function abrirAba(t){
   TAB = t;
   document.querySelectorAll('.nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
-  ['crm','vendas','meu','tatico','ajuste'].forEach(x => $('tab-' + x).classList.toggle('hidden', x !== t));
+  ['crm','vendas','meu','tatico','anuncios','ajuste'].forEach(x => $('tab-' + x).classList.toggle('hidden', x !== t));
   if (t === 'tatico') renderTatico();
+  if (t === 'anuncios') renderAnuncios();
   if (t === 'ajuste') minhasSolicitacoes();   // sempre busca a situação mais recente dos chamados
   window.scrollTo({top:0});
 }
@@ -715,6 +726,7 @@ async function iniciar(v){
   const famCor = (window.VENDEDORES_COR || {})[v.famCrm[0]] || ({plasticos:'#2E75B6',adesivos:'#D64545',especialidades:'#16A085',papeis:'#8E44AD',hub:'#E8A733'})[v.famCrm[0]] || '#2E75B6';
   document.documentElement.style.setProperty('--fam', famCor);
   $('meFoto').src = v.foto; $('meFoto').alt = 'Foto de ' + v.nome; $('meNome').textContent = v.nome; $('meSetor').textContent = v.setor;
+  { const hub = ehDoHub(v); $('btnAnuncios').classList.toggle('hidden', !hub); const an = $('tab-anuncios'); an.innerHTML = ''; delete an.dataset.ok; if (!hub && TAB === 'anuncios') abrirAba('crm'); }   // a aba Anúncios é só do Hub
   document.title = `Desempenho Comercial · ${v.nome}`;
   $('app').classList.remove('hidden');
   $('tab-crm').innerHTML = '<div class="card loading">Carregando os seus números…</div>';
