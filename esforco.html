@@ -62,6 +62,10 @@
   @keyframes flutuaI{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
   .inicio .pessoa:hover .ft{outline:4px solid #F7941D;}
   .inicio .pessoa strong{display:block;margin-top:10px;font-size:15px;color:var(--navy);} .inicio .pessoa small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px;line-height:1.3;}
+  .inicio .ft2{display:flex;align-items:center;justify-content:center;width:118px;height:118px;border-radius:50%;margin:0 auto;border:4px solid #fff;box-shadow:0 8px 22px rgba(15,45,92,.22);background:#DDE7F0 center/cover no-repeat;font:800 34px 'Inter',sans-serif;color:#fff;}
+  .inicio input{width:100%;max-width:340px;font:500 16px 'Inter',sans-serif;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin:0 auto 10px;display:block;}
+  .inicio .sErro{color:#C0392B;font-size:13.5px;min-height:20px;margin:2px 0 8px;}
+  .inicio .sBtn{font:700 15px 'Inter',sans-serif;border:0;border-radius:12px;padding:12px 28px;background:var(--navy);color:#fff;cursor:pointer;} .inicio .sBtn:disabled{opacity:.55;cursor:wait;}
   .inicio .outro{margin-top:26px;background:none;border:0;color:var(--blue);cursor:pointer;font:600 13px 'Inter',sans-serif;text-decoration:underline;}
   .setores button.inicio-btn{background:rgba(255,255,255,.16);margin-right:6px;}
   .setores button.chip-user{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;text-transform:none;letter-spacing:0;font-weight:700;background:rgba(255,255,255,.1);}
@@ -433,7 +437,7 @@
 
 <script>
 /* carrega dados e menu sempre na versão mais nova (evita o navegador mostrar um arquivo antigo guardado) */
-(function(){var v=Date.now();['esforco_data.js','esforco_menu.js','suporte.js','vendedores.js'].forEach(function(f){document.write('<script src="'+f+'?v='+v+'"><\/script>');});})();
+(function(){var v=Date.now();['esforco_data.js','esforco_menu.js','suporte.js','vendedores.js','pd_config.js'].forEach(function(f){document.write('<script src="'+f+'?v='+v+'"><\/script>');});})();
 </script>
 <script>
 (function(){
@@ -634,17 +638,38 @@ function montarUsuarios(){
   USUARIOS=(window.ESFORCO_USUARIOS||[]).map(function(u){
     var lista=u.fonte==='S'?window.SUPORTE:u.fonte==='V'?window.VENDEDORES:null, f=lista?lista.filter(function(x){return x.id===u.ref;})[0]:null;
     return {id:u.id,nome:(f&&f.nome)||u.nome||u.id,cargo:(f&&(f.cargo||f.setor))||u.cargo||'',foto:(f&&f.foto)||u.foto||''}; }); }
-function usuarioAtual(){ var id=''; try{ id=localStorage.getItem('esf_usuario')||''; }catch(e){} return USUARIOS.filter(function(u){return u.id===id;})[0]||null; }
+function senhaAtiva(){ var a=String((window.PD_CONFIG||{}).apiUrl||''); return /^https:\/\//.test(a)||/^http:\/\/localhost/.test(a); }
+function usuarioAtual(){ var id='',exp=0; try{ id=localStorage.getItem('esf_usuario')||''; exp=+localStorage.getItem('esf_usr_exp')||0; }catch(e){} if(senhaAtiva()&&exp<Date.now()) return null; return USUARIOS.filter(function(u){return u.id===id;})[0]||null; }
 function fotoHTML(u,cls){ return '<span class="'+cls+'"'+(u.foto?' style="background-image:url('+u.foto+')"':'')+'>'+(u.foto?'':esc2(u.nome.charAt(0)))+'</span>'; }
 function esc2(t){ return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function mostrarInicio(){
   var el=$('#inicio'); montarUsuarios();
   el.innerHTML='<div class="caixa"><h1>Quem é você?</h1><p class="sub">Clique na sua foto para abrir o painel central.</p><div class="equipe">'+
     USUARIOS.map(function(u){ return '<button class="pessoa" type="button" data-u="'+u.id+'">'+fotoHTML(u,'ft')+'<strong>'+esc2(u.nome)+'</strong><small>'+esc2(u.cargo)+'</small></button>'; }).join('')+
-    '</div><button class="outro" type="button" data-u="">Não estou na lista: entrar mesmo assim</button></div>';
+    '</div>'+(senhaAtiva()?'':'<button class="outro" type="button" data-u="">Não estou na lista: entrar mesmo assim</button>')+'</div>';
   el.classList.add('on'); window.scrollTo(0,0); }
 function escolherUsuario(id){ try{ if(id) localStorage.setItem('esf_usuario',id); else localStorage.removeItem('esf_usuario'); }catch(e){} $('#inicio').classList.remove('on'); montarSetores(); }
-document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('#inicio [data-u]'); if(b) escolherUsuario(b.getAttribute('data-u')); });
+/* senha de cada pessoa (criada no 1º acesso; guardada embaralhada no servidor): a chave vale 12 h neste navegador */
+function apiSenha(corpo){ return fetch(window.PD_CONFIG.apiUrl,{method:'POST',body:JSON.stringify(corpo),redirect:'follow'}).then(function(r){return r.json();}); }
+function entrouUsuario(id,horas){ try{ localStorage.setItem('esf_usuario',id); localStorage.setItem('esf_usr_exp',String(Date.now()+(horas||12)*3600000)); }catch(e){} $('#inicio').classList.remove('on'); montarSetores(); }
+function pedirSenhaUsuario(id){
+  var u=USUARIOS.filter(function(x){return x.id===id;})[0]; if(!u) return; var el=$('#inicio');
+  el.innerHTML='<div class="caixa" style="max-width:460px">'+fotoHTML(u,'ft2')+'<h1 style="margin-top:12px">Olá, '+esc2(u.nome.split(' ')[0])+'!</h1><p class="sub" id="sMsg">Conectando…</p><div id="sForm"></div><button class="outro" type="button" data-voltar="1">← Escolher outra pessoa</button></div>';
+  apiSenha({a:'usr_estado',id:id}).then(function(d){ if(!d.ok) throw new Error(d.erro||'erro'); formSenha(id,d.temSenha); }).catch(function(){ $('#sMsg').textContent='Não consegui conectar. Confira a internet e tente de novo.'; }); }
+function formSenha(id,tem){
+  $('#sMsg').textContent=tem?'Digite a sua senha para abrir o painel.':'Primeiro acesso: crie a sua senha. Ela será pedida nas próximas vezes.';
+  $('#sForm').innerHTML='<input type="password" id="sSenha" placeholder="'+(tem?'Sua senha':'Crie uma senha (mínimo 6 caracteres)')+'" autocomplete="'+(tem?'current-password':'new-password')+'">'+(tem?'':'<input type="password" id="sSenha2" placeholder="Repita a senha" autocomplete="new-password">')+'<div class="sErro" id="sErro"></div><button class="sBtn" type="button" id="sBtn">'+(tem?'Entrar':'Criar senha e entrar')+'</button>';
+  var go=function(){ var s=$('#sSenha').value, er=$('#sErro'); er.textContent='';
+    if(!tem){ if(s.length<6){ er.textContent='A senha precisa ter pelo menos 6 caracteres.'; return; } if(s!==$('#sSenha2').value){ er.textContent='As duas senhas não são iguais.'; return; } } else if(!s){ er.textContent='Digite a senha.'; return; }
+    var b=$('#sBtn'); b.disabled=true;
+    apiSenha({a:tem?'usr_entrar':'usr_criar',id:id,senha:s}).then(function(d){ b.disabled=false; if(d.ok) entrouUsuario(id,d.horas); else er.textContent=d.erro||'Não foi possível entrar.'; }).catch(function(){ b.disabled=false; er.textContent='Sem conexão. Tente de novo.'; }); };
+  $('#sBtn').onclick=go; ['sSenha','sSenha2'].forEach(function(k){ var i=document.getElementById(k); if(i) i.addEventListener('keydown',function(ev){ if(ev.key==='Enter') go(); }); }); setTimeout(function(){ $('#sSenha').focus(); },60); }
+document.addEventListener('click',function(e){
+  var v=e.target.closest&&e.target.closest('#inicio [data-voltar]'); if(v){ mostrarInicio(); return; }
+  var b=e.target.closest&&e.target.closest('#inicio [data-u]'); if(!b) return; var id=b.getAttribute('data-u');
+  if(!senhaAtiva()||!id){ escolherUsuario(id); return; }
+  var ua=usuarioAtual(); if(ua&&ua.id===id){ $('#inicio').classList.remove('on'); return; }
+  pedirSenhaUsuario(id); });
 
 function montarSetores(){
   var bar=$('#setores'); if(!SETORES){ bar.style.display='none'; return; }
