@@ -40,9 +40,9 @@ window.ESFORCO_SETORES = [
 window.ESFORCO_MENU = [
   // LOBBY: a primeira tela depois do login (guia do painel, resultado da semana, destaques, OKRs e sugestões)
   {id:'lobby', setor:'lobby', nome:'Lobby', tipo:'painel', restrito:false},
-  // MINHA ÁREA: enviar recado à equipe (os 3) e sugestões de melhoria (só a Thais). O servidor também confere quem pode.
+  // MINHA ÁREA: enviar recado à equipe (os 3) e sugestões de melhoria (os 3). O servidor também confere quem pode.
   {id:'recados', setor:'minha', nome:'Enviar recado à equipe', tipo:'painel', restrito:false},
-  {id:'sugestoes', setor:'minha', nome:'Sugestões de melhoria', tipo:'painel', restrito:false, soUsuarios:['thais']},
+  {id:'sugestoes', setor:'minha', nome:'Sugestões de melhoria', tipo:'painel', restrito:false, soUsuarios:['thais','saenz','gpigatto']},
 
   // ============================== GERAL (por enquanto só a Visão CSC) ==============================
   // PAINEL COMERCIAL - VISÃO CSC: resultado geral de vendas do mês (sem família), aberto SEM senha. É a página de entrada do dash.
