@@ -18,7 +18,7 @@
    tipo:'painel' -> abas feitas dentro do esforco.html (não mexer nas duas primeiras)
    tipo:'pagina' -> abre um arquivo .html do repositório (src:'crm.html') OU um link completo (src:'https://...')
    tipo:'grupo'  -> título com subpáginas (filhos). Para acrescentar um relatório: copie uma linha de filhos e mude id, nome e src.
-   restrito:true -> pede a senha (0201) antes de abrir.   src vazio ('') -> o item não aparece.
+   restrito:true -> pede a senha (0201) antes de abrir. No COMERCIAL só o CRM e o PORTAL DO VENDEDOR pedem a senha (decisão de 26/10/2026).   src vazio ('') -> o item não aparece.
    O RELATÓRIO DE VENDAS lê os meses do meses.json: quando o robô do faturamento fecha um mês, o mês novo entra sozinho no menu. */
 
 window.ESFORCO_SETORES = [
@@ -35,6 +35,10 @@ window.ESFORCO_SETORES = [
 ];
 
 window.ESFORCO_MENU = [
+  // ============================== GERAL (por enquanto só a Visão CSC) ==============================
+  // PAINEL COMERCIAL - VISÃO CSC: resultado geral de vendas do mês (sem família), aberto SEM senha. É a página de entrada do dash.
+  {id:'csc', setor:'geral', nome:'Painel Comercial - Visão CSC', tipo:'pagina', src:'painel-csc.html', restrito:false},
+
   // ============================== COMERCIAL ==============================
   // CRM: um item só no menu. Dentro dele há uma barra de abas (ESFORCO_ABAS, no fim do arquivo) com:
   //   CRM - Acompanhamento (Tarefas Atrasadas / Oportunidades / Próximas Tarefas) | Performance CRM - Completa | Esforço Comercial - Geral
@@ -48,16 +52,16 @@ window.ESFORCO_MENU = [
   // Resultado da Semana: abre SEM senha pelo link do e-mail do Gabriel; nunca aparece no menu (escondido:true)
   {id:'semana',  setor:'comercial', nome:'Resultado da Semana - CRM',  tipo:'painel', restrito:false, oculto:true, escondido:true},
 
-  {id:'vendas', setor:'comercial', nome:'RELATÓRIO DE VENDAS', tipo:'grupo', restrito:true, filhosDeMeses:'meses.json', filhos:[
+  {id:'vendas', setor:'comercial', nome:'RELATÓRIO DE VENDAS', tipo:'grupo', restrito:false, filhosDeMeses:'meses.json', filhos:[
     {id:'vendas-atual',   nome:'Mês atual',      src:'index.html'},
     {id:'vendas-2026-09', nome:'Setembro 2026',  src:'2026-09.html'},
     {id:'vendas-2026-08', nome:'Agosto 2026',    src:'2026-08.html'}
   ]},
 
-  // P&D - ACOMPANHAMENTO: projetos de novos produtos (tarefas, atas, progresso e alertas de prazo). Pede a senha por enquanto.
-  {id:'pd', setor:'comercial', nome:'P&D - Acompanhamento', titulo:'P&D — Acompanhamento', tipo:'pagina', src:'pd-acompanhamento.html', restrito:true},
+  // P&D - ACOMPANHAMENTO: projetos de novos produtos (tarefas, atas, progresso e alertas de prazo). Sem a senha 0201: a própria página pede o login da empresa (Google).
+  {id:'pd', setor:'comercial', nome:'P&D - Acompanhamento', titulo:'P&D — Acompanhamento', tipo:'pagina', src:'pd-acompanhamento.html', restrito:false},
 
-  {id:'diag', setor:'comercial', nome:'Diagnóstico Geral - Trimestre/Ano', tipo:'pagina', src:'resultados.html', restrito:true},
+  {id:'diag', setor:'comercial', nome:'Diagnóstico Geral - Trimestre/Ano', tipo:'pagina', src:'resultados.html', restrito:false},
 
   // PORTAL DO VENDEDOR: dentro do dash abre no modo gestão (escolhe o vendedor no topo). Cada vendedor usa o próprio link (links-vendedores.txt).
   {id:'portal', setor:'comercial', nome:'Portal do Vendedor', tipo:'pagina', src:'vendedor.html', restrito:true},
@@ -84,10 +88,6 @@ window.ESFORCO_MENU = [
   // ============================== GROWTH / GOOGLE ADS ==============================
   // A própria página pede a senha dela. inicial:false = o dash nunca abre sozinho nesta página (a entrada padrão é a Visão CSC).
   {id:'growth', setor:'growthads', nome:'GROWTH - GOOGLE ADS', titulo:'Growth — Google Ads', tipo:'pagina', src:'growth-google-ads.html', restrito:false, inicial:false},
-
-  // ============================== GERAL (por enquanto só a Visão CSC) ==============================
-  // PAINEL COMERCIAL - VISÃO CSC: resultado geral de vendas do mês (sem família), aberto SEM senha. É a página de entrada do dash.
-  {id:'csc', setor:'geral', nome:'Painel Comercial - Visão CSC', tipo:'pagina', src:'painel-csc.html', restrito:false},
 
   // ============================== SUPORTE ==============================
   // CHAMADOS/SUPORTE: abre SEM a senha 0201 — cada pessoa da equipe entra com o próprio usuário e senha (criada no 1º acesso)
