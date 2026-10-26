@@ -36,21 +36,22 @@ window.ESFORCO_SETORES = [
 
 window.ESFORCO_MENU = [
   // ============================== COMERCIAL ==============================
-  {id:'tv',      setor:'comercial', nome:'Esforço Comercial - Geral',            tipo:'painel', restrito:true},
-  {id:'analise', setor:'comercial', nome:'Comercial - Performance CRM completa', tipo:'painel', restrito:true},
-  // Resultado da Semana: abre SEM senha pelo link do e-mail do Gabriel; não aparece no menu para quem não digitou a senha (oculto:true)
-  {id:'semana',  setor:'comercial', nome:'Resultado da Semana - CRM',            tipo:'painel', restrito:false, oculto:true},
+  // CRM: um item só no menu. Dentro dele há uma barra de abas (ESFORCO_ABAS, no fim do arquivo) com:
+  //   CRM - Acompanhamento (Tarefas Atrasadas / Oportunidades / Próximas Tarefas) | Performance CRM - Completa | Esforço Comercial - Geral
+  // As páginas abaixo ficam escondidas do menu (escondido:true) e continuam abrindo por link (#tv, #analise, #crm-atrasadas...).
+  {id:'crm', setor:'comercial', nome:'CRM', tipo:'alias', alvo:'crm-atrasadas', restrito:true},
+  {id:'crm-atrasadas',     setor:'comercial', nome:'Tarefas Atrasadas',               tipo:'pagina', src:'tarefas-atrasadas-crm.html', restrito:true, escondido:true, abaGrupo:'crm'},
+  {id:'crm-oportunidades', setor:'comercial', nome:'Oportunidades (Ganhas/Perdidas)', tipo:'pagina', src:'oportunidades-crm.html',     restrito:true, escondido:true, abaGrupo:'crm'},
+  {id:'crm-proximas',      setor:'comercial', nome:'Próximas Tarefas (7 dias)',       tipo:'pagina', src:'proximas-tarefas-crm.html', restrito:true, escondido:true, abaGrupo:'crm'},
+  {id:'analise', setor:'comercial', nome:'Performance CRM - Completa', tipo:'painel', restrito:true, escondido:true, abaGrupo:'crm'},
+  {id:'tv',      setor:'comercial', nome:'Esforço Comercial - Geral',  tipo:'painel', restrito:true, escondido:true, abaGrupo:'crm'},
+  // Resultado da Semana: abre SEM senha pelo link do e-mail do Gabriel; nunca aparece no menu (escondido:true)
+  {id:'semana',  setor:'comercial', nome:'Resultado da Semana - CRM',  tipo:'painel', restrito:false, oculto:true, escondido:true},
 
   {id:'vendas', setor:'comercial', nome:'RELATÓRIO DE VENDAS', tipo:'grupo', restrito:true, filhosDeMeses:'meses.json', filhos:[
     {id:'vendas-atual',   nome:'Mês atual',      src:'index.html'},
     {id:'vendas-2026-09', nome:'Setembro 2026',  src:'2026-09.html'},
     {id:'vendas-2026-08', nome:'Agosto 2026',    src:'2026-08.html'}
-  ]},
-
-  {id:'crm', setor:'comercial', nome:'CRM - Acompanhamento', tipo:'grupo', restrito:true, filhos:[
-    {id:'crm-atrasadas',     nome:'Tarefas Atrasadas',               src:'tarefas-atrasadas-crm.html'},
-    {id:'crm-oportunidades', nome:'Oportunidades (Ganhas/Perdidas)', src:'oportunidades-crm.html'},
-    {id:'crm-proximas',      nome:'Próximas Tarefas (7 dias)',       src:'proximas-tarefas-crm.html'}
   ]},
 
   // P&D - ACOMPANHAMENTO: projetos de novos produtos (tarefas, atas, progresso e alertas de prazo). Pede a senha por enquanto.
@@ -65,16 +66,16 @@ window.ESFORCO_MENU = [
 
   // NÚMEROS PARA O TÁTICO: saiu do menu (pedido de 23/10/2026). Fica só nos links individuais dos vendedores (vendedor.html, aba "Números para o Tático").
 
-  // PRECIFICAÇÃO COMERCIAL: painel feito no Claude (abre em nova aba; precisa da conta do Claude da empresa)
-  {id:'precificacao', setor:'comercial', nome:'Precificação', titulo:'Comercial — Precificação', tipo:'pagina', src:'https://claude.ai/artifact/PD4u6xfBuD9kAHrr1zLifQ?open_in_browser=1&via=user_open&org=2a25c44d-3cc5-4c1b-9451-bea2c2c2fc54', novaAba:true, restrito:true},
-
   // ============================== OPERAÇÃO (senha do setor) ==============================
   {id:'logistica', setor:'operacao', nome:'Logística', titulo:'Operação — Logística', tipo:'pagina', src:'https://claude.ai/artifact/GYEb3xAjK81tZUhBERLAek', novaAba:true, restrito:false},
   {id:'lotes',     setor:'operacao', nome:'Lotes', titulo:'Operação — Lotes', tipo:'pagina', src:'https://painel-pigatto.github.io/pigatto-lotes-dashboard/', restrito:false},
 
-  // ============================== COMPRAS ==============================
+  // ============================== COMPRAS (senha do setor) ==============================
   // GESTÃO DE COMPRAS: dash do Adrian (já existia). Se não aparecer dentro do painel, use o botão "Abrir em nova aba".
   {id:'compras-dash', setor:'compras', nome:'Gestão de Compras', tipo:'pagina', src:'https://omie-compras-dashboard.vercel.app/', restrito:false},
+
+  // PRECIFICAÇÃO: painel feito no Claude (abre em nova aba; precisa da conta do Claude da empresa). Saiu do COMERCIAL em 23/10/2026.
+  {id:'precificacao', setor:'compras', nome:'Precificação', titulo:'Comercial — Precificação', tipo:'pagina', src:'https://claude.ai/artifact/PD4u6xfBuD9kAHrr1zLifQ?open_in_browser=1&via=user_open&org=2a25c44d-3cc5-4c1b-9451-bea2c2c2fc54', novaAba:true, restrito:false},
 
   // ============================== PAINEL CEO ==============================
   // A página tem login próprio (a senha é criada pelo Gabriel no primeiro acesso, pelo link do e-mail).
@@ -114,3 +115,12 @@ window.ESFORCO_USUARIOS = [
   {id:'jsantanna',  fonte:'V', ref:'jessica-santanna'},
   {id:'rhamayana',  fonte:'V', ref:'rhamayana'}
 ];
+
+/* Barra de abas dos itens do menu. A chave (crm) é o id do item do menu; cada aba lista as páginas dela (ids de ESFORCO_MENU). */
+window.ESFORCO_ABAS = {
+  crm: [
+    { nome:'CRM - Acompanhamento', paginas:[ {id:'crm-atrasadas', nome:'Tarefas Atrasadas'}, {id:'crm-oportunidades', nome:'Oportunidades (Ganhas/Perdidas)'}, {id:'crm-proximas', nome:'Próximas Tarefas (7 dias)'} ] },
+    { nome:'Performance CRM - Completa', paginas:[ {id:'analise'} ] },
+    { nome:'Esforço Comercial - Geral',  paginas:[ {id:'tv'} ] }
+  ]
+};

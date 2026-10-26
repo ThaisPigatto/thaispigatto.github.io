@@ -40,12 +40,13 @@
   body.menu-oculto .menu-open{display:block;}
   body.menu-oculto .main{padding-left:104px;}
   /* ---------- barra de SETORES (topo) ---------- */
-  .setores{display:none;flex:0 0 100%;width:100%;height:var(--topo);position:sticky;top:0;z-index:70;background:linear-gradient(90deg,var(--navy),var(--navy2));align-items:center;gap:8px;padding:0 18px;overflow-x:auto;box-shadow:0 4px 16px rgba(1,42,74,.28);}
+  .setores{display:none;flex:0 0 100%;width:100%;height:var(--topo);position:sticky;top:0;z-index:70;background:linear-gradient(90deg,var(--navy),var(--navy2));align-items:center;gap:5px;padding:0 14px;overflow-x:auto;box-shadow:0 4px 16px rgba(1,42,74,.28);}
   body.com-setores .setores{display:flex;}
-  .setores button{border:0;background:rgba(255,255,255,.1);color:#fff;font:800 13px 'Inter',sans-serif;letter-spacing:.7px;text-transform:uppercase;padding:11px 20px;border-radius:12px;cursor:pointer;white-space:nowrap;transition:.15s;flex:none;}
+  .setores button{border:0;background:rgba(255,255,255,.1);color:#fff;font:800 12px 'Inter',sans-serif;letter-spacing:.4px;text-transform:uppercase;padding:10px 12px;border-radius:12px;cursor:pointer;white-space:nowrap;transition:.15s;flex:none;}
   .setores button:hover{background:rgba(255,255,255,.22);}
   .setores button.on{background:#F7941D;color:#fff;box-shadow:0 6px 16px rgba(247,148,29,.5);}
   .setores .dir{margin-left:auto;display:flex;gap:8px;flex:none;}
+  @media (max-width:1400px){ .setores button{padding:10px 8px;font-size:11px;letter-spacing:.2px;} .setores .dir{gap:5px;} .setores button.chip-user{padding:4px 10px 4px 4px;} .setores button.chip-user em{display:none;} }
   .setores button.suave{background:transparent;border:1px solid rgba(255,255,255,.32);font-weight:700;}
   .setores button.suave.on{background:#F7941D;border-color:#F7941D;}
   .nav .nav-setor{font:800 11px 'Inter',sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#F7B955;margin:2px 4px 10px;}
@@ -71,6 +72,14 @@
   .setores button.chip-user{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;text-transform:none;letter-spacing:0;font-weight:700;background:rgba(255,255,255,.1);}
   .setores button.chip-user .ft{width:30px;height:30px;border-radius:50%;background:#7C93AB center/cover no-repeat;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;}
   .setores button.chip-user em{font-style:normal;font-weight:500;font-size:11px;opacity:.75;}
+  /* ---------- barra de ABAS dentro de um item do menu (ex.: CRM) ---------- */
+  .abas-wrap{margin-bottom:16px;}
+  .abasbar{display:flex;gap:8px;flex-wrap:wrap;background:linear-gradient(90deg,var(--navy),var(--navy2));border-radius:20px;padding:10px 12px;}
+  .abasbar button{border:0;background:none;color:#fff;font:700 15px 'Inter',sans-serif;padding:11px 20px;border-radius:12px;cursor:pointer;}
+  .abasbar button:hover{background:rgba(255,255,255,.14);} .abasbar button.on{background:#F7941D;box-shadow:0 6px 14px rgba(247,148,29,.4);}
+  .abas-sub{display:inline-flex;flex-wrap:wrap;gap:4px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px;margin-top:12px;}
+  .abas-sub button{border:0;background:none;color:var(--muted);font:700 14px 'Inter',sans-serif;padding:9px 20px;border-radius:12px;cursor:pointer;} .abas-sub button.on{background:var(--navy);color:#fff;}
+  body.com-abas .ifr{height:calc(100vh - 290px - var(--topo));min-height:520px;}
   .nova-aba{text-align:center;padding:48px 20px;} .nova-aba a.btn-abrir{display:inline-block;background:var(--navy);color:#fff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:12px;} .nova-aba a.btn-abrir:hover{background:#133C63;}
   .side-foot{margin-top:40px;font-size:11px;color:rgba(255,255,255,.45);line-height:1.7;}
 
@@ -256,6 +265,7 @@
 </aside>
 
 <main class="main">
+  <div id="abasBarra" style="display:none"></div>
 
   <!-- ============================ ABA 1: GERAL (TV) ============================ -->
   <section id="view-tv" class="view active">
@@ -531,7 +541,7 @@ function filhosDe(g){
 function todasPaginas(){ var out=[];
   MENU_CFG.forEach(function(m){
     if(m.tipo==='grupo') filhosDe(m).forEach(function(f){out.push(f);});
-    else if(m.tipo==='painel'||temSrc(m)) out.push(m); });
+    else if(m.tipo==='painel'||m.tipo==='alias'||temSrc(m)) out.push(m); });
   return out; }
 function criarView(p){
   if(document.getElementById('view-'+p.id)) return;
@@ -542,7 +552,9 @@ function criarView(p){
   sec.querySelector('h1').textContent=p.titulo||p.nome; sec.querySelector('.sub').textContent=p.descricao||'';   // titulo: opcional (título da página diferente do nome no menu)
   sec.querySelector('a.abrir').href=p.src; sec.querySelector('iframe').title=p.titulo||p.nome;
   $('#paginasExtras').appendChild(sec); }
+function paginaPorId(id){ return todasPaginas().filter(function(x){return x.id===id;})[0]; }
 function abrir(p){
+  if(p.tipo==='alias'){ var al=paginaPorId(p.alvo); if(al) abrir(al); return; }   // item do menu que só leva para uma página (ex.: CRM)
   if(SETORES){ var sg=setorObj(setorDe(p)); if(setorTrancado(sg)){ gateSetor(sg).then(function(ok){ if(ok) abrir(p); }); return; } }
   if(p.restrito&&!unlocked){
     var s=window.prompt('Essa área é restrita. Digite a senha:');
@@ -553,13 +565,30 @@ function abrir(p){
   if(SETORES){ var st=setorDe(p); ULTIMA[st]=p.id; if(st!==SETOR){ SETOR=st; montarSetores(); montarMenu(); } }
   if(p.tipo!=='painel'){ criarView(p); if(!p.novaAba&&!carregadas[p.id]){ $('#view-'+p.id+' iframe').src=p.src; carregadas[p.id]=1; } }  // só carrega depois da senha
   $$('.view').forEach(function(x){x.classList.toggle('active',x.id==='view-'+p.id);});
-  $$('.nav button[data-view]').forEach(function(x){x.classList.toggle('active',x.getAttribute('data-view')===p.id);});
+  $$('.nav button[data-view]').forEach(function(x){x.classList.toggle('active',x.getAttribute('data-view')===p.id||(!!p.abaGrupo&&x.getAttribute('data-view')===p.abaGrupo));});
+  montarAbas(p);
   if(p.id==='analise') renderAnalise();
   if(p.id==='semana') renderSemana(); else { try{history.replaceState(null,'','#'+p.id);}catch(e){} }
   window.scrollTo(0,0);
 }
+/* ---------- barra de ABAS (ex.: CRM): configurada em ESFORCO_ABAS no esforco_menu.js ---------- */
+var ULTIMA_ABA={};
+function montarAbas(p){
+  var bar=$('#abasBarra'), cfg=window.ESFORCO_ABAS||{}, g=p&&p.abaGrupo&&cfg[p.abaGrupo];
+  if(!g){ bar.style.display='none'; bar.innerHTML=''; document.body.classList.remove('com-abas'); return; }
+  document.body.classList.add('com-abas'); bar.style.display='block'; bar.className='abas-wrap'; bar.setAttribute('data-grupo',p.abaGrupo);
+  var ai=-1; g.forEach(function(a,i){ if(a.paginas.some(function(x){return x.id===p.id;})) ai=i; });
+  if(ai>=0) ULTIMA_ABA[p.abaGrupo+':'+ai]=p.id;
+  var h='<div class="abasbar">'+g.map(function(a,i){ return '<button type="button" data-ab="'+i+'" class="'+(i===ai?'on':'')+'">'+esc2(a.nome)+'</button>'; }).join('')+'</div>';
+  if(ai>=0&&g[ai].paginas.length>1) h+='<div class="abas-sub">'+g[ai].paginas.map(function(x){ return '<button type="button" data-pg="'+x.id+'" class="'+(x.id===p.id?'on':'')+'">'+esc2(x.nome||x.id)+'</button>'; }).join('')+'</div>';
+  bar.innerHTML=h; }
+document.addEventListener('click',function(e){
+  var bar=e.target.closest&&e.target.closest('#abasBarra'); if(!bar) return;
+  var b=e.target.closest('[data-ab]'), sp=e.target.closest('[data-pg]'), grp=bar.getAttribute('data-grupo'), g=(window.ESFORCO_ABAS||{})[grp]; if(!g) return;
+  if(b){ var i=+b.getAttribute('data-ab'), pg=paginaPorId(ULTIMA_ABA[grp+':'+i]||g[i].paginas[0].id); if(pg) abrir(pg); }
+  else if(sp){ var pg2=paginaPorId(sp.getAttribute('data-pg')); if(pg2) abrir(pg2); } });
 function montarMenu(){
-  var nav=$('#nav'); nav.innerHTML=''; var qtd=0;
+  var nav=$('#nav'); nav.innerHTML=''; var qtd=0, PA=paginaPorId(ATUAL);
   if(SETORES){ var so=setorObj(SETOR); var h=document.createElement('div'); h.className='nav-setor'; h.textContent=so?so.nome:''; nav.appendChild(h); }
   MENU_CFG.forEach(function(m){
     if(SETORES&&setorDe(m)!==SETOR) return;
@@ -574,9 +603,10 @@ function montarMenu(){
         if(abrindo&&!fs.some(function(f){return f.id===ATUAL;})) abrir(fs[0]); });
       qtd++; nav.appendChild(gb); nav.appendChild(box);
       fs.forEach(function(f){ var b=document.createElement('button'); b.textContent=f.nome+(f.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',f.id); if(f.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(f);}); box.appendChild(b); });
-    } else if(m.tipo==='painel'||temSrc(m)){
+    } else if(m.tipo==='painel'||m.tipo==='alias'||temSrc(m)){
+      if(m.escondido) return;   // só aparece dentro da barra de abas (ou por link)
       if(m.oculto&&!unlocked) return;     // seção só por link (aparece no menu depois que a senha for digitada)
-      var b=document.createElement('button'); b.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',m.id); if(m.id===ATUAL) b.className='active'; if(m.destaque) b.classList.add('destaque'); b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b); if(!m.oculto) qtd++;
+      var b=document.createElement('button'); b.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',m.id); if(m.id===ATUAL||(PA&&PA.abaGrupo===m.id)) b.className='active'; if(m.destaque) b.classList.add('destaque'); b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b); if(!m.oculto) qtd++;
     }
   });
   if(SETORES&&!qtd){ var vz=document.createElement('div'); vz.className='nav-vazio'; vz.textContent='Nenhum painel neste setor ainda.'; nav.appendChild(vz); }
@@ -612,7 +642,7 @@ function garantirLiberado(){
   if(String(ATUAL).indexOf('vazio-')===0){ var so=setorObj(ATUAL.slice(6)); if(so&&!so.restrito) return; }
   var paginas=todasPaginas(), atual=paginas.filter(function(p){return p.id===ATUAL;})[0];
   if(atual&&!atual.restrito) return;
-  var livre=paginas.filter(function(p){return !p.restrito&&!p.oculto&&p.inicial!==false&&!setorTrancado(setorObj(setorDe(p)));})[0];   // inicial:false = nunca abre sozinha como página inicial
+  var livre=paginas.filter(function(p){return !p.restrito&&!p.oculto&&!p.escondido&&p.inicial!==false&&!setorTrancado(setorObj(setorDe(p)));})[0];   // inicial:false = nunca abre sozinha como página inicial
   if(livre){ abrir(livre); montarMenu(); }
   else { $$('.view').forEach(function(x){x.classList.remove('active');}); }
 }
@@ -695,7 +725,7 @@ function entrarSetor(id){
   var st=setorObj(id); if(!st) return;
   if(setorTrancado(st)){ gateSetor(st).then(function(ok){ if(ok) entrarSetor(id); }); return; }
   if(st.restrito&&!st.senhaHash&&!liberar()) return;
-  var ps=todasPaginas().filter(function(p){return setorDe(p)===id&&!p.oculto;});
+  var ps=todasPaginas().filter(function(p){return setorDe(p)===id&&!p.oculto&&!p.escondido;});
   if(!ps.length){ mostrarVazio(st); return; }
   var alvo=ps.filter(function(p){return p.id===ULTIMA[id];})[0];
   if(!alvo){ var ini=ps.filter(function(p){return p.inicial!==false;}); alvo=(unlocked?ini:ini.filter(function(p){return !p.restrito;}))[0]||ini[0]||ps[0]; }
@@ -1274,6 +1304,7 @@ function renderSemana(){
 stampStatus(); renderTV();
 abrirPorHash();   // abre o link direto (ex.: #semana/2026-10-05) assim que tudo carregou
 garantirLiberado();
+montarAbas(paginaPorId(ATUAL));
 // TV da sala comercial: recarrega sozinha a cada 15 min (só se estiver na aba Geral) para pegar a atualização diária
 setInterval(function(){ if(ATUAL==='tv') window.location.reload(); }, 15*60*1000);
 })();
