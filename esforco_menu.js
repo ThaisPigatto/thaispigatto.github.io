@@ -26,12 +26,12 @@ window.ESFORCO_SETORES = [
   {id:'lobby',    nome:'LOBBY'},
   {id:'comercial', nome:'COMERCIAL', guia:'CRM e esforço comercial, relatório de vendas, P&D, diagnóstico geral e portal do vendedor.'},
   {id:'growthads', nome:'GROWTH / GOOGLE ADS', guia:'Resultados e campanhas do Google Ads.'},
-  {id:'operacao',  nome:'OPERAÇÃO',  restrito:true, sal:'pigatto-operacao-v1:', senhaHash:'0daa92fa188e7fe8ea006c0e9ef1b8f5cf32a48ea46e1583d6b1a81ab5765ef3', descricao:'Aqui vão entrar os painéis da operação. Os que a operação já criou serão integrados por aqui, um a um.', guia:'Logística e lotes. Pede a senha do setor.'},
-  {id:'rh',        nome:'RH',        restrito:true, sal:'pigatto-rh-v1:', senhaHash:'0c70788e4a5eb5a5abb3c96bc8da6415fc145de98e0e22f83e00103080424f49', descricao:'Setor em estruturação. Por conter dados pessoais de colaboradores (LGPD), a entrada é restrita.', guia:'Em estruturação. Acesso restrito, pede a senha do setor.'},
-  {id:'qualidade', nome:'QUALIDADE', restrito:true, sal:'pigatto-qualidade-v1:', senhaHash:'ceb9398b5297a71c9514e4a8e9c58734fbaef0653dad9d2396e445dab98ac907', descricao:'Setor em estruturação. Quando houver painéis da qualidade, eles aparecem no menu à esquerda.', guia:'Em estruturação. Pede a senha do setor.'},
-  {id:'compras',   nome:'COMPRAS',   restrito:true, sal:'pigatto-compras-v1:', senhaHash:'e39a1ac59964321d3b9ef9570865fcb0fc37b734625dff68df82fc354cfb3251', descricao:'Setor em estruturação. O dash Gestão de Compras já está ligado aqui; os próximos painéis entram ao lado dele.', guia:'Gestão de Compras e precificação. Pede a senha do setor.'},
+  {id:'operacao',  nome:'OPERAÇÃO',  restrito:true, sal:'pigatto-operacao-v1:', senhaHash:'0daa92fa188e7fe8ea006c0e9ef1b8f5cf32a48ea46e1583d6b1a81ab5765ef3', descricao:'Aqui vão entrar os painéis da operação. Os que a operação já criou serão integrados por aqui, um a um.', guia:'Logística e lotes.'},
+  {id:'rh',        nome:'RH',        restrito:true, sal:'pigatto-rh-v1:', senhaHash:'0c70788e4a5eb5a5abb3c96bc8da6415fc145de98e0e22f83e00103080424f49', descricao:'Setor em estruturação. Por conter dados pessoais de colaboradores (LGPD), a entrada é restrita.', guia:'Em estruturação.'},
+  {id:'qualidade', nome:'QUALIDADE', restrito:true, sal:'pigatto-qualidade-v1:', senhaHash:'ceb9398b5297a71c9514e4a8e9c58734fbaef0653dad9d2396e445dab98ac907', descricao:'Setor em estruturação. Quando houver painéis da qualidade, eles aparecem no menu à esquerda.', guia:'Em estruturação.'},
+  {id:'compras',   nome:'COMPRAS',   restrito:true, sal:'pigatto-compras-v1:', senhaHash:'e39a1ac59964321d3b9ef9570865fcb0fc37b734625dff68df82fc354cfb3251', descricao:'Setor em estruturação. O dash Gestão de Compras já está ligado aqui; os próximos painéis entram ao lado dele.', guia:'Gestão de Compras e precificação.'},
   {id:'ceo',       nome:'PAINEL CEO', descricao:'Área do Gabriel Pigatto. Ele entra com a senha que ele mesmo criou no primeiro acesso.', guia:'Área reservada ao Gabriel Pigatto.'},
-  {id:'minha',     nome:'MINHA ÁREA', direita:true, suave:true, soUsuarios:['thais']},   // aparece só para quem entrou como a Thais
+  {id:'minha',     nome:'MINHA ÁREA', direita:true, suave:true, soUsuarios:['thais','saenz','gpigatto']},   // área pessoal: só aparece para a Thais, o Gabriel Saenz e o Gabriel Pigatto
   {id:'geral',     nome:'GERAL',     direita:true, suave:true, guia:'Visão CSC: o resultado geral de vendas do mês.'},
   {id:'suporte',   nome:'SUPORTE',   direita:true, suave:true, guia:'Abra e acompanhe chamados para o time de operação.'},
   {id:'claude',    nome:'CLAUDE - PROJETOS', direita:true, suave:true, guia:'Projetos e ferramentas criados com o Claude.'}
@@ -40,8 +40,9 @@ window.ESFORCO_SETORES = [
 window.ESFORCO_MENU = [
   // LOBBY: a primeira tela depois do login (guia do painel, resultado da semana, destaques, OKRs e sugestões)
   {id:'lobby', setor:'lobby', nome:'Lobby', tipo:'painel', restrito:false},
-  // MINHA ÁREA (só a Thais): sugestões de melhoria enviadas pela equipe. O servidor também confere quem pode ler.
-  {id:'sugestoes', setor:'minha', nome:'Sugestões de melhoria', tipo:'painel', restrito:false},
+  // MINHA ÁREA: enviar recado à equipe (os 3) e sugestões de melhoria (só a Thais). O servidor também confere quem pode.
+  {id:'recados', setor:'minha', nome:'Enviar recado à equipe', tipo:'painel', restrito:false},
+  {id:'sugestoes', setor:'minha', nome:'Sugestões de melhoria', tipo:'painel', restrito:false, soUsuarios:['thais']},
 
   // ============================== GERAL (por enquanto só a Visão CSC) ==============================
   // PAINEL COMERCIAL - VISÃO CSC: resultado geral de vendas do mês (sem família), aberto SEM senha. É a página de entrada do dash.
