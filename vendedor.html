@@ -243,6 +243,8 @@ iframe.tat{width:100%;height:calc(100vh - 120px);min-height:900px;border:0;borde
 
 <script src="vendedores.js"></script>
 <script src="suporte.js"></script>
+<script src="pd_config.js"></script>
+<script src="esforco_menu.js"></script>
 <script>
 /* ============ CONFIGURAÇÃO ============ */
 const API_CHAMADOS = 'https://script.google.com/macros/s/AKfycbxAfTiOwt-qhyn3vjy-uhFkd7LiC-Jxb05xseGaq3PuLKBEZ310GwUx4G559MFHZg_Lug/exec';           // mesmo Apps Script da planilha do Tático
@@ -267,14 +269,22 @@ function mesmoNome(a, b){ // compara pelo primeiro e último nome
   return x.length < 2 || y.length < 2 || x[x.length-1] === y[y.length-1] || x.includes(y[y.length-1]) || y.includes(x[x.length-1]);
 }
 
-let V = null, D = null, VD = null, MESES_V = [], MES_V = null, TAB = 'crm', K = null;   // K = chave do link pessoal
+let V = null, D = null, VD = null, MESES_V = [], MES_V = null, TAB = 'crm', K = null, DASH = false;   // K = chave do link pessoal
 
 /* ---------------- quem é o vendedor ---------------- */
 async function sha256(t){ const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join(''); }
 async function identificar(){
   const p = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+  /* MEU PAINEL dentro do dash: a pessoa já entrou com a senha do dash; o servidor confere a chave e quem ela é */
+  const du = p.get('du'), dt = p.get('dt');
+  if (du && dt){
+    try { const api = (window.PD_CONFIG||{}).apiUrl; const r = await fetch(api, { method:'POST', body: JSON.stringify({ a:'lobby_ler', t: dt }), redirect:'follow' }); const j = await r.json();
+      if (j.ok && j.eu && j.eu.id === du){ const ref = (window.ESFORCO_USUARIOS||[]).find(x => x.id === du), v = ref && (window.VENDEDORES||[]).find(x => x.id === ref.ref); if (v){ DASH = true; return v; } } } catch(e){}
+    return null; }
   const k = p.get('k');
-  if (k) { const h = await sha256(k); const v = (window.VENDEDORES||[]).find(x => x.chave === h); if (v) { K = k; return v; } }
+  if (k) { const h = await sha256(k); const v = (window.VENDEDORES||[]).find(x => x.chave === h);
+    if (v){ if (window === window.top){ location.replace('esforco.html#inicio'); return 'redir'; }   /* o link pessoal agora abre o dash: INÍCIO > senha > LOBBY */
+            K = k; return v; } }
   return null;
 }
 function portao(msg){
@@ -727,6 +737,7 @@ async function iniciar(v){
   document.documentElement.style.setProperty('--fam', famCor);
   $('meFoto').src = v.foto; $('meFoto').alt = 'Foto de ' + v.nome; $('meNome').textContent = v.nome; $('meSetor').textContent = v.setor;
   { const hub = ehDoHub(v); $('btnAnuncios').classList.toggle('hidden', !hub); const an = $('tab-anuncios'); an.innerHTML = ''; delete an.dataset.ok; if (!hub && TAB === 'anuncios') abrirAba('crm'); }   // a aba Anúncios é só do Hub
+  { const aj = document.querySelector('.nav [data-tab=ajuste]'); if (aj) aj.classList.toggle('hidden', DASH); if (DASH && TAB === 'ajuste') abrirAba('crm'); }   // dentro do dash, o suporte é o botão SUPORTE do topo
   document.title = `Desempenho Comercial · ${v.nome}`;
   $('app').classList.remove('hidden');
   $('tab-crm').innerHTML = '<div class="card loading">Carregando os seus números…</div>';
@@ -749,6 +760,7 @@ function dentroDoDashLiberado(){ // aberto pelo menu do dash, depois de digitar 
 (async () => {
   if (!window.crypto || !crypto.subtle){ portao('Abra este link pelo endereço https:// (o navegador bloqueou a verificação do link).'); return; }
   const v = await identificar();
+  if (v === 'redir') return;
   if (v) iniciar(v);
   else if (dentroDoDashLiberado()) modoGestao(0);
   else portao('Este link não é válido ou está incompleto. Peça o seu link pessoal para a Thais Brito.');

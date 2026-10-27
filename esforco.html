@@ -615,6 +615,7 @@ function abrir(p){
   }
   ATUAL=p.id;
   if(SETORES){ var st=setorDe(p); ULTIMA[st]=p.id; if(st!==SETOR){ SETOR=st; montarSetores(); montarMenu(); } }
+  if(p.id==='meupainel') p.src=urlMeuPainel();
   if(p.tipo!=='painel'){ criarView(p); if(!p.novaAba&&!carregadas[p.id]){ $('#view-'+p.id+' iframe').src=p.src; carregadas[p.id]=1; } }  // só carrega depois da senha
   $$('.view').forEach(function(x){x.classList.toggle('active',x.id==='view-'+p.id);});
   $$('.nav button[data-view]').forEach(function(x){x.classList.toggle('active',x.getAttribute('data-view')===p.id||(!!p.abaGrupo&&x.getAttribute('data-view')===p.abaGrupo));});
@@ -687,7 +688,8 @@ montarUsuarios();
 montarSetores();
 montarMenu();
 var HASH_INICIAL=(location.hash||'').slice(1);
-if(!/^semana/.test(HASH_INICIAL)&&!usuarioAtual()) mostrarInicio();   // 1ª visita: quem é você? (só o link do e-mail do Gabriel, #semana, pula essa tela)
+if(HASH_INICIAL==='inicio'){ try{ history.replaceState(null,'',location.pathname); }catch(e){} mostrarInicio(); }   // link pessoal do vendedor: sempre começa pelo INÍCIO
+else if(!/^semana/.test(HASH_INICIAL)&&!usuarioAtual()) mostrarInicio();   // 1ª visita: quem é você? (só o link do e-mail do Gabriel, #semana, pula essa tela)
 // meses do "Relatório de Vendas": lê meses.json (quando o robô de faturamento fecha o mês, o item novo aparece sozinho)
 MENU_CFG.forEach(function(m){ if(m.tipo==='grupo'&&m.filhosDeMeses){
   fetch(m.filhosDeMeses,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(l){
@@ -735,10 +737,10 @@ function mostrarInicio(){
     USUARIOS.map(function(u){ return '<button class="pessoa" type="button" data-u="'+u.id+'">'+fotoHTML(u,'ft')+'<strong>'+esc2(u.nome)+'</strong><small>'+esc2(u.cargo)+'</small></button>'; }).join('')+
     '</div>'+(senhaAtiva()?'':'<button class="outro" type="button" data-u="">Não estou na lista: entrar mesmo assim</button>')+'</div>';
   el.classList.add('on'); window.scrollTo(0,0); }
-function escolherUsuario(id){ try{ if(id) localStorage.setItem('esf_usuario',id); else localStorage.removeItem('esf_usuario'); }catch(e){} $('#inicio').classList.remove('on'); montarSetores(); entrarSetor('lobby'); }
+function escolherUsuario(id){ try{ if(id) localStorage.setItem('esf_usuario',id); else localStorage.removeItem('esf_usuario'); }catch(e){} $('#inicio').classList.remove('on'); zerarMeuPainel(); montarSetores(); entrarSetor('lobby'); }
 /* senha de cada pessoa (criada no 1º acesso; guardada embaralhada no servidor): a chave vale 12 h neste navegador */
 function apiSenha(corpo){ return fetch(window.PD_CONFIG.apiUrl,{method:'POST',body:JSON.stringify(corpo),redirect:'follow'}).then(function(r){return r.json();}); }
-function entrouUsuario(id,horas,token){ try{ localStorage.setItem('esf_usuario',id); localStorage.setItem('esf_usr_exp',String(Date.now()+(horas||12)*3600000)); if(token) localStorage.setItem('esf_usr_token',token); }catch(e){} $('#inicio').classList.remove('on'); montarSetores(); entrarSetor('lobby'); }
+function entrouUsuario(id,horas,token){ try{ localStorage.setItem('esf_usuario',id); localStorage.setItem('esf_usr_exp',String(Date.now()+(horas||12)*3600000)); if(token) localStorage.setItem('esf_usr_token',token); }catch(e){} $('#inicio').classList.remove('on'); zerarMeuPainel(); montarSetores(); entrarSetor('lobby'); }
 function pedirSenhaUsuario(id){
   var u=USUARIOS.filter(function(x){return x.id===id;})[0]; if(!u) return; var el=$('#inicio');
   el.innerHTML='<div class="caixa" style="max-width:460px">'+fotoHTML(u,'ft2')+'<h1 style="margin-top:12px">Olá, '+esc2(u.nome.split(' ')[0])+'!</h1><p class="sub" id="sMsg">Conectando…</p><div id="sForm"></div><button class="outro" type="button" data-voltar="1">← Escolher outra pessoa</button></div>';
@@ -755,7 +757,7 @@ document.addEventListener('click',function(e){
   var v=e.target.closest&&e.target.closest('#inicio [data-voltar]'); if(v){ mostrarInicio(); return; }
   var b=e.target.closest&&e.target.closest('#inicio [data-u]'); if(!b) return; var id=b.getAttribute('data-u');
   if(!senhaAtiva()||!id){ escolherUsuario(id); return; }
-  var ua=usuarioAtual(); if(ua&&ua.id===id){ $('#inicio').classList.remove('on'); return; }
+  var ua=usuarioAtual(); if(ua&&ua.id===id){ $('#inicio').classList.remove('on'); entrarSetor('lobby'); return; }
   pedirSenhaUsuario(id); });
 
 function montarSetores(){
@@ -790,7 +792,11 @@ function entrarSetor(id){
   if(alvo.restrito&&!st.senhaHash&&!liberar()) return;     // se não digitar a senha, fica onde estava
   SETOR=id; montarSetores(); montarMenu(); abrir(alvo); }
 
-function podeVerSetor(st){ if(!st||!st.soUsuarios) return true; var u=usuarioAtual(); return !!(u&&st.soUsuarios.indexOf(u.id)>=0); }
+function ehVendedorUsuario(u){ var r=(window.ESFORCO_USUARIOS||[]).filter(function(x){return u&&x.id===u.id;})[0]; return !!(r&&r.fonte==='V'); }
+function podeVerSetor(st){ if(!st) return true; var u=usuarioAtual(); if(st.soVendedores) return ehVendedorUsuario(u); if(st.naoVendedores&&ehVendedorUsuario(u)) return false; if(!st.soUsuarios) return true; return !!(u&&st.soUsuarios.indexOf(u.id)>=0); }
+/* MEU PAINEL: o portal do vendedor aberto por dentro do dash; o portal confere no servidor (chave do dash) quem é a pessoa */
+function urlMeuPainel(){ var u=usuarioAtual(); if(!u||!ehVendedorUsuario(u)) return 'about:blank'; return 'vendedor.html#du='+encodeURIComponent(u.id)+'&dt='+encodeURIComponent(tokenDash()); }
+function zerarMeuPainel(){ carregadas['meupainel']=0; var f=document.querySelector('#view-meupainel iframe'); if(f) f.removeAttribute('src'); }
 /* ============================ LOBBY (1ª tela depois do login) ============================ */
 var LB={S:null,vendas:undefined,api:undefined,w:null,crm:null,pend:undefined,fi:0,timer:0,anim:false}, SUG_NOVAS=0;
 var EDITORES=['thais','saenz','gpigatto'];   // únicos que editam o LOBBY (o servidor confere de novo)
@@ -799,7 +805,7 @@ var VEIC_URL='https://script.google.com/a/macros/pigattodistribuidora.com.br/s/A
 var FERIADO_NOME={'01-01':'Confraternização Universal','04-21':'Tiradentes','05-01':'Dia do Trabalho','09-07':'Independência do Brasil','10-12':'Nossa Senhora Aparecida','11-02':'Finados','11-15':'Proclamação da República','11-20':'Consciência Negra','12-25':'Natal'};
 var DIA_SEM=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 var LB_ESTILO=[['#E3EDF8','#0B2A46'],['#FFF4CC','#F7B500'],['#FFFFFF','#C8202B']];   // fundos do guia: azul, amarelo e branco do Grupo Pigatto
-var LB_ICO={comercial:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',growthads:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',operacao:'<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',rh:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',qualidade:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',compras:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',ceo:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',geral:'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',suporte:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>',carro:'<path d="M3 13l2-5a2 2 0 0 1 2-1.5h10A2 2 0 0 1 19 8l2 5"/><rect x="2" y="13" width="20" height="5" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>'};
+var LB_ICO={comercial:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',growthads:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',operacao:'<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',meupainel:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',rh:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',qualidade:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',compras:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',ceo:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',geral:'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',suporte:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>',carro:'<path d="M3 13l2-5a2 2 0 0 1 2-1.5h10A2 2 0 0 1 19 8l2 5"/><rect x="2" y="13" width="20" height="5" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>'};
 function lbSvg(id,px){ return '<svg viewBox="0 0 24 24" width="'+(px||28)+'" height="'+(px||28)+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(LB_ICO[id]||'')+'</svg>'; }
 function tokenDash(){ try{ return localStorage.getItem('esf_usr_token')||''; }catch(e){ return ''; } }
 function apiLobby(corpo){ return fetch(window.PD_CONFIG.apiUrl,{method:'POST',body:JSON.stringify(Object.assign({t:tokenDash()},corpo)),redirect:'follow'}).then(function(r){return r.json();}); }
