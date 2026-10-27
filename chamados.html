@@ -189,7 +189,8 @@ details.redir summary{cursor:pointer;font-weight:700;color:var(--navy)}
 const API = 'https://script.google.com/macros/s/AKfycbxAfTiOwt-qhyn3vjy-uhFkd7LiC-Jxb05xseGaq3PuLKBEZ310GwUx4G559MFHZg_Lug/exec';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const EQ = window.SUPORTE || [], VS = window.VENDEDORES || [];
+const _ordNome = (a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });   // pessoas sempre em ordem alfabética (A–Z)
+const EQ = (window.SUPORTE || []).slice().sort(_ordNome), VS = (window.VENDEDORES || []).slice().sort(_ordNome);
 const quem = id => EQ.find(p => p.id === id) || {};
 const dt = s => s ? new Date(s).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '—';
 function dur(ms){ const h = Math.abs(ms) / 36e5; return h < 1 ? Math.round(h*60) + ' min' : h < 48 ? h.toFixed(h < 10 ? 1 : 0).replace('.', ',') + ' h' : Math.round(h/24) + ' dias'; }

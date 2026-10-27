@@ -296,7 +296,7 @@ function portao(msg){
     <p class="sub">${esc(msg)}</p><button class="btn" id="btGestao">Acesso da gestão</button><div id="gestaoLista" style="margin-top:14px"></div></div>`;
   $('btGestao').onclick = () => {
     if (prompt('Senha da gestão:') !== SENHA_GESTAO) { alert('Senha incorreta.'); return; }
-    $('gestaoLista').innerHTML = '<p class="sub">Pré-visualizar o portal de:</p>' + (window.VENDEDORES||[]).map((v,i) => `<button class="btn" style="margin:4px" data-i="${i}">${esc(v.nome)}</button>`).join('');
+    $('gestaoLista').innerHTML = '<p class="sub">Pré-visualizar o portal de:</p>' + (window.VENDEDORES||[]).map((v,i) => ({v,i})).sort((a,b) => a.v.nome.localeCompare(b.v.nome,'pt-BR',{sensitivity:'base'})).map(({v,i}) => `<button class="btn" style="margin:4px" data-i="${i}">${esc(v.nome)}</button>`).join('');   // ordem alfabética
     $('gestaoLista').querySelectorAll('[data-i]').forEach(b => b.onclick = () => { $('gate').classList.add('hidden'); modoGestao(+b.dataset.i); });
   };
 }
