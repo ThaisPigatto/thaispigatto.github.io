@@ -1,7 +1,7 @@
 /* FOTOS DA EQUIPE: vêm da pasta do Drive (pelo Apps Script) e trocam as fotos embutidas nas listas.
    Ficam 24 h guardadas no navegador. Se algo falhar, continuam as fotos que já estão nos arquivos. Carregar DEPOIS de suporte.js, vendedores.js, esforco_menu.js e pd_config.js. */
 (function () {
-  var KEY = 'pig_fotos_v1', MAPA = { thais: ['S', 'thais'], saenz: ['S', 'gabriel-saenz'], adrian: ['S', 'adrian'], franco: ['S', 'gabriel-franco'], siqueira: ['S', 'lucas-siqueira'], felipe: ['S', 'lucas-felipe'], gpigatto: ['U', 'gpigatto'], jfarias: ['V', 'jessica-farias'], mcardozo: ['V', 'maria-cardozo'], tiago: ['V', 'tiago-fruet'], wellington: ['V', 'wellington-azevedo'], mribeiro: ['V', 'marcelo-ribeiro'], jsantanna: ['V', 'jessica-santanna'], rhamayana: ['V', 'rhamayana'] };
+  var KEY = 'pig_fotos_v1', MAPA = { thais: ['S', 'thais'], saenz: ['S', 'gabriel-saenz'], adrian: ['S', 'adrian'], franco: ['S', 'gabriel-franco'], siqueira: ['S', 'lucas-siqueira'], felipe: ['S', 'lucas-felipe'], fernando: ['U', 'fernando'], gpigatto: ['U', 'gpigatto'], jfarias: ['V', 'jessica-farias'], mcardozo: ['V', 'maria-cardozo'], tiago: ['V', 'tiago-fruet'], wellington: ['V', 'wellington-azevedo'], mribeiro: ['V', 'marcelo-ribeiro'], jsantanna: ['V', 'jessica-santanna'], rhamayana: ['V', 'rhamayana'] };
   function lista(t) { return t === 'S' ? window.SUPORTE : t === 'V' ? window.VENDEDORES : window.ESFORCO_USUARIOS; }
   function aplicar(m) { Object.keys(MAPA).forEach(function (k) { if (!m[k]) return; (lista(MAPA[k][0]) || []).forEach(function (x) { if (x.id === MAPA[k][1]) x.foto = m[k]; }); }); }
   var c = null; try { c = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { }
