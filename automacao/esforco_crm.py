@@ -422,6 +422,31 @@ def anuncios_hub(cfg):
             return None
 
 
+def licitacoes_hub(cfg):
+    """Licitações do Hub registradas na planilha (aba "licitacoes", página licitacoes-hub.html). Devolve lista de {data, modalidade, objeto, prazo}
+    ou None se a planilha não estiver configurada. Se a leitura falhar, reaproveita as licitações do arquivo atual."""
+    url = cfg.get("hub", {}).get("anuncios_url")   # é o mesmo Apps Script dos anúncios
+    if not url:
+        return None
+    try:
+        sep = "&" if "?" in url else "?"
+        with urllib.request.urlopen(f"{url}{sep}licitacoes=1", timeout=60) as resp:
+            j = json.loads(resp.read().decode("utf-8"))
+        if not j.get("ok"):
+            raise ValueError(j.get("erro"))
+        print(f"Licitações do Hub na planilha: {len(j['licitacoes'])}")
+        return j["licitacoes"]
+    except Exception as e:
+        print(f"AVISO: não consegui ler as licitações do Hub na planilha ({e}) — mantendo as da última atualização")
+        try:
+            with open(SAIDA_JS, encoding="utf-8") as f:
+                txt = f.read()
+            ant = json.loads(txt[txt.index("{"):txt.rstrip().rstrip(";").rindex("}") + 1])
+            return [{"data": d} for d, regra, qtd in ant.get("hubRegistros", []) if regra == "licitacao" for _ in range(qtd)]
+        except Exception:
+            return None
+
+
 def _nome_cli(s):
     return re.sub(r"[^a-z0-9]", "", norm(s or ""))
 
@@ -464,7 +489,7 @@ def notas_sem_crm(vendas, opp_info, ultima_tarefa, cfg):
     return faltando, info
 
 
-def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None):
+def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None, licitacoes=None):
     """
     empresas = { 'matriz': {'lookups': {...}, 'oportunidades': [...], 'tarefas': [...]}, 'papeis': {...} }
     hoje     = datetime.date (data de hoje em São Paulo)
@@ -542,6 +567,8 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None):
             for regra, palavras in cfg["hub"].get("regras_texto", {}).items():
                 if regra == "anuncio" and anuncios is not None:
                     continue   # anúncios contam pela planilha de links (ver anuncios_hub)
+                if regra == "licitacao" and licitacoes is not None:
+                    continue   # licitações contam pela planilha de registros (ver licitacoes_hub)
                 if any(norm(p) in descr for p in palavras) and (info is None or info["fam"] in (None, "hub")):
                     hub_cont[(d_iso, regra)] += 1
             if info is None or info["fam"] is None or info["fam"] == "hub":
@@ -559,6 +586,11 @@ def montar_dados(empresas, cfg, vendas, hoje, agora_iso=None, anuncios=None):
             d_iso = str(a.get("data", ""))[:10]
             if inicio <= d_iso <= hoje_iso:
                 hub_cont[(d_iso, "anuncio")] += 1
+    if licitacoes is not None:   # cada licitação registrada na planilha = 1 licitação no dia da participação
+        for a in licitacoes:
+            d_iso = str(a.get("data", ""))[:10]
+            if inicio <= d_iso <= hoje_iso:
+                hub_cont[(d_iso, "licitacao")] += 1
     atividades = [[d, f, v, c, ti, qtd] for (d, f, v, c, ti), qtd in sorted(contagem.items())]
     hub_regs = [[d, r, qtd] for (d, r), qtd in sorted(hub_cont.items())]
 
@@ -799,7 +831,7 @@ def main():
         print(f"{emp}: {len(oportunidades)} oportunidades, {len(tarefas)} tarefas")
         empresas[emp] = {"lookups": lookups, "oportunidades": oportunidades, "tarefas": tarefas}
 
-    dados = montar_dados(empresas, cfg, vendas, hoje, anuncios=anuncios_hub(cfg))
+    dados = montar_dados(empresas, cfg, vendas, hoje, anuncios=anuncios_hub(cfg), licitacoes=licitacoes_hub(cfg))
     # trava de segurança: nunca sobrescreve o arquivo bom com um vazio
     if not dados["atividades"]:
         print("VALIDAÇÃO FALHOU: nenhuma atividade encontrada — esforco_data.js NÃO foi alterado.")
