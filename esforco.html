@@ -142,6 +142,23 @@
   .lb-fs{display:grid;gap:26px;max-width:780px;}
   .lb-fer.mini{background:#fff;border:2px solid var(--pg-verm);padding:16px 22px;flex-direction:row;align-items:center;gap:18px;flex-wrap:wrap;} .lb-fer.mini h3{font-size:15px;color:#16191F;width:100%;margin:0;} .lb-fer.mini .dt{font-size:34px;color:var(--pg-verm);margin:0;} .lb-fer.mini span{font-size:15px;color:#16191F;} .lb-fer.mini small{color:#5A6B7D;} .lb-fer.mini .em{background:var(--pg-verm);color:#fff;margin:0 0 0 auto;} .lb-fer.mini .lb-ph{color:#5A6B7D;}
   .lb-sug{background:#16191F;} .lb-sug h3{color:#fff;} .lb-sug small{color:rgba(255,255,255,.72);} .lb-sug-r label{color:#fff;} .lb-sug .lb-btn{background:var(--pg-verm);} .lb-sug .lb-btn:hover{background:#A91923;} .lb-sug .lb-vazio{color:rgba(255,255,255,.75);} .lb-sug .lb-msg{color:#FF9AA2;} .lb-sug .lb-msg.ok{color:#9BE3B5;}
+  /* ---------- SUAS TAREFAS (quadro simples, estilo ClickUp) ---------- */
+  .tf{--pg-verm:#C8202B;max-width:1180px;margin:0 auto;} .tf h2,.tf h3{font-family:'Space Grotesk','Inter',sans-serif;color:var(--navy);margin:0;}
+  .tf-top{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px;} .tf-top h2{font-size:24px;display:flex;align-items:center;gap:12px;} .tf-top h2::before{content:'';width:6px;height:26px;border-radius:3px;background:var(--pg-verm);}
+  .tf-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;} @media(max-width:900px){.tf-cols{grid-template-columns:1fr;}}
+  .tf-col{background:#F5F7FA;border:1px solid #E4EAF1;border-radius:18px;padding:14px;min-height:150px;transition:.15s;} .tf-col.over{background:#FDECEE;border-color:var(--pg-verm);}
+  .tf-ch{display:flex;align-items:center;gap:8px;font:800 12px 'Inter',sans-serif;letter-spacing:.7px;text-transform:uppercase;color:#5A6B7D;margin-bottom:12px;} .tf-ch i{width:10px;height:10px;border-radius:50%;background:var(--cc);display:inline-block;font-style:normal;} .tf-ch b{margin-left:auto;background:#fff;border:1px solid #E4EAF1;border-radius:999px;padding:1px 9px;color:var(--ink);font-size:11.5px;}
+  .tf-col.c1{--cc:#C8202B;} .tf-col.c2{--cc:#F7B500;} .tf-col.c3{--cc:#22A25B;}
+  .tf-card{background:#fff;border:1px solid #E4EAF1;border-left:5px solid var(--pc,#9AA9B8);border-radius:14px;padding:13px 15px;margin-bottom:11px;cursor:grab;box-shadow:0 2px 6px rgba(15,45,92,.05);transition:.15s;} .tf-card:hover{box-shadow:0 8px 18px rgba(15,45,92,.12);transform:translateY(-2px);} .tf-card.arr{opacity:.45;} .tf-card.alta{--pc:#C8202B;} .tf-card.media{--pc:#F7B500;} .tf-card.baixa{--pc:#9AA9B8;}
+  .tf-card b{display:block;font:600 15px 'Inter',sans-serif;color:var(--navy);line-height:1.4;} .tf-card.feita b{text-decoration:line-through;color:#7E8C9A;}
+  .tf-card p{margin:6px 0 0;font-size:13px;color:#5A6B7D;line-height:1.45;}
+  .tf-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;font-size:11.5px;}
+  .tf-tag{border-radius:999px;padding:3px 9px;font-weight:700;background:#EEF3FA;color:#355C8A;} .tf-tag.p-alta{background:#FDECEE;color:#C8202B;} .tf-tag.p-media{background:#FFF4CC;color:#8A6A00;} .tf-tag.p-baixa{background:#EEF1F4;color:#5A6B7D;}
+  .tf-tag.hoje{background:#FFF1DD;color:#B15F00;} .tf-tag.atraso{background:#C8202B;color:#fff;} .tf-de{color:#7E8C9A;margin-left:auto;}
+  .tf-acoes{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;} .tf-b{font:700 12px 'Inter',sans-serif;border:1px solid #E4EAF1;background:#fff;border-radius:9px;padding:5px 10px;cursor:pointer;color:var(--navy);} .tf-b:hover{border-color:var(--pg-verm);color:var(--pg-verm);} .tf-b.ok{background:#22A25B;border-color:#22A25B;color:#fff;} .tf-b.ok:hover{background:#1B8F4F;color:#fff;}
+  .tf-vazio{color:var(--muted);font-size:13px;padding:10px 4px;}
+  .tf-abas{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;} .tf-aba{font:700 13px 'Inter',sans-serif;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 16px;cursor:pointer;color:var(--navy);} .tf-aba.on{background:var(--pg-verm);border-color:var(--pg-verm);color:#fff;}
+  .tf-dica{font-size:12.5px;color:var(--muted);margin:0 0 16px;}
   /* ---------- barra de ABAS dentro de um item do menu (ex.: CRM) ---------- */
   .abas-wrap{margin-bottom:16px;}
   .abasbar{display:flex;gap:8px;flex-wrap:wrap;background:linear-gradient(90deg,var(--navy),var(--navy2));border-radius:20px;padding:10px 12px;}
@@ -339,6 +356,7 @@
   <section id="view-lobby" class="view"></section>
   <section id="view-sugestoes" class="view"></section>
   <section id="view-recados" class="view"></section>
+  <section id="view-tarefas" class="view"></section>
 
   <!-- ============================ ABA 1: GERAL (TV) ============================ -->
   <section id="view-tv" class="view active">
@@ -644,6 +662,7 @@ function abrir(p){
   if(p.id==='analise') renderAnalise();
   if(p.id==='lobby') renderLobby();
   if(p.id==='sugestoes') renderSugestoes();
+  if(p.id==='tarefas'){ pintarTarefas(); tfCarregar(true).then(pintarTarefas); }
   if(p.id==='recados') renderRecados();
   if(p.id==='semana') renderSemana(); else { try{history.replaceState(null,'','#'+p.id);}catch(e){} }
   window.scrollTo(0,0);
@@ -758,10 +777,10 @@ function mostrarInicio(){
     USUARIOS.map(function(u){ return '<button class="pessoa" type="button" data-u="'+u.id+'">'+fotoHTML(u,'ft')+'<strong>'+esc2(u.nome)+'</strong><small>'+esc2(u.cargo)+'</small></button>'; }).join('')+
     '</div>'+(senhaAtiva()?'':'<button class="outro" type="button" data-u="">Não estou na lista: entrar mesmo assim</button>')+'</div>';
   el.classList.add('on'); window.scrollTo(0,0); }
-function escolherUsuario(id){ try{ if(id) localStorage.setItem('esf_usuario',id); else localStorage.removeItem('esf_usuario'); }catch(e){} $('#inicio').classList.remove('on'); zerarMeuPainel(); montarSetores(); entrarSetor('lobby'); }
+function escolherUsuario(id){ try{ if(id) localStorage.setItem('esf_usuario',id); else localStorage.removeItem('esf_usuario'); }catch(e){} $('#inicio').classList.remove('on'); zerarMeuPainel(); zerarTarefas(); montarSetores(); entrarSetor('lobby'); }
 /* senha de cada pessoa (criada no 1º acesso; guardada embaralhada no servidor): a chave vale 12 h neste navegador */
 function apiSenha(corpo){ return fetch(window.PD_CONFIG.apiUrl,{method:'POST',body:JSON.stringify(corpo),redirect:'follow'}).then(function(r){return r.json();}); }
-function entrouUsuario(id,horas,token){ try{ localStorage.setItem('esf_usuario',id); localStorage.setItem('esf_usr_exp',String(Date.now()+(horas||12)*3600000)); if(token) localStorage.setItem('esf_usr_token',token); }catch(e){} $('#inicio').classList.remove('on'); zerarMeuPainel(); montarSetores(); entrarSetor('lobby'); }
+function entrouUsuario(id,horas,token){ try{ localStorage.setItem('esf_usuario',id); localStorage.setItem('esf_usr_exp',String(Date.now()+(horas||12)*3600000)); if(token) localStorage.setItem('esf_usr_token',token); }catch(e){} $('#inicio').classList.remove('on'); zerarMeuPainel(); zerarTarefas(); montarSetores(); entrarSetor('lobby'); }
 function pedirSenhaUsuario(id){
   var u=USUARIOS.filter(function(x){return x.id===id;})[0]; if(!u) return; var el=$('#inicio');
   el.innerHTML='<div class="caixa" style="max-width:460px">'+fotoHTML(u,'ft2')+'<h1 style="margin-top:12px">Olá, '+esc2(u.nome.split(' ')[0])+'!</h1><p class="sub" id="sMsg">Conectando…</p><div id="sForm"></div><button class="outro" type="button" data-voltar="1">← Escolher outra pessoa</button></div>';
@@ -817,7 +836,98 @@ function ehVendedorUsuario(u){ var r=(window.ESFORCO_USUARIOS||[]).filter(functi
 function podeVerSetor(st){ if(!st) return true; var u=usuarioAtual(); if(st.soVendedores) return ehVendedorUsuario(u); if(st.naoVendedores&&ehVendedorUsuario(u)) return false; if(!st.soUsuarios) return true; return !!(u&&st.soUsuarios.indexOf(u.id)>=0); }
 /* MEU PAINEL: o portal do vendedor aberto por dentro do dash; o portal confere no servidor (chave do dash) quem é a pessoa */
 function urlMeuPainel(){ var u=usuarioAtual(); if(!u||!ehVendedorUsuario(u)) return 'about:blank'; return 'vendedor.html#du='+encodeURIComponent(u.id)+'&dt='+encodeURIComponent(tokenDash()); }
+function zerarTarefas(){ TF.itens=null; TF.criadas=[]; TF.gestor=false; TF.aba='minhas'; }
 function zerarMeuPainel(){ carregadas['meupainel']=0; var f=document.querySelector('#view-meupainel iframe'); if(f) f.removeAttribute('src'); }
+
+/* ============================ SUAS TAREFAS (quadro simples) ============================ */
+var TF={itens:null,criadas:[],gestor:false,aba:'minhas',arr:null};
+var TF_COLS=[['a_fazer','A fazer','c1'],['fazendo','Fazendo','c2'],['feita','Feita','c3']];
+function tfApi(c){ return apiLobby(c); }
+function tfCarregar(forcar){
+  if(TF.itens&&!forcar) return Promise.resolve();
+  return tfApi({a:'tar_listar'}).then(function(r){ if(r&&r.ok){ TF.itens=r.minhas||[]; TF.criadas=r.criadas||[]; TF.gestor=!!r.gestor; } else { TF.itens=TF.itens||[]; } }).catch(function(){ TF.itens=TF.itens||[]; });
+}
+function tfPrazo(t){
+  if(!t.prazo) return '';
+  var d=Math.round((new Date(t.prazo+'T00:00:00')-new Date(hojeReal()+'T00:00:00'))/864e5);
+  if(t.estado==='feita') return '<span class="tf-tag">'+dm(t.prazo)+'</span>';
+  if(d<0) return '<span class="tf-tag atraso">venceu há '+(-d)+(d===-1?' dia':' dias')+'</span>';
+  if(d===0) return '<span class="tf-tag hoje">vence hoje</span>';
+  if(d<=7) return '<span class="tf-tag hoje">em '+d+(d===1?' dia':' dias')+'</span>';
+  return '<span class="tf-tag">'+dm(t.prazo)+'</span>';
+}
+function tfCard(t,minha){
+  var cl=(t.prioridade==='Alta'?'alta':t.prioridade==='Baixa'?'baixa':'media');
+  var acoes=minha?('<div class="tf-acoes">'+(t.estado!=='feita'?'<button class="tf-b ok" data-tf="feita" data-id="'+t.id+'">✓ Concluir</button>':'<button class="tf-b" data-tf="a_fazer" data-id="'+t.id+'">Reabrir</button>')+(t.estado==='a_fazer'?'<button class="tf-b" data-tf="fazendo" data-id="'+t.id+'">Começar</button>':'')+'</div>')
+    :('<div class="tf-acoes"><button class="tf-b" data-tf="apagar" data-id="'+t.id+'">Apagar</button></div>');
+  var quem=minha?('de '+esc2(t.deNome)):('para '+esc2(nomeUsuario(t.para)));
+  return '<div class="tf-card '+cl+(t.estado==='feita'?' feita':'')+'" draggable="'+(minha?'true':'false')+'" data-id="'+t.id+'"><b>'+esc2(t.texto)+'</b>'+(t.detalhe?'<p>'+esc2(t.detalhe)+'</p>':'')+
+    '<div class="tf-meta"><span class="tf-tag p-'+cl+'">'+esc2(t.prioridade)+'</span>'+tfPrazo(t)+'<span class="tf-de">'+quem+'</span></div>'+acoes+'</div>';
+}
+function nomeUsuario(id){ var u=USUARIOS.filter(function(x){return x.id===id;})[0]; return u?u.nome:id; }
+function tfQuadro(lista,minha){
+  return '<div class="tf-cols">'+TF_COLS.map(function(c){
+    var its=lista.filter(function(t){ return t.estado===c[0]; });
+    return '<div class="tf-col '+c[2]+'" data-col="'+c[0]+'"><div class="tf-ch"><i></i>'+c[1]+'<b>'+its.length+'</b></div>'+
+      (its.length?its.map(function(t){ return tfCard(t,minha); }).join(''):'<div class="tf-vazio">Nada aqui.</div>')+'</div>'; }).join('')+'</div>';
+}
+function pintarTarefas(){
+  var el=$('#view-tarefas'); if(!el) return;
+  if(TF.itens===null){ el.innerHTML='<div class="tf"><div class="tf-top"><h2>Suas tarefas</h2></div><div class="lb-vazio">Carregando…</div></div>'; return; }
+  var ua=usuarioAtual(), gest=TF.gestor, lista=TF.aba==='criadas'?TF.criadas:TF.itens, minha=TF.aba!=='criadas';
+  el.innerHTML='<div class="tf"><div class="tf-top"><h2>Suas tarefas</h2>'+(gest?'<button class="lb-btn" data-tf="nova">＋ Criar tarefa para usuários</button>':'')+'</div>'+
+    (gest?'<div class="tf-abas"><button class="tf-aba'+(TF.aba==='minhas'?' on':'')+'" data-tf="aba" data-v="minhas">Minhas tarefas ('+TF.itens.length+')</button><button class="tf-aba'+(TF.aba==='criadas'?' on':'')+'" data-tf="aba" data-v="criadas">Que eu deleguei ('+TF.criadas.length+')</button></div>':'')+
+    '<p class="tf-dica">'+(minha?'Arraste os cartões entre as colunas, ou use os botões. Quem pediu a tarefa recebe um e-mail quando você concluir.':'Tarefas que você criou para a equipe. O acompanhamento é feito por quem recebeu.')+'</p>'+
+    tfQuadro(lista,minha)+'</div>';
+  if(minha) tfArrastar();
+}
+function tfArrastar(){
+  var el=$('#view-tarefas');
+  el.querySelectorAll('.tf-card[draggable=true]').forEach(function(c){
+    c.addEventListener('dragstart',function(e){ TF.arr=c.dataset.id; c.classList.add('arr'); try{ e.dataTransfer.setData('text/plain',c.dataset.id); e.dataTransfer.effectAllowed='move'; }catch(x){} });
+    c.addEventListener('dragend',function(){ c.classList.remove('arr'); TF.arr=null; });
+  });
+  el.querySelectorAll('.tf-col').forEach(function(col){
+    col.addEventListener('dragover',function(e){ e.preventDefault(); col.classList.add('over'); });
+    col.addEventListener('dragleave',function(){ col.classList.remove('over'); });
+    col.addEventListener('drop',function(e){ e.preventDefault(); col.classList.remove('over'); var id=TF.arr||((e.dataTransfer&&e.dataTransfer.getData('text/plain'))||''); if(id) tfMudar(id,col.dataset.col); });
+  });
+}
+function tfMudar(id,estado){
+  var t=(TF.itens||[]).filter(function(x){return x.id===id;})[0]; if(!t||t.estado===estado) return;
+  t.estado=estado; t.feitaEm=estado==='feita'?new Date().toISOString():''; pintarTarefas();   // mostra na hora e confirma com o servidor
+  tfApi({a:'tar_estado',idTar:id,estado:estado}).then(function(r){ if(r&&r.ok){ TF.itens=r.minhas||[]; TF.criadas=r.criadas||[]; } pintarTarefas(); }).catch(function(){ tfCarregar(true).then(pintarTarefas); });
+}
+function tfModalNova(){
+  var ops=lbListaPessoas([]);   // já vem em ordem alfabética
+  lbModal('<h3>Criar tarefa para usuários</h3><label>O que precisa ser feito<textarea id="tfTx" maxlength="200" style="min-height:70px" placeholder="Ex.: Enviar a proposta para o cliente X"></textarea></label>'+
+    '<label>Detalhes (opcional)<textarea id="tfDe" maxlength="600" style="min-height:60px"></textarea></label>'+
+    '<label>Para quem<div class="lb-checks" id="tfQuem">'+ops+'</div></label>'+
+    '<label>Prazo (opcional)<input type="date" class="lb-in" id="tfPz" min="'+hojeReal()+'"></label>'+
+    '<label>Prioridade<select id="tfPr"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></label>'+
+    '<div class="lb-mb"><button class="lb-btn alt" data-lbm="x">Cancelar</button><button class="lb-btn" data-tf="salvar">Criar e avisar por e-mail</button></div><div class="lb-msg" id="tfMsg"></div>');
+}
+function tfClique(e){
+  var b=e.target.closest&&e.target.closest('[data-tf]'); if(!b) return; var a=b.dataset.tf, id=b.dataset.id;
+  if(a==='aba'){ TF.aba=b.dataset.v; pintarTarefas(); return; }
+  if(a==='nova'){ tfModalNova(); return; }
+  if(a==='salvar'){
+    var tx=($('#tfTx').value||'').trim(), msg=$('#tfMsg'); msg.className='lb-msg';
+    var para=Array.prototype.slice.call(document.querySelectorAll('#tfQuem input:checked')).map(function(c){return c.value;});
+    if(tx.length<3){ msg.textContent='Escreva a tarefa.'; return; }
+    if(!para.length){ msg.textContent='Escolha pelo menos uma pessoa.'; return; }
+    b.disabled=true; b.textContent='Criando…';
+    tfApi({a:'tar_criar',para:para,texto:tx,detalhe:$('#tfDe').value,prazo:$('#tfPz').value,prioridade:$('#tfPr').value}).then(function(r){
+      b.disabled=false; b.textContent='Criar e avisar por e-mail';
+      if(r&&r.ok){ TF.itens=r.minhas||[]; TF.criadas=r.criadas||[]; TF.aba='criadas'; lbFecha(); pintarTarefas(); }
+      else { msg.textContent=(r&&r.erro)||'Não foi possível criar.'; }
+    }).catch(function(){ b.disabled=false; b.textContent='Criar e avisar por e-mail'; msg.textContent='Sem conexão.'; });
+    return; }
+  if(a==='apagar'){ if(!confirm('Apagar esta tarefa?')) return; tfApi({a:'tar_apagar',idTar:id}).then(function(r){ if(r&&r.ok){ TF.itens=r.minhas||[]; TF.criadas=r.criadas||[]; } pintarTarefas(); }); return; }
+  if(a==='feita'||a==='fazendo'||a==='a_fazer'){ tfMudar(id,a); return; }
+}
+document.addEventListener('click',tfClique);
+
 /* ============================ LOBBY (1ª tela depois do login) ============================ */
 var LB={S:null,vendas:undefined,api:undefined,w:null,crm:null,pend:undefined,fi:0,mi:0,timer:0,anim:false}, SUG_NOVAS=0;
 var EDITORES=['thais','saenz','gpigatto'];   // únicos que editam o LOBBY (o servidor confere de novo)
@@ -826,7 +936,7 @@ var VEIC_URL='https://script.google.com/a/macros/pigattodistribuidora.com.br/s/A
 var FERIADO_NOME={'01-01':'Confraternização Universal','04-21':'Tiradentes','05-01':'Dia do Trabalho','09-07':'Independência do Brasil','10-12':'Nossa Senhora Aparecida','11-02':'Finados','11-15':'Proclamação da República','11-20':'Consciência Negra','12-25':'Natal'};
 var DIA_SEM=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 var LB_ESTILO=[['#E3EDF8','#0B2A46'],['#FFF4CC','#F7B500'],['#FFFFFF','#C8202B']];   // fundos do guia: azul, amarelo e branco do Grupo Pigatto
-var LB_ICO={comercial:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',growthads:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',operacao:'<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',meupainel:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',rh:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',qualidade:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',compras:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',ceo:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',geral:'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',suporte:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>',carro:'<path d="M3 13l2-5a2 2 0 0 1 2-1.5h10A2 2 0 0 1 19 8l2 5"/><rect x="2" y="13" width="20" height="5" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>'};
+var LB_ICO={comercial:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',growthads:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',operacao:'<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',meupainel:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',tarefas:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',rh:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',qualidade:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',compras:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',ceo:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',geral:'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',suporte:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>',carro:'<path d="M3 13l2-5a2 2 0 0 1 2-1.5h10A2 2 0 0 1 19 8l2 5"/><rect x="2" y="13" width="20" height="5" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>'};
 function lbSvg(id,px){ return '<svg viewBox="0 0 24 24" width="'+(px||28)+'" height="'+(px||28)+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(LB_ICO[id]||'')+'</svg>'; }
 function tokenDash(){ try{ return localStorage.getItem('esf_usr_token')||''; }catch(e){ return ''; } }
 function apiLobby(corpo){ return fetch(window.PD_CONFIG.apiUrl,{method:'POST',body:JSON.stringify(Object.assign({t:tokenDash()},corpo)),redirect:'follow'}).then(function(r){return r.json();}); }
