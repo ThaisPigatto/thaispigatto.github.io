@@ -1,0 +1,55 @@
+name: Diagnostico Filial SC (somente leitura)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ler etapas, vendedores e pedidos da SC
+        env:
+          K: ${{ secrets.OMIE_SC_APP_KEY }}
+          S: ${{ secrets.OMIE_SC_APP_SECRET }}
+        run: |
+          python3 - <<'EOF'
+          import os, json, time, urllib.request
+          K, S = os.environ["K"].strip(), os.environ["S"].strip()
+          if not K or not S:
+              raise SystemExit("ERRO: secrets OMIE_SC_APP_KEY / OMIE_SC_APP_SECRET vazios.")
+          def call(path, nome, param):
+              body = json.dumps({"call": nome, "app_key": K, "app_secret": S, "param": [param]}).encode()
+              req = urllib.request.Request("https://app.omie.com.br/api/v1/" + path + "/", data=body,
+                                           headers={"Content-Type": "application/json"})
+              for t in range(5):
+                  try:
+                      with urllib.request.urlopen(req, timeout=60) as r:
+                          return json.load(r)
+                  except urllib.error.HTTPError as e:
+                      txt = e.read().decode(errors="ignore")
+                      if "5113" in txt: return {}
+                      if t == 4: print("ERRO", nome, txt[:300]); return {}
+                  time.sleep(3)
+          print("=== ETAPAS DE FATURAMENTO (codigo -> nome) ===")
+          r = call("produtos/etapafat", "ListarEtapasFaturamento", {"pagina": 1, "registros_por_pagina": 50})
+          for op in r.get("cadastros", []):
+              print("Operacao:", op.get("cCodOperacao"), op.get("cDescOperacao"))
+              for e in op.get("etapas", []):
+                  print("   ", e.get("cCodigo"), "|", e.get("cDescricao"), "|", e.get("cDescrPadrao"))
+          time.sleep(1)
+          print("\n=== VENDEDORES ===")
+          r = call("geral/vendedores", "ListarVendedores", {"pagina": 1, "registros_por_pagina": 100})
+          for v in r.get("cadastro", []):
+              print("   ", v.get("codigo"), "|", v.get("nome"), "| inativo:", v.get("inativo"))
+          time.sleep(1)
+          print("\n=== PEDIDOS (numero | etapa | cancelado | faturado | vendedor | valor mercadoria) ===")
+          r = call("produtos/pedido", "ListarPedidos", {"pagina": 1, "registros_por_pagina": 100, "apenas_importado_api": "N"})
+          for p in r.get("pedido_venda_produto", []):
+              c = p.get("cabecalho", {}); info = p.get("infoCadastro", {})
+              tot = p.get("total_pedido", {}).get("valor_mercadorias")
+              print("   ", c.get("numero_pedido"), "|", c.get("etapa"), "| canc:", info.get("cancelado"),
+                    "| fat:", info.get("faturado"), "| vend:", p.get("informacoes_adicionais", {}).get("codVend"), "|", tot)
+          EOF
