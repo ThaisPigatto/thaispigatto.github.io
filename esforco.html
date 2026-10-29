@@ -887,7 +887,7 @@ function ehVendedorUsuario(u){ var r=(window.ESFORCO_USUARIOS||[]).filter(functi
 function podeVerSetor(st){ if(!st) return true; var u=usuarioAtual(); if(st.soVendedores) return ehVendedorUsuario(u); if(st.naoVendedores&&ehVendedorUsuario(u)) return false; if(st.acesso==='todos') return true; if(Array.isArray(st.acesso)) return !!(u&&st.acesso.indexOf(u.id)>=0); if(!st.soUsuarios) return true; return !!(u&&st.soUsuarios.indexOf(u.id)>=0); }
 /* MEU PAINEL: o portal do vendedor aberto por dentro do dash; o portal confere no servidor (chave do dash) quem é a pessoa */
 function urlMeuPainel(){ var u=usuarioAtual(); if(!u||!ehVendedorUsuario(u)) return 'about:blank'; return 'vendedor.html#du='+encodeURIComponent(u.id)+'&dt='+encodeURIComponent(tokenDash()); }
-function zerarTarefas(){ TF.itens=null; TF.criadas=[]; TF.gestor=false; TF.aba='minhas'; TF.vendoDe=null; TF.outrasTarefas=null; }
+function zerarTarefas(){ TF.podePara=null; TF.itens=null; TF.criadas=[]; TF.gestor=false; TF.aba='minhas'; TF.vendoDe=null; TF.outrasTarefas=null; }
 function zerarMeuPainel(){ carregadas['meupainel']=0; var f=document.querySelector('#view-meupainel iframe'); if(f) f.removeAttribute('src'); }
 
 /* ============================ SUAS TAREFAS (quadro simples) ============================ */
@@ -896,7 +896,7 @@ var TF_COLS=[['a_fazer','A fazer','c1'],['fazendo','Fazendo','c2'],['feita','Fei
 function tfApi(c){ return apiLobby(c); }
 function tfCarregar(forcar){
   if(TF.itens&&!forcar) return Promise.resolve();
-  return tfApi({a:'tar_listar'}).then(function(r){ if(r&&r.ok){ TF.itens=r.minhas||[]; TF.criadas=r.criadas||[]; TF.gestor=!!r.gestor; } else { TF.itens=TF.itens||[]; } }).catch(function(){ TF.itens=TF.itens||[]; });
+  return tfApi({a:'tar_listar'}).then(function(r){ if(r&&r.ok){ TF.itens=r.minhas||[]; TF.criadas=r.criadas||[]; TF.gestor=!!r.gestor; TF.podePara=Array.isArray(r.podePara)?r.podePara:null; } else { TF.itens=TF.itens||[]; } }).catch(function(){ TF.itens=TF.itens||[]; });
 }
 function tfPrazo(t){
   if(!t.prazo) return '';
@@ -976,7 +976,7 @@ function tfMudar(id,estado){
   tfApi({a:'tar_estado',idTar:id,estado:estado}).then(function(r){ if(r&&r.ok){ TF.itens=r.minhas||[]; TF.criadas=r.criadas||[]; } pintarTarefas(); }).catch(function(){ tfCarregar(true).then(pintarTarefas); });
 }
 function tfModalNova(){
-  var ops=lbListaPessoas([]);   // já vem em ordem alfabética
+  var ops=lbListaPessoas([],TF.podePara);   // já vem em ordem alfabética; delegação restrita mostra só as pessoas liberadas pelo servidor
   lbModal('<h3>Criar tarefa para usuários</h3><label>O que precisa ser feito<textarea id="tfTx" maxlength="200" style="min-height:70px" placeholder="Ex.: Enviar a proposta para o cliente X"></textarea></label>'+
     '<label>Detalhes (opcional)<textarea id="tfDe" maxlength="600" style="min-height:60px"></textarea></label>'+
     '<label>Para quem<div class="lb-checks" id="tfQuem">'+ops+'</div></label>'+
@@ -1138,7 +1138,7 @@ function renderLobby(){
     apiLobby({a:'lobby_pendentes'}).then(function(r){ LB.pend=r.ok?r:null; repintarLobby(); }).catch(function(){}); } }
 function lbModal(html){ var m=document.getElementById('lbModal'); if(!m){ m=document.createElement('div'); m.id='lbModal'; document.body.appendChild(m); m.addEventListener('click',function(e){ if(e.target===m||e.target.closest('[data-lbm="x"]')) m.classList.remove('on'); }); } m.innerHTML='<div class="lb-mbox">'+html+'</div>'; m.classList.add('on'); }
 function lbFecha(){ var m=document.getElementById('lbModal'); if(m) m.classList.remove('on'); }
-function lbListaPessoas(pr){ return USUARIOS.map(function(u){ return '<label class="lb-chk"><input type="checkbox" value="'+u.id+'"'+(pr&&pr.indexOf(u.id)>=0?' checked':'')+'> '+esc2(u.nome)+'</label>'; }).join(''); }
+function lbListaPessoas(pr,so){ return USUARIOS.filter(function(u){ return !so||so.indexOf(u.id)>=0; }).map(function(u){ return '<label class="lb-chk"><input type="checkbox" value="'+u.id+'"'+(pr&&pr.indexOf(u.id)>=0?' checked':'')+'> '+esc2(u.nome)+'</label>'; }).join(''); }
 document.addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('[data-lb]'); if(!b) return; var a=b.getAttribute('data-lb');
   if(a==='ir'){ entrarSetor(b.getAttribute('data-id')); return; }
