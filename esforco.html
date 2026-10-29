@@ -46,7 +46,7 @@
   .setores button:hover{background:rgba(255,255,255,.22);}
   .setores button.on{background:#F7941D;color:#fff;box-shadow:0 6px 16px rgba(247,148,29,.5);}
   .setores .dir{margin-left:auto;display:flex;gap:8px;flex:none;}
-  @media (max-width:1400px){ .setores button{padding:10px 8px;font-size:11px;letter-spacing:.2px;} .setores .dir{gap:5px;} .setores button.chip-user{padding:4px 10px 4px 4px;} .setores button.chip-user em{display:none;} }
+  @media (max-width:1400px){ .setores button{padding:10px 8px;font-size:11px;letter-spacing:.2px;} .setores .dir{gap:5px;} .setores button.chip-user{padding:4px 12px 4px 4px;} .setores button.chip-user .ft{width:36px;height:36px;} .setores button.chip-user em{display:none;} }
   .setores button.suave{background:transparent;border:1px solid rgba(255,255,255,.32);font-weight:700;}
   .setores button.suave.on{background:#F7941D;border-color:#F7941D;}
   .nav .nav-setor{font:800 11px 'Inter',sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#F7B955;margin:2px 4px 10px;}
@@ -69,8 +69,8 @@
   .inicio .sBtn{font:700 15px 'Inter',sans-serif;border:0;border-radius:12px;padding:12px 28px;background:var(--navy);color:#fff;cursor:pointer;} .inicio .sBtn:disabled{opacity:.55;cursor:wait;}
   .inicio .outro{margin-top:26px;background:none;border:0;color:var(--blue);cursor:pointer;font:600 13px 'Inter',sans-serif;text-decoration:underline;}
   .setores button.inicio-btn{background:rgba(255,255,255,.16);margin-right:6px;}
-  .setores button.chip-user{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;text-transform:none;letter-spacing:0;font-weight:700;background:rgba(255,255,255,.1);}
-  .setores button.chip-user .ft{width:30px;height:30px;border-radius:50%;background:#7C93AB center/cover no-repeat;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;}
+  .setores button.chip-user{display:flex;align-items:center;gap:10px;padding:5px 16px 5px 5px;text-transform:none;letter-spacing:0;font-weight:700;font-size:14px;background:rgba(255,255,255,.1);}
+  .setores button.chip-user .ft{width:42px;height:42px;border-radius:50%;background:#7C93AB center/cover no-repeat;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;}
   .setores button.chip-user em{font-style:normal;font-weight:500;font-size:11px;opacity:.75;}
   /* ---------- LOBBY (tema Grupo Pigatto: azul, amarelo, branco e vermelho) ---------- */
   .lb{--pg-azul:#0B2A46;--pg-azul2:#1E6FB8;--pg-amarelo:#F7B500;--pg-verm:#C8202B;max-width:1180px;margin:0 auto;} .lb h1,.lb h2,.lb h3{font-family:'Space Grotesk','Inter',sans-serif;color:var(--navy);margin:0;}
@@ -701,7 +701,7 @@ function montarMenu(){
       fs.forEach(function(f){ var b=document.createElement('button'); b.textContent=f.nome+(f.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',f.id); if(f.id===ATUAL) b.className='active'; b.addEventListener('click',function(){abrir(f);}); box.appendChild(b); });
     } else if(m.tipo==='painel'||m.tipo==='alias'||temSrc(m)){
       if(m.escondido) return;   // só aparece dentro da barra de abas (ou por link)
-      if(m.soUsuarios&&!podeVerSetor(m)) return;   // ex.: Sugestões de melhoria só para a Thais
+      if((m.soUsuarios||m.acesso)&&!podeVerSetor(m)) return;   // ex.: Sugestões de melhoria só para a Thais
       if(m.oculto&&!unlocked) return;     // seção só por link (aparece no menu depois que a senha for digitada)
       var b=document.createElement('button'); b.textContent=m.nome+(m.restrito&&!unlocked?' 🔒':''); b.setAttribute('data-view',m.id); if(m.id===ATUAL||(PA&&PA.abaGrupo===m.id)) b.className='active'; if(m.destaque) b.classList.add('destaque'); b.addEventListener('click',function(){abrir(m);}); nav.appendChild(b); if(!m.oculto) qtd++;
     }
@@ -833,14 +833,14 @@ function entrarSetor(id){
   SETOR=id; montarSetores(); montarMenu(); abrir(alvo); }
 
 function ehVendedorUsuario(u){ var r=(window.ESFORCO_USUARIOS||[]).filter(function(x){return u&&x.id===u.id;})[0]; return !!(r&&r.fonte==='V'); }
-function podeVerSetor(st){ if(!st) return true; var u=usuarioAtual(); if(st.soVendedores) return ehVendedorUsuario(u); if(st.naoVendedores&&ehVendedorUsuario(u)) return false; if(!st.soUsuarios) return true; return !!(u&&st.soUsuarios.indexOf(u.id)>=0); }
+function podeVerSetor(st){ if(!st) return true; var u=usuarioAtual(); if(st.soVendedores) return ehVendedorUsuario(u); if(st.naoVendedores&&ehVendedorUsuario(u)) return false; if(st.acesso==='todos') return true; if(Array.isArray(st.acesso)) return !!(u&&st.acesso.indexOf(u.id)>=0); if(!st.soUsuarios) return true; return !!(u&&st.soUsuarios.indexOf(u.id)>=0); }
 /* MEU PAINEL: o portal do vendedor aberto por dentro do dash; o portal confere no servidor (chave do dash) quem é a pessoa */
 function urlMeuPainel(){ var u=usuarioAtual(); if(!u||!ehVendedorUsuario(u)) return 'about:blank'; return 'vendedor.html#du='+encodeURIComponent(u.id)+'&dt='+encodeURIComponent(tokenDash()); }
-function zerarTarefas(){ TF.itens=null; TF.criadas=[]; TF.gestor=false; TF.aba='minhas'; }
+function zerarTarefas(){ TF.itens=null; TF.criadas=[]; TF.gestor=false; TF.aba='minhas'; TF.vendoDe=null; TF.outrasTarefas=null; }
 function zerarMeuPainel(){ carregadas['meupainel']=0; var f=document.querySelector('#view-meupainel iframe'); if(f) f.removeAttribute('src'); }
 
 /* ============================ SUAS TAREFAS (quadro simples) ============================ */
-var TF={itens:null,criadas:[],gestor:false,aba:'minhas',arr:null};
+var TF={itens:null,criadas:[],gestor:false,aba:'minhas',arr:null,vendoDe:null,outrasTarefas:null};
 var TF_COLS=[['a_fazer','A fazer','c1'],['fazendo','Fazendo','c2'],['feita','Feita','c3']];
 function tfApi(c){ return apiLobby(c); }
 function tfCarregar(forcar){
@@ -856,31 +856,57 @@ function tfPrazo(t){
   if(d<=7) return '<span class="tf-tag hoje">em '+d+(d===1?' dia':' dias')+'</span>';
   return '<span class="tf-tag">'+dm(t.prazo)+'</span>';
 }
-function tfCard(t,minha){
+function tfCard(t,minha,soLeitura){
   var cl=(t.prioridade==='Alta'?'alta':t.prioridade==='Baixa'?'baixa':'media');
-  var acoes=minha?('<div class="tf-acoes">'+(t.estado!=='feita'?'<button class="tf-b ok" data-tf="feita" data-id="'+t.id+'">✓ Concluir</button>':'<button class="tf-b" data-tf="a_fazer" data-id="'+t.id+'">Reabrir</button>')+(t.estado==='a_fazer'?'<button class="tf-b" data-tf="fazendo" data-id="'+t.id+'">Começar</button>':'')+'</div>')
-    :('<div class="tf-acoes"><button class="tf-b" data-tf="apagar" data-id="'+t.id+'">Apagar</button></div>');
+  var acoes=soLeitura?'':(minha?('<div class="tf-acoes">'+(t.estado!=='feita'?'<button class="tf-b ok" data-tf="feita" data-id="'+t.id+'">✓ Concluir</button>':'<button class="tf-b" data-tf="a_fazer" data-id="'+t.id+'">Reabrir</button>')+(t.estado==='a_fazer'?'<button class="tf-b" data-tf="fazendo" data-id="'+t.id+'">Começar</button>':'')+'</div>')
+    :('<div class="tf-acoes"><button class="tf-b" data-tf="apagar" data-id="'+t.id+'">Apagar</button></div>'));
   var quem=minha?('de '+esc2(t.deNome)):('para '+esc2(nomeUsuario(t.para)));
-  return '<div class="tf-card '+cl+(t.estado==='feita'?' feita':'')+'" draggable="'+(minha?'true':'false')+'" data-id="'+t.id+'"><b>'+esc2(t.texto)+'</b>'+(t.detalhe?'<p>'+esc2(t.detalhe)+'</p>':'')+
+  return '<div class="tf-card '+cl+(t.estado==='feita'?' feita':'')+'" draggable="'+((minha&&!soLeitura)?'true':'false')+'" data-id="'+t.id+'"><b>'+esc2(t.texto)+'</b>'+(t.detalhe?'<p>'+esc2(t.detalhe)+'</p>':'')+
     '<div class="tf-meta"><span class="tf-tag p-'+cl+'">'+esc2(t.prioridade)+'</span>'+tfPrazo(t)+'<span class="tf-de">'+quem+'</span></div>'+acoes+'</div>';
 }
 function nomeUsuario(id){ var u=USUARIOS.filter(function(x){return x.id===id;})[0]; return u?u.nome:id; }
-function tfQuadro(lista,minha){
+function tfQuadro(lista,minha,soLeitura){
   return '<div class="tf-cols">'+TF_COLS.map(function(c){
     var its=lista.filter(function(t){ return t.estado===c[0]; });
     return '<div class="tf-col '+c[2]+'" data-col="'+c[0]+'"><div class="tf-ch"><i></i>'+c[1]+'<b>'+its.length+'</b></div>'+
-      (its.length?its.map(function(t){ return tfCard(t,minha); }).join(''):'<div class="tf-vazio">Nada aqui.</div>')+'</div>'; }).join('')+'</div>';
+      (its.length?its.map(function(t){ return tfCard(t,minha,soLeitura); }).join(''):'<div class="tf-vazio">Nada aqui.</div>')+'</div>'; }).join('')+'</div>';
 }
+function ehAdminTarefas(uid){ return ['thais','saenz','gpigatto','fernando'].indexOf(uid)>=0; }
 function pintarTarefas(){
   var el=$('#view-tarefas'); if(!el) return;
   if(TF.itens===null){ el.innerHTML='<div class="tf"><div class="tf-top"><h2>Suas tarefas</h2></div><div class="lb-vazio">Carregando…</div></div>'; return; }
-  var ua=usuarioAtual(), gest=TF.gestor, lista=TF.aba==='criadas'?TF.criadas:TF.itens, minha=TF.aba!=='criadas';
+  var ua=usuarioAtual(), gest=TF.gestor, isAdmin=ua&&ehAdminTarefas(ua.id);
+  if(TF.aba==='outras' && isAdmin){
+    if(!TF.vendoDe){ var primeiro=(USUARIOS.filter(function(u){return u.id!==(ua&&ua.id);})[0]||{}).id; TF.vendoDe=primeiro; }
+    var dados = TF.outrasTarefas || {minhas:[],criadas:[]};
+    var ops = USUARIOS.filter(function(u){return u.id!==(ua&&ua.id);}).map(function(u){ return '<option value="'+u.id+'"'+(u.id===TF.vendoDe?' selected':'')+'>'+esc2(u.nome)+'</option>'; }).join('');
+    el.innerHTML='<div class="tf"><div class="tf-top"><h2>Suas tarefas</h2>'+(gest?'<button class="lb-btn" data-tf="nova">＋ Criar tarefa para usuários</button>':'')+'</div>'+
+      '<div class="tf-abas">'+
+        '<button class="tf-aba" data-tf="aba" data-v="minhas">Minhas tarefas ('+TF.itens.length+')</button>'+
+        (gest?'<button class="tf-aba" data-tf="aba" data-v="criadas">Que eu deleguei ('+TF.criadas.length+')</button>':'')+
+        '<button class="tf-aba on" data-tf="aba" data-v="outras">Ver outras pessoas</button>'+
+      '</div>'+
+      '<div style="display:flex;gap:10px;align-items:center;margin:6px 0 14px;flex-wrap:wrap">'+
+        '<label style="font-size:13px;color:var(--muted)">Ver tarefas de:</label>'+
+        '<select id="tfVerDe" style="padding:7px 12px;border-radius:9px;border:1px solid var(--line);font:600 13px \'Inter\',sans-serif;background:#fff">'+ops+'</select>'+
+        '<span style="color:var(--muted);font-size:12.5px">(só visualização, não dá para mexer)</span>'+
+      '</div>'+
+      '<div style="background:#F5F7FA;border:1px solid #E4EAF1;border-radius:14px;padding:14px;margin-bottom:14px"><div style="font:800 11px \'Inter\',sans-serif;color:#5A6B7D;letter-spacing:.6px;margin-bottom:8px;text-transform:uppercase">Tarefas desta pessoa ('+dados.minhas.length+')</div>'+ tfQuadro(dados.minhas, false, true) +'</div>'+
+      (dados.criadas.length?'<div style="background:#F5F7FA;border:1px solid #E4EAF1;border-radius:14px;padding:14px"><div style="font:800 11px \'Inter\',sans-serif;color:#5A6B7D;letter-spacing:.6px;margin-bottom:8px;text-transform:uppercase">Delegou para outros ('+dados.criadas.length+')</div>'+ tfQuadro(dados.criadas, false, true) +'</div>':'') +
+    '</div>';
+    var sel=document.getElementById('tfVerDe');
+    if(sel){ sel.addEventListener('change',function(){ TF.vendoDe=sel.value; TF.outrasTarefas=null; pintarTarefas(); tfCarregarOutras(sel.value).then(pintarTarefas); }); }
+    if(!TF.outrasTarefas && TF.vendoDe){ tfCarregarOutras(TF.vendoDe).then(pintarTarefas); }
+    return;
+  }
+  var lista=TF.aba==='criadas'?TF.criadas:TF.itens, minha=TF.aba!=='criadas';
   el.innerHTML='<div class="tf"><div class="tf-top"><h2>Suas tarefas</h2>'+(gest?'<button class="lb-btn" data-tf="nova">＋ Criar tarefa para usuários</button>':'')+'</div>'+
-    (gest?'<div class="tf-abas"><button class="tf-aba'+(TF.aba==='minhas'?' on':'')+'" data-tf="aba" data-v="minhas">Minhas tarefas ('+TF.itens.length+')</button><button class="tf-aba'+(TF.aba==='criadas'?' on':'')+'" data-tf="aba" data-v="criadas">Que eu deleguei ('+TF.criadas.length+')</button></div>':'')+
+    (gest?'<div class="tf-abas"><button class="tf-aba'+(TF.aba==='minhas'?' on':'')+'" data-tf="aba" data-v="minhas">Minhas tarefas ('+TF.itens.length+')</button><button class="tf-aba'+(TF.aba==='criadas'?' on':'')+'" data-tf="aba" data-v="criadas">Que eu deleguei ('+TF.criadas.length+')</button>'+(isAdmin?'<button class="tf-aba" data-tf="aba" data-v="outras">Ver outras pessoas</button>':'')+'</div>':'')+
     '<p class="tf-dica">'+(minha?'Arraste os cartões entre as colunas, ou use os botões. Quem pediu a tarefa recebe um e-mail quando você concluir.':'Tarefas que você criou para a equipe. O acompanhamento é feito por quem recebeu.')+'</p>'+
     tfQuadro(lista,minha)+'</div>';
   if(minha) tfArrastar();
 }
+function tfCarregarOutras(uid){ return tfApi({a:'tar_de',alvo:uid}).then(function(r){ if(r&&r.ok){ TF.outrasTarefas={minhas:r.minhas||[], criadas:r.criadas||[]}; } else TF.outrasTarefas={minhas:[],criadas:[]}; }).catch(function(){ TF.outrasTarefas={minhas:[],criadas:[]}; }); }
 function tfArrastar(){
   var el=$('#view-tarefas');
   el.querySelectorAll('.tf-card[draggable=true]').forEach(function(c){
@@ -909,7 +935,7 @@ function tfModalNova(){
 }
 function tfClique(e){
   var b=e.target.closest&&e.target.closest('[data-tf]'); if(!b) return; var a=b.dataset.tf, id=b.dataset.id;
-  if(a==='aba'){ TF.aba=b.dataset.v; pintarTarefas(); return; }
+  if(a==='aba'){ TF.aba=b.dataset.v; if(TF.aba==='outras'){ if(!TF.vendoDe){ var ua2=usuarioAtual(); var p0=(USUARIOS.filter(function(u){return u.id!==(ua2&&ua2.id);})[0]||{}).id; TF.vendoDe=p0; TF.outrasTarefas=null; } pintarTarefas(); if(TF.vendoDe) tfCarregarOutras(TF.vendoDe).then(pintarTarefas); return; } pintarTarefas(); return; }
   if(a==='nova'){ tfModalNova(); return; }
   if(a==='salvar'){
     var tx=($('#tfTx').value||'').trim(), msg=$('#tfMsg'); msg.className='lb-msg';
