@@ -15,8 +15,8 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;}
-  :root{--topo:0px;}
-  body.com-setores{--topo:62px;}
+  :root{--topo:0px; --col-setores:234px;}
+  body.com-setores{--topo:0px;}
   body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;display:flex;flex-wrap:wrap;align-content:flex-start;min-height:100vh;}
 
   /* ---------- sidebar ---------- */
@@ -39,16 +39,26 @@
   body.menu-oculto .sidebar{display:none;}
   body.menu-oculto .menu-open{display:block;}
   body.menu-oculto .main{padding-left:104px;}
-  /* ---------- barra de SETORES (topo) ---------- */
-  .setores{display:none;flex:0 0 100%;width:100%;height:var(--topo);position:sticky;top:0;z-index:70;background:linear-gradient(90deg,var(--navy),var(--navy2));align-items:center;gap:5px;padding:0 14px;overflow-x:auto;box-shadow:0 4px 16px rgba(1,42,74,.28);}
+  /* ---------- COLUNA LATERAL de SETORES (estilo RD/ClickUp) ---------- */
+  .setores{display:none;width:var(--col-setores);flex:0 0 var(--col-setores);min-height:100vh;height:100vh;position:sticky;top:0;left:0;z-index:70;background:linear-gradient(180deg,var(--navy),var(--navy2));box-shadow:4px 0 16px rgba(1,42,74,.28);flex-direction:column;padding:14px 10px 14px;gap:4px;overflow-y:auto;overflow-x:hidden;}
   body.com-setores .setores{display:flex;}
-  .setores button{border:0;background:rgba(255,255,255,.1);color:#fff;font:800 12px 'Inter',sans-serif;letter-spacing:.4px;text-transform:uppercase;padding:10px 12px;border-radius:12px;cursor:pointer;white-space:nowrap;transition:.15s;flex:none;}
-  .setores button:hover{background:rgba(255,255,255,.22);}
-  .setores button.on{background:#F7941D;color:#fff;box-shadow:0 6px 16px rgba(247,148,29,.5);}
-  .setores .dir{margin-left:auto;display:flex;gap:8px;flex:none;}
-  @media (max-width:1400px){ .setores button{padding:10px 8px;font-size:11px;letter-spacing:.2px;} .setores .dir{gap:5px;} .setores button.chip-user{padding:4px 12px 4px 4px;} .setores button.chip-user .ft{width:36px;height:36px;} .setores button.chip-user em{display:none;} }
-  .setores button.suave{background:transparent;border:1px solid rgba(255,255,255,.32);font-weight:700;}
-  .setores button.suave.on{background:#F7941D;border-color:#F7941D;}
+  .setores .marca{display:flex;align-items:center;gap:10px;padding:6px 10px 14px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:10px;}
+  .setores .marca .pt{width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font:800 14px 'Inter',sans-serif;color:var(--navy);}
+  .setores .marca .nm{color:#fff;font:700 14px 'Inter',sans-serif;letter-spacing:.2px;line-height:1.1;}
+  .setores .marca .nm small{display:block;font-weight:500;font-size:10.5px;opacity:.65;letter-spacing:.3px;margin-top:1px;}
+  .setores .grp-tit{color:rgba(255,255,255,.52);font:700 10.5px 'Inter',sans-serif;letter-spacing:1.1px;text-transform:uppercase;padding:12px 12px 4px;}
+  .setores button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;color:rgba(255,255,255,.85);font:600 13px 'Inter',sans-serif;letter-spacing:.1px;padding:8px 12px;border-radius:10px;cursor:pointer;white-space:normal;transition:.14s;text-align:left;line-height:1.25;}
+  .setores button:hover{background:rgba(255,255,255,.08);color:#fff;}
+  .setores button.on{background:#F7941D;color:#fff;font-weight:700;box-shadow:0 4px 10px rgba(247,148,29,.35);}
+  .setores button.suave{opacity:.95;}
+  .setores .espaco{flex:1;}   /* empurra o chip para o fim */
+  .setores .dir{display:flex;flex-direction:column;gap:4px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px;margin-top:10px;}
+  @media (max-width:980px){
+    .setores{position:fixed;top:0;left:-260px;width:260px;flex:0 0 260px;transition:left .2s;}
+    body.com-setores.menu-mobile-aberto .setores{left:0;box-shadow:4px 0 24px rgba(0,0,0,.4);}
+    body.com-setores{padding-left:0;}
+    .menu-open{display:block;}
+  }
   .nav .nav-setor{font:800 11px 'Inter',sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#F7B955;margin:2px 4px 10px;}
   .nav .nav-vazio{font-size:12px;color:rgba(255,255,255,.5);padding:6px 6px;line-height:1.5;}
   /* ---------- INÍCIO (quem é você?) e usuário no topo ---------- */
@@ -68,10 +78,12 @@
   .inicio .sErro{color:#C0392B;font-size:13.5px;min-height:20px;margin:2px 0 8px;}
   .inicio .sBtn{font:700 15px 'Inter',sans-serif;border:0;border-radius:12px;padding:12px 28px;background:var(--navy);color:#fff;cursor:pointer;} .inicio .sBtn:disabled{opacity:.55;cursor:wait;}
   .inicio .outro{margin-top:26px;background:none;border:0;color:var(--blue);cursor:pointer;font:600 13px 'Inter',sans-serif;text-decoration:underline;}
-  .setores button.inicio-btn{background:rgba(255,255,255,.16);margin-right:6px;}
-  .setores button.chip-user{display:flex;align-items:center;gap:10px;padding:5px 16px 5px 5px;text-transform:none;letter-spacing:0;font-weight:700;font-size:14px;background:rgba(255,255,255,.1);}
-  .setores button.chip-user .ft{width:42px;height:42px;border-radius:50%;background:#7C93AB center/cover no-repeat;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;}
-  .setores button.chip-user em{font-style:normal;font-weight:500;font-size:11px;opacity:.75;}
+  .setores button.inicio-btn{background:rgba(255,255,255,.12);font:700 12px 'Inter',sans-serif;letter-spacing:.4px;text-transform:uppercase;justify-content:center;}
+  .setores button.chip-user{display:flex;align-items:center;gap:12px;padding:10px 10px;text-transform:none;letter-spacing:0;font:700 15px 'Inter',sans-serif;background:rgba(255,255,255,.1);border-radius:12px;}
+  .setores button.chip-user:hover{background:rgba(255,255,255,.18);}
+  .setores button.chip-user .ft{width:48px;height:48px;border-radius:50%;background:#7C93AB center/cover no-repeat;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+  .setores button.chip-user span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .setores button.chip-user em{font-style:normal;font-weight:500;font-size:11px;opacity:.7;display:block;margin-top:1px;}
   /* ---------- LOBBY (tema Grupo Pigatto: azul, amarelo, branco e vermelho) ---------- */
   .lb{--pg-azul:#0B2A46;--pg-azul2:#1E6FB8;--pg-amarelo:#F7B500;--pg-verm:#C8202B;max-width:1180px;margin:0 auto;} .lb h1,.lb h2,.lb h3{font-family:'Space Grotesk','Inter',sans-serif;color:var(--navy);margin:0;}
   @keyframes lbUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}} @keyframes lbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}} @keyframes lbPop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}} @keyframes lbFall{0%{transform:translateY(-20px) rotate(0);opacity:0}15%{opacity:1}100%{transform:translateY(90px) rotate(360deg);opacity:0}}
@@ -340,6 +352,7 @@
 </style>
 </head>
 <body>
+<button class="menu-open" id="btnMobSetores" type="button" aria-label="Abrir menu" style="display:none;position:fixed;top:12px;left:12px;z-index:80;background:#0B2A46;color:#fff;border:none;border-radius:10px;padding:10px 14px;font:800 16px 'Inter',sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(1,42,74,.4);">☰</button>
 <header class="setores" id="setores" aria-label="Setores"></header>
 <div class="inicio" id="inicio" aria-label="Início"></div>
 
@@ -726,6 +739,7 @@ function abrirPorHash(){
   if(alvo&&alvo.id!==ATUAL) abrir(alvo); }
 montarUsuarios();
 montarSetores();
+document.addEventListener('click',function(e){ var b=e.target && e.target.closest && e.target.closest('#btnMobSetores'); if(b){ e.preventDefault(); abrirMenuMobile(); return; } if(document.body.classList.contains('menu-mobile-aberto')){   var dentro=e.target.closest && e.target.closest('#setores');   if(!dentro) fecharMenuMobile(); }});
 montarMenu();
 var HASH_INICIAL=(location.hash||'').slice(1);
 if(HASH_INICIAL==='inicio'){ try{ history.replaceState(null,'',location.pathname); }catch(e){} mostrarInicio(); }   // link pessoal do vendedor: sempre começa pelo INÍCIO
@@ -803,17 +817,47 @@ document.addEventListener('click',function(e){
 function montarSetores(){
   var bar=$('#setores'); if(!SETORES){ bar.style.display='none'; return; }
   document.body.classList.add('com-setores'); bar.innerHTML='';
+  // Marca (logo mini + nome)
+  var marca=document.createElement('div'); marca.className='marca';
+  marca.innerHTML='<div class="pt">PT</div><div class="nm">Painel Pigatto<small>Grupo Pigatto</small></div>';
+  bar.appendChild(marca);
+  // Botão INÍCIO (trocar usuário)
+  var bi=document.createElement('button'); bi.type='button'; bi.className='inicio-btn'; bi.textContent='⌂ INÍCIO';
+  bi.addEventListener('click',function(){ fecharMenuMobile(); mostrarInicio(); });
+  bar.appendChild(bi);
+  // Grupos
+  var GRUPOS=(window.ESFORCO_GRUPOS&&window.ESFORCO_GRUPOS.length)?window.ESFORCO_GRUPOS:[{id:'_',nome:''}];
+  GRUPOS.forEach(function(g){
+    var filhos=SETORES.filter(function(st){ var gid=st.grupo||'_'; return gid===g.id && podeVerSetor(st) && !st.direita; });
+    if(!filhos.length) return;
+    if(g.nome){ var tit=document.createElement('div'); tit.className='grp-tit'; tit.textContent=g.nome; bar.appendChild(tit); }
+    filhos.forEach(function(st){ bar.appendChild(botaoSetor(st)); });
+  });
+  // Setores "direita" (legado) — se existir algum sem grupo marcado como direita, cai aqui
   var dir=document.createElement('div'); dir.className='dir';
-  var bi=document.createElement('button'); bi.type='button'; bi.className='inicio-btn'; bi.textContent='⌂ INÍCIO'; bi.addEventListener('click',mostrarInicio); bar.appendChild(bi);
-  SETORES.forEach(function(st){
-    if(!podeVerSetor(st)) return;   // ex.: MINHA ÁREA só aparece para a Thais
-    var b=document.createElement('button'); b.type='button'; b.setAttribute('data-setor',st.id);
-    b.textContent=st.nome+((st.senhaHash?setorTrancado(st):(st.restrito&&!unlocked))?' 🔒':'')+((st.id==='minha'&&SUG_NOVAS>0)?' ('+SUG_NOVAS+')':'');
-    var ativo=(SETOR===st.id); if(ativo) b.className='on'; if(st.suave) b.classList.add('suave');
-    b.addEventListener('click',function(){ entrarSetor(st.id); });
-    (st.direita?dir:bar).appendChild(b); });
-  var ua=usuarioAtual(); if(ua){ var cu=document.createElement('button'); cu.type='button'; cu.className='chip-user suave'; cu.title='Trocar de usuário'; cu.innerHTML=fotoHTML(ua,'ft')+'<span>'+esc2(ua.nome.split(' ')[0])+'</span><em>trocar</em>'; cu.addEventListener('click',mostrarInicio); dir.appendChild(cu); }
-  if(dir.children.length) bar.appendChild(dir); }
+  SETORES.forEach(function(st){ if(st.direita && podeVerSetor(st)) dir.appendChild(botaoSetor(st)); });
+  // Espaço flex para empurrar chip
+  var esp=document.createElement('div'); esp.className='espaco'; bar.appendChild(esp);
+  // Chip do usuário no rodapé
+  var ua=usuarioAtual();
+  if(ua){
+    var cu=document.createElement('button'); cu.type='button'; cu.className='chip-user'; cu.title='Trocar de usuário';
+    cu.innerHTML=fotoHTML(ua,'ft')+'<span>'+esc2(ua.nome.split(' ')[0])+'<em>trocar usuário</em></span>';
+    cu.addEventListener('click',function(){ fecharMenuMobile(); mostrarInicio(); });
+    dir.appendChild(cu);
+  }
+  if(dir.children.length) bar.appendChild(dir);
+}
+function botaoSetor(st){
+  var b=document.createElement('button'); b.type='button'; b.setAttribute('data-setor',st.id);
+  b.textContent=st.nome+((st.senhaHash?setorTrancado(st):(st.restrito&&!unlocked))?' 🔒':'')+((st.id==='minha'&&SUG_NOVAS>0)?' ('+SUG_NOVAS+')':'');
+  if(SETOR===st.id) b.className='on';
+  if(st.suave) b.classList.add('suave');
+  b.addEventListener('click',function(){ fecharMenuMobile(); entrarSetor(st.id); });
+  return b;
+}
+function abrirMenuMobile(){ document.body.classList.add('menu-mobile-aberto'); }
+function fecharMenuMobile(){ document.body.classList.remove('menu-mobile-aberto'); }
 function mostrarVazio(st){
   ATUAL='vazio-'+st.id; SETOR=st.id; montarSetores(); montarMenu();
   $('#svTitulo').textContent=st.nome; $('#svSub').textContent=st.sub||'';
