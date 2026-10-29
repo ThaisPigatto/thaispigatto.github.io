@@ -114,13 +114,20 @@ EMPRESAS = {
     "matriz": (os.environ["OMIE_MATRIZ_APP_KEY"], os.environ["OMIE_MATRIZ_APP_SECRET"]),
     "papeis": (os.environ["OMIE_PAPEIS_APP_KEY"], os.environ["OMIE_PAPEIS_APP_SECRET"]),
 }
+# PIGATTO FILIAL SC (Thais, 29/10/2026): mesmas regras da Matriz/Papéis, soma na meta atual
+# (sem meta própria). Só entra se os Secrets OMIE_SC_* existirem.
+if os.environ.get("OMIE_SC_APP_KEY") and os.environ.get("OMIE_SC_APP_SECRET"):
+    EMPRESAS["sc"] = (os.environ["OMIE_SC_APP_KEY"], os.environ["OMIE_SC_APP_SECRET"])
 
 PREVISAO_ETAPAS = {"matriz": {"20", "80", "50"}, "papeis": {"20", "50"}}
+# Filial SC (diagnóstico 29/10/2026): 20=Separar Estoque, 50=Faturar, 60=Faturado, 70=Entrega.
+if "sc" in EMPRESAS:
+    PREVISAO_ETAPAS["sc"] = {"20", "50"}
 # Etapa "70" da Papéis passou a contar como Realizado em 03/09/2026 — decisão da Thais:
 # "siga o do financeiro, o dele é sempre o correto, ajuste pra ficar igual". Achado que gerou
 # a mudança: NF 00019902 (R$309,12, pedido em etapa 70 na Papéis) estava Autorizada e presente
 # no relatório oficial do financeiro, mas ficava de fora do painel por essa regra excluir a 70.
-REALIZADO_ETAPAS = {"matriz": {"60", "70"}, "papeis": {"60", "70", "80"}}
+REALIZADO_ETAPAS = {"matriz": {"60", "70"}, "papeis": {"60", "70", "80"}, "sc": {"60", "70"}}
 
 # CFOPs de SAÍDA que são venda de verdade (nota emitida pra cliente). 5.112/5.202 foram
 # retirados em 03/09/2026: são "devolução de COMPRA" (a Pigatto devolvendo mercadoria pro
@@ -518,7 +525,7 @@ def confirmar_etapa_ao_vivo(empresa, nIdPedido):
     return etapa_viva
 
 
-def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
+def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis, etapas_sc=None):
     def parse_dt(d, h):
         try:
             return datetime.datetime.strptime(f"{d} {h}", "%d/%m/%Y %H:%M:%S")
@@ -526,7 +533,7 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis):
             return datetime.datetime.min
 
     etapa_atual = {}
-    for empresa, registros in [("papeis", etapas_papeis), ("matriz", etapas_matriz)]:
+    for empresa, registros in [("papeis", etapas_papeis), ("matriz", etapas_matriz), ("sc", etapas_sc or [])]:
         for e in registros:
             pid = e["nCodPed"]
             dt = parse_dt(e["dDtEtapa"], e["cHrEtapa"])
@@ -1295,10 +1302,11 @@ def recomputar_mes_fechado(ano, mes, meta_geral_hist, grupos_metas_hist, hub_met
         nf_dados = buscar_nf()
         etapas_matriz = buscar_etapas("matriz")
         etapas_papeis = buscar_etapas("papeis")
+        etapas_sc = buscar_etapas("sc") if "sc" in EMPRESAS else []
         pedidos_previsao = buscar_previsao()
 
         linhas_prev = montar_linhas_previsao(pedidos_previsao)
-        linhas_real = montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis)
+        linhas_real = montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis, etapas_sc)
 
         produto_familia = atualizar_cache_familias(linhas_real, linhas_prev, produto_familia)
         completar_nomes(linhas_real, linhas_prev, produto_familia, fam_nome_cache, vend_nome_cache)
@@ -1421,10 +1429,11 @@ def main():
     nf_dados = buscar_nf()
     etapas_matriz = buscar_etapas("matriz")
     etapas_papeis = buscar_etapas("papeis")
+    etapas_sc = buscar_etapas("sc") if "sc" in EMPRESAS else []
     pedidos_previsao = buscar_previsao()
 
     linhas_prev = montar_linhas_previsao(pedidos_previsao)
-    linhas_real = montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis)
+    linhas_real = montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis, etapas_sc)
 
     produto_familia = atualizar_cache_familias(linhas_real, linhas_prev, produto_familia)
     json.dump(produto_familia, open(CACHE_PRODUTO_FAMILIA, "w", encoding="utf-8"), ensure_ascii=False)
