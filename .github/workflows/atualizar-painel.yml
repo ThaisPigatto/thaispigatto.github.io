@@ -28,6 +28,8 @@ jobs:
           OMIE_MATRIZ_APP_SECRET: ${{ secrets.OMIE_MATRIZ_APP_SECRET }}
           OMIE_PAPEIS_APP_KEY: ${{ secrets.OMIE_PAPEIS_APP_KEY }}
           OMIE_PAPEIS_APP_SECRET: ${{ secrets.OMIE_PAPEIS_APP_SECRET }}
+          OMIE_SC_APP_KEY: ${{ secrets.OMIE_SC_APP_KEY }}
+          OMIE_SC_APP_SECRET: ${{ secrets.OMIE_SC_APP_SECRET }}
           REPROCESSAR_MES: ${{ github.event.inputs.reprocessar_mes }}
         # tee: guarda a saída num arquivo pro aviso por e-mail abaixo; pipefail mantém o erro do script
         run: |

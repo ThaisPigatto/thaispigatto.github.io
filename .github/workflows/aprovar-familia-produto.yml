@@ -41,7 +41,7 @@ jobs:
           src = open("automacao/atualizar_painel.py", encoding="utf-8").read()
           g = re.search(r"^GRUPOS = (\[.*?^\])", src, re.S | re.M)
           familias = {f for grp in ast.literal_eval(g.group(1)) for f in grp["familias"]}
-          if d.get("empresa") not in ("matriz", "papeis"): falha("Empresa inválida.")
+          if d.get("empresa") not in ("matriz", "papeis", "sc"): falha("Empresa inválida.")
           if not re.fullmatch(r"\d+", str(d.get("cod_produto", ""))): falha("Código de produto inválido.")
           if d.get("familia") not in familias: falha(f"Família '{d.get('familia')}' não existe nos grupos do painel.")
           agora = datetime.datetime.now(ZoneInfo("America/Sao_Paulo"))
