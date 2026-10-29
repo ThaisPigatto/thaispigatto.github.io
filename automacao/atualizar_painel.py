@@ -383,7 +383,7 @@ def buscar_nf():
 def buscar_etapas(empresa):
     app_key, app_secret = EMPRESAS[empresa]
     r = call("produtos/pedidoetapas", "ListarEtapasPedido", {"nPagina": 1, "nRegPorPagina": 100}, app_key, app_secret)
-    total_paginas = r["nTotPaginas"]
+    total_paginas = r.get("nTotPaginas", 1) or 1
     todos = []
     pagina = total_paginas
     sem_mes_seguidas = 0
@@ -392,8 +392,8 @@ def buscar_etapas(empresa):
     while sem_mes_seguidas < 5:
         rr = call("produtos/pedidoetapas", "ListarEtapasPedido",
                   {"nPagina": pagina, "nRegPorPagina": 100}, app_key, app_secret)
-        todos.extend(rr["etapasPedido"])
-        dts = [e["dDtEtapa"] for e in rr["etapasPedido"] if e["dDtEtapa"]]
+        todos.extend(rr.get("etapasPedido", []))
+        dts = [e.get("dDtEtapa") for e in rr.get("etapasPedido", []) if e.get("dDtEtapa")]
         tem_mes = any(d[3:5] == mes_str and d[6:] == ano_str for d in dts)
         sem_mes_seguidas = 0 if tem_mes else sem_mes_seguidas + 1
         pagina -= 1
@@ -536,10 +536,10 @@ def montar_linhas_realizado(nf_dados, etapas_matriz, etapas_papeis, etapas_sc=No
     for empresa, registros in [("papeis", etapas_papeis), ("matriz", etapas_matriz), ("sc", etapas_sc or [])]:
         for e in registros:
             pid = e["nCodPed"]
-            dt = parse_dt(e["dDtEtapa"], e["cHrEtapa"])
+            dt = parse_dt(e.get("dDtEtapa", ""), e.get("cHrEtapa", ""))
             key = (empresa, pid)
             if key not in etapa_atual or dt > etapa_atual[key]["dt"]:
-                etapa_atual[key] = {"etapa": e["cEtapa"], "cancelado": e["cancelamento"]["cCancelado"], "dt": dt}
+                etapa_atual[key] = {"etapa": e["cEtapa"], "cancelado": (e.get("cancelamento") or {}).get("cCancelado", "N"), "dt": dt}
     print("Total pedidos com etapa conhecida:", len(etapa_atual))
 
     linhas = []
