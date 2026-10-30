@@ -372,6 +372,18 @@
   #flyMenu button{display:block;width:100%;text-align:left;border:0;background:none;border-radius:8px;padding:9px 12px;font:600 13px 'Inter',sans-serif;color:#0B2A46;cursor:pointer}
   #flyMenu button:hover{background:#F2F5F9;color:#C8202B}
   #flyMenu button.sub{padding-left:24px;font-weight:500;font-size:12.5px}
+
+  /* ---- 30/10: chip do usuário (foto) sempre por cima, branco e preto e maior; título da página volta para dentro da página ---- */
+  #topbar.topbar{z-index:150;background:#fff;border:1px solid #DDE3EA;padding:8px 24px 8px 8px;gap:14px;box-shadow:0 8px 24px rgba(0,0,0,.16);backdrop-filter:none;}
+  #topbar.topbar:hover{background:#fff;box-shadow:0 12px 28px rgba(0,0,0,.24);}
+  #topbar.topbar .ft{width:60px;height:60px;border:3px solid #111;}
+  #topbar.topbar .nm{color:#111;font-size:18px;}
+  #topbar.topbar .nm small{color:#444;opacity:1;font-size:12px;}
+  .view .topbar.slim{position:static;z-index:auto;background:transparent;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;padding:0 200px 14px 0;cursor:default;transform:none;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;}
+  .view .topbar.slim:hover{background:transparent;box-shadow:none;transform:none;}
+  .view .topbar.slim h1{color:#111;font:800 22px 'Inter',sans-serif;margin:0;}
+  .view .topbar.slim .sub{color:#555;font-size:13px;}
+  .view .topbar.slim a.abrir{color:#111;font:700 12.5px 'Inter',sans-serif;}
 </style>
 </head>
 <body>
