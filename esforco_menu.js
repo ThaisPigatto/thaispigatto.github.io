@@ -53,7 +53,8 @@ window.ESFORCO_MENU = [
 
   // COMERCIAL
   // CRM: só para os 4 admins
-  {id:'crm', setor:'comercial', nome:'CRM', tipo:'alias', alvo:'crm-atrasadas', restrito:false, acesso:['thais','saenz','gpigatto','fernando']},
+   {id:'painel-comercial', setor:'comercial', nome:'PAINEL COMERCIAL', titulo:'Painel Comercial — Resultado de Vendas', tipo:'pagina', src:'index.html', restrito:false},
+   {id:'crm', setor:'comercial', nome:'CRM', tipo:'alias', alvo:'crm-atrasadas', restrito:false, acesso:['thais','saenz','gpigatto','fernando']},
   {id:'crm-atrasadas',     setor:'comercial', nome:'Tarefas Atrasadas',               tipo:'pagina', src:'tarefas-atrasadas-crm.html', restrito:false, escondido:true, abaGrupo:'crm', acesso:['thais','saenz','gpigatto','fernando']},
   {id:'crm-oportunidades', setor:'comercial', nome:'Oportunidades (Ganhas/Perdidas)', tipo:'pagina', src:'oportunidades-crm.html',     restrito:false, escondido:true, abaGrupo:'crm', acesso:['thais','saenz','gpigatto','fernando']},
   {id:'crm-proximas',      setor:'comercial', nome:'Próximas Tarefas (7 dias)',       tipo:'pagina', src:'proximas-tarefas-crm.html', restrito:false, escondido:true, abaGrupo:'crm', acesso:['thais','saenz','gpigatto','fernando']},
