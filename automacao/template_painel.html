@@ -375,6 +375,22 @@
     header.top .meta{text-align:left;}
     table.simple{font-size:11.5px;}
   }
+
+  /* ---- ajustes visuais 30/10/2026 ---- */
+  .kpis.secao-geral .kpi .label{text-align:center;font-weight:800;}
+  .kpis.secao-geral .kpi .value{font-size:28px;text-align:center;}
+  .panel h2.titulo-performance{font-size:25px;font-weight:800;}
+  .panel h2.titulo-corrida{font-size:30px;font-weight:800;letter-spacing:.5px;justify-content:center;align-items:center;gap:12px;}
+  .bandeiras{width:56px;height:38px;flex-shrink:0;}
+  .ritmo-banner.bad{width:max-content;max-width:94%;margin:26px auto 0;background:#C8202B;color:#fff;border-radius:999px;padding:10px 26px;box-shadow:0 10px 24px rgba(200,32,43,.35);animation:baloes 2.6s ease-in-out infinite;position:relative;}
+  .ritmo-banner.bad:after{content:'';position:absolute;left:50%;bottom:-9px;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#C8202B;}
+  @keyframes baloes{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  .carro-anda{transition:left 2.8s cubic-bezier(.2,.7,.25,1)!important;animation:carroTreme .18s linear infinite;}
+  @keyframes carroTreme{0%,100%{translate:0 0}50%{translate:0 -1.5px}}
+  .fumaca{position:absolute;width:0;height:0;pointer-events:none;transition:left 2.8s cubic-bezier(.2,.7,.25,1);}
+  .fumaca i{position:absolute;left:0;top:0;width:9px;height:9px;border-radius:50%;background:rgba(150,150,150,.55);animation:fumacaSai 1.4s ease-out infinite;}
+  .fumaca i:nth-child(2){animation-delay:.45s}.fumaca i:nth-child(3){animation-delay:.9s}
+  @keyframes fumacaSai{0%{transform:translate(0,0) scale(.4);opacity:.8}100%{transform:translate(-26px,-14px) scale(2.2);opacity:0}}
 </style>
 </head>
 <body>
@@ -423,7 +439,7 @@
   </div>
 
   <div class="panel secao-geral">
-    <h2 class="titulo-performance">🏁 Performance de Vendas</h2>
+    <h2 class="titulo-performance">🏁 PERFORMANCE DE VENDAS</h2>
     <div class="gauge-wrap-full" style="margin-bottom:38px;">
       <div class="performance-principal">
         <div class="corrida-track-wrap" id="performanceFatTrackWrap">
@@ -458,7 +474,7 @@
 
   <div class="panel panel-largo secao-geral" id="painelCorrida">
     <button id="corridaFullscreenBtn" class="corrida-fullscreen-btn" type="button" title="Ver em tela cheia">⛶ Tela cheia</button>
-    <h2 style="justify-content:center;">🏁 Corrida das Famílias — Atingimento da Meta Por Família</h2>
+    <h2 class="titulo-corrida"><svg class="bandeiras" viewBox="0 0 120 80" aria-hidden="true"><defs><pattern id="xadrez" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#fff"/><rect width="5" height="5" fill="#111"/><rect x="5" y="5" width="5" height="5" fill="#111"/></pattern></defs><line x1="30" y1="6" x2="62" y2="76" stroke="#111" stroke-width="4" stroke-linecap="round"/><line x1="90" y1="6" x2="58" y2="76" stroke="#111" stroke-width="4" stroke-linecap="round"/><path d="M30 6 C40 0 50 14 60 8 L50 40 C40 46 30 32 18 38 Z" transform="translate(-14 2)" fill="url(#xadrez)" stroke="#111" stroke-width="2"/><path d="M90 6 C80 0 70 14 60 8 L70 40 C80 46 90 32 102 38 Z" transform="translate(14 2)" fill="url(#xadrez)" stroke="#111" stroke-width="2"/></svg> CORRIDA DAS FAMÍLIAS</h2>
     <div class="desc" style="text-align:center;margin-bottom:22px;">Considerando somente o Faturado</div>
     <div id="corridaFamilias"></div>
   </div>
@@ -1351,6 +1367,19 @@ function corTextoLegivel(hex){
   const r2 = Math.round(r*fator), g2 = Math.round(g*fator), b2 = Math.round(b*fator);
   return '#' + [r2,g2,b2].map(v => v.toString(16).padStart(2,'0')).join('');
 }
+
+// Animação 30/10/2026: o carro sai do início da barra e anda até a posição dele, soltando fumaça.
+// Só nos carros das famílias e no "Previsto + Faturado"; o carro do Faturado geral fica parado.
+function animarCarros(sel){
+  document.querySelectorAll(sel).forEach(function(img){
+    var alvo=img.style.left; if(!alvo) return;
+    var fu=document.createElement('span'); fu.className='fumaca'; fu.innerHTML='<i></i><i></i><i></i>'; img.parentNode.appendChild(fu);
+    function posFumaca(){ var w=img.offsetWidth||60, h=img.offsetHeight||34, b=parseFloat(getComputedStyle(img).bottom)||44; fu.style.bottom=(b+h*0.25)+'px'; fu.style.marginLeft=(-w*0.91-4)+'px'; }
+    img.style.transition='none'; fu.style.transition='none'; img.style.left='0%'; fu.style.left='0%'; posFumaca(); void img.offsetWidth;
+    setTimeout(function(){ posFumaca(); img.classList.add('carro-anda'); fu.style.transition=''; img.style.left=alvo; fu.style.left=alvo; },350);
+    if(!img.complete) img.addEventListener('load',posFumaca);
+  });
+}
 function renderCorridaFamilias(){
   const box = document.getElementById('corridaFamilias');
   if (!box) return;
@@ -1384,6 +1413,7 @@ function renderCorridaFamilias(){
   });
 }
 renderCorridaFamilias();
+animarCarros('#corridaFamilias .corrida-truck');
 
 
 // Barra "Performance de Vendas" (mesmos números de sempre: Prev+Fat sobre a meta geral,
@@ -1408,6 +1438,7 @@ function renderPerformanceBar(){
   espEl.textContent = fmtPct(t.esperado_pct ?? 0);
 }
 renderPerformanceBar();
+animarCarros('#performanceTruck');
 
 function renderPerformanceFaturadoBar(){
   const truck = document.getElementById('performanceFatTruck');
