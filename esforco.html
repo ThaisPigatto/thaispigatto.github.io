@@ -371,7 +371,7 @@
   #tv .tv-s.fr{padding:0}
   #tv h2.tv-t{font:800 clamp(26px,3.4vw,54px) 'Space Grotesk','Inter',sans-serif;color:#0B2A46;margin:0 0 4vh;display:flex;align-items:center;gap:16px}
   #tv h2.tv-t:before{content:'';width:10px;height:1.1em;background:#C8202B;border-radius:6px}
-  #tv .tv-dest{width:min(1300px,72vw);display:flex;flex-direction:column;gap:5vh}
+  #tv .tv-dest{width:min(1200px,64vw);margin-top:8vh;display:flex;flex-direction:column;gap:5vh}
   #tv .tv-card{background:#fff;border-radius:28px;border-top:8px solid #C8202B;box-shadow:0 18px 50px rgba(11,42,70,.12);padding:3.2vh 3vw;display:flex;align-items:center;gap:3vw}
   #tv .tv-card h3{font:800 clamp(18px,1.8vw,30px) 'Space Grotesk','Inter',sans-serif;color:#0B2A46;letter-spacing:1px;margin:0 0 1.4vh}
   #tv .tv-card .lb-ft{width:min(17vh,190px)!important;height:min(17vh,190px)!important;flex-shrink:0;border-radius:50%;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font:800 60px 'Inter';color:#0B2A46;background-color:#DCE5EE;box-shadow:0 0 0 6px #fff,0 0 0 12px #C8202B}
@@ -379,12 +379,12 @@
   #tv .tv-nome{display:block;font:800 clamp(30px,3.4vw,58px) 'Space Grotesk','Inter',sans-serif;color:#0B2A46;margin:1vh 0 .6vh}
   #tv .tv-met{font-size:clamp(16px,1.5vw,26px);color:#5A6B7D}
   #tv .tv-vz{font-size:clamp(18px,1.6vw,26px);color:#8A97A6}
-  #tv .tv-masc2{position:absolute;right:2vw;bottom:0;height:78vh;animation:tvPula 1.2s ease-in-out infinite;transform-origin:bottom center}
+  #tv .tv-masc2{position:absolute;left:3vw;bottom:0;height:58vh;animation:tvPula 1.2s ease-in-out infinite;transform-origin:bottom center}
   @keyframes tvPula{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}
   #tv .tv-conf{position:absolute;inset:0;overflow:hidden;pointer-events:none}
   #tv .tv-conf i{position:absolute;top:-4vh;width:12px;height:22px;border-radius:3px;animation:tvCai linear forwards}
   @keyframes tvCai{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(var(--dx),110vh) rotate(720deg)}}
-  #tv .tv-frase{font:800 clamp(28px,3.6vw,64px) 'Space Grotesk','Inter',sans-serif;color:#0B2A46;text-align:center;max-width:80vw;line-height:1.2;margin-bottom:5vh}
+  #tv .tv-frase{font:800 clamp(20px,2.2vw,40px) 'Space Grotesk','Inter',sans-serif;color:#0B2A46;text-align:center;max-width:80vw;line-height:1.2;margin-bottom:5vh}
   #tv .tv-recbox{width:min(1500px,88vw);display:flex;align-items:flex-end;gap:2vw;background:#fff;border:2px solid #C8202B;border-radius:28px;padding:3vh 2vw 0 3vw;min-height:46vh}
   #tv .tv-recl{flex:1;display:flex;flex-direction:column;gap:2.4vh;align-self:center;padding-bottom:3vh}
   #tv .tv-nota{background:#C8202B;color:#fff;border-radius:20px;padding:2.6vh 2.4vw;box-shadow:0 10px 26px rgba(200,32,43,.25)}
@@ -1815,7 +1815,10 @@ setInterval(function(){ if(ATUAL==='tv') window.location.reload(); }, 15*60*1000
     var path=[]; keep.forEach(function(k){ for(var e=k;e&&e!==doc.body;e=e.parentElement) path.push(e); });
     path.forEach(function(e){ var p=e.parentElement; if(!p) return; Array.prototype.forEach.call(p.children,function(c){ if(path.indexOf(c)<0&&!keep.some(function(k){return k.contains(c);})&&c.tagName!=='SCRIPT'&&c.tagName!=='STYLE') c.style.display='none'; }); });
     var st=doc.createElement('style'); st.textContent='body{background:#fff!important;overflow:hidden!important}.corrida-fullscreen-btn,.seletor-mes{display:none!important}'; doc.head.appendChild(st);
-    doc.body.style.zoom=1; var wr=doc.querySelector('.wrap'), h=Math.max.apply(null,keep.map(function(k){return k.getBoundingClientRect().bottom;}))+20, w=Math.max.apply(null,keep.map(function(k){return k.getBoundingClientRect().right;}).concat([wr?wr.getBoundingClientRect().right:0]))+30, z=Math.min(innerHeight/(h+10),innerWidth/w,2.2); doc.body.style.zoom=z>0?z:1;
+    var hd=doc.querySelector('header.top'), k0=doc.querySelector('.kpis'); if(hd&&k0&&keep.indexOf(hd)>=0){ hd.style.maxWidth=k0.getBoundingClientRect().width+'px'; hd.style.margin='0 auto'; }
+    var R=keep.map(function(k){return k.getBoundingClientRect();}), L=Math.min.apply(null,R.map(function(r){return r.left;})), T=Math.min.apply(null,R.map(function(r){return r.top;})), W=Math.max.apply(null,R.map(function(r){return r.right;}))-L, H=Math.max.apply(null,R.map(function(r){return r.bottom;}))-T;
+    var z=Math.min(innerWidth*0.95/W,innerHeight*0.93/H,2.6), tx=(innerWidth-W*z)/2-L*z, ty=(innerHeight-H*z)/2-T*z;
+    doc.documentElement.style.overflow='hidden'; doc.body.style.transformOrigin='0 0'; doc.body.style.transform='translate('+tx+'px,'+ty+'px) scale('+z+')';
   }
   function carregaFrame(n,sel){ var f=document.getElementById('tvF'+n); return new Promise(function(ok){ f.onload=function(){ try{ soMostrar(f.contentDocument,sel); }catch(e){} ok(); }; f.src='index.html?tv='+Date.now(); setTimeout(ok,8000); }); }
   function api(){ return fetch(window.PD_CONFIG.apiUrl,{method:'POST',body:JSON.stringify({a:'tv_ler'}),redirect:'follow'}).then(function(r){return r.json();}).then(function(r){ if(r&&r.ok) API=r; }).catch(function(){}); }
@@ -1831,8 +1834,8 @@ setInterval(function(){ if(ATUAL==='tv') window.location.reload(); }, 15*60*1000
     var el=document.getElementById('tvS2');
     return Promise.all([api(), carregarVendasDATA().then(function(S){ LB.vendas=lbVendas(S,LB.w); }).catch(function(){ LB.vendas=false; })]).then(function(){
       LB.api={destaque:API&&API.destaque}; var dd=lbDestaques();
-      el.innerHTML='<h2 class="tv-t">Destaques da semana</h2><div class="tv-dest">'+card('DESTAQUE DE VENDAS',LB.vendas?dd.vendas:null,'vendas')+card('DESTAQUE PREENCHIMENTO CRM',dd.crm,'crm')+'</div><img class="tv-masc2" src="'+MASC2+'" alt="">';
-      el.querySelector('.tv-dest').style.marginRight='22vw'; confetes(el); });
+      el.innerHTML='<h2 class="tv-t" style="position:absolute;top:4vh;left:0;right:0;justify-content:center;font-weight:900;letter-spacing:1px">DESTAQUES DA SEMANA</h2><div class="tv-dest">'+card('DESTAQUE DE VENDAS',LB.vendas?dd.vendas:null,'vendas')+card('DESTAQUE PREENCHIMENTO CRM',dd.crm,'crm')+'</div><img class="tv-masc2" src="'+MASC2+'" alt="">';
+      el.querySelector('.tv-dest').style.marginLeft='20vw'; confetes(el); });
   }
   function recados(){
     var el=document.getElementById('tvS3');
