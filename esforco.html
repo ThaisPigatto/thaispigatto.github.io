@@ -384,6 +384,10 @@
   .view .topbar.slim h1{color:#111;font:800 22px 'Inter',sans-serif;margin:0;}
   .view .topbar.slim .sub{color:#555;font-size:13px;}
   .view .topbar.slim a.abrir{color:#111;font:700 12.5px 'Inter',sans-serif;}
+
+  #topbar.topbar .nm .cg{display:block;font:600 12px 'Inter',sans-serif;color:#333;margin-top:2px;max-width:220px;line-height:1.25;}
+  #topbar.topbar .nm small{margin-top:7px;text-decoration:underline;}
+  #topbar.topbar .ft{background-size:165%!important;background-position:50% 18%!important;}
 </style>
 </head>
 <body>
@@ -926,7 +930,7 @@ function montarSetores(){
   if(!tb){ tb=document.createElement('div'); tb.id='topbar'; tb.className='topbar'; tb.title='Trocar de usuário'; tb.addEventListener('click',function(){ fecharMenuMobile(); mostrarInicio(); }); document.body.appendChild(tb); }
   if(ua){
     tb.style.display='flex';
-    tb.innerHTML=fotoHTML(ua,'ft')+'<div class="nm">'+esc2(ua.nome.split(' ')[0])+'<small>trocar usuário</small></div>';
+    tb.innerHTML=fotoHTML(ua,'ft')+'<div class="nm">'+esc2(ua.nome.split(' ')[0])+(ua.cargo?'<span class="cg">'+esc2(ua.cargo)+'</span>':'')+'<small>trocar usuário</small></div>';
   } else { tb.style.display='none'; }
 }
 function botaoSetor(st){
